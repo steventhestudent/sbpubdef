@@ -4,7 +4,7 @@
 	"https": true,
 	"serveConfigurations": {
 		"default": {
-			"pageUrl": "https://csula.sharepoint.com/sites/playground",
+			"pageUrl": "https://countyofsb.sharepoint.com/sites/PD-Internal",
 			"customActions": {
 				"2196e02f-20bc-4d3c-a967-c4e98420d1bb": {
 					"location": "ClientSideExtension.ApplicationCustomizer",
@@ -15,7 +15,7 @@
 			}
 		},
 		"landingRedirectExt": {
-			"pageUrl": "https://csula.sharepoint.com/sites/playground",
+			"pageUrl": "https://countyofsb.sharepoint.com/sites/PD-Internal",
 			"customActions": {
 				"2196e02f-20bc-4d3c-a967-c4e98420d1bb": {
 					"location": "ClientSideExtension.ApplicationCustomizer",
