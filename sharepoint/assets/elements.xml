@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Elements xmlns="http://schemas.microsoft.com/sharepoint/">
+    <CustomAction
+        Title="LandingRedirectExt"
+        Location="ClientSideExtension.ApplicationCustomizer"
+        ClientSideComponentId="2196e02f-20bc-4d3c-a967-c4e98420d1bb"
+        ClientSideComponentProperties="{&quot;testMessage&quot;:&quot;Test message&quot;}">
+    </CustomAction>
+</Elements>
