@@ -1,39 +1,134 @@
-import { Log } from '@microsoft/sp-core-library';
-import {
-  BaseApplicationCustomizer
-} from '@microsoft/sp-application-base';
-import { Dialog } from '@microsoft/sp-dialog';
+import { BaseApplicationCustomizer } from "@microsoft/sp-application-base";
+import { AadHttpClient, IHttpClientOptions } from "@microsoft/sp-http";
 
-import * as strings from 'LandingRedirectExtApplicationCustomizerStrings';
+const REDIRECT_FLAG = "spfx-landing-redirected";
 
-const LOG_SOURCE: string = 'LandingRedirectExtApplicationCustomizer';
-
-/**
- * If your command set uses the ClientSideComponentProperties JSON input,
- * it will be deserialized into the BaseExtension.properties object.
- * You can define an interface to describe it.
- */
-export interface ILandingRedirectExtApplicationCustomizerProperties {
-  // This is an example; replace with your own property
-  testMessage: string;
+export interface RoleBasedRedirectRule {
+	groups: string[] /** Azure AD group object IDs (GUIDs) */;
+	targetURL: string /** Target site path, e.g. "/sites/attorney" */;
 }
 
-/** A Custom Action which can be run during execution of a Client Side Application */
-export default class LandingRedirectExtApplicationCustomizer
-  extends BaseApplicationCustomizer<ILandingRedirectExtApplicationCustomizerProperties> {
+export interface ILandingRedirectExtApplicationCustomizerProperties {
+	defaultURL: string /** Fallback landing site if no rule matches */;
+	redirectRules: RoleBasedRedirectRule[];
+}
 
-  public onInit(): Promise<void> {
-    Log.info(LOG_SOURCE, `Initialized ${strings.Title}`);
+/** Custom Action: can run during Client Side App execution */
+export default class LandingRedirectExtApplicationCustomizer extends BaseApplicationCustomizer<ILandingRedirectExtApplicationCustomizerProperties> {
+	public async onInit(): Promise<void> {
+		if (sessionStorage.getItem(REDIRECT_FLAG) === "1") return; // Avoid loops within the same tab/session
 
-    let message: string = this.properties.testMessage;
-    if (!message) {
-      message = '(No properties were provided.)';
-    }
+		try {
+			const target = await this._resolveTargetSite();
+			if (!target) return;
 
-    Dialog.alert(`Hello from ${strings.Title}:\n\n${message}`).catch(() => {
-      /* handle error */
-    });
+			const currentOrigin = window.location.origin.toLowerCase();
+			const currentPath = window.location.pathname.toLowerCase();
+			const normalizedTarget = target.toLowerCase();
 
-    return Promise.resolve();
-  }
+			const onTarget =
+				(currentOrigin + currentPath).startsWith(
+					currentOrigin + normalizedTarget
+				) || currentPath.startsWith(normalizedTarget);
+
+			if (onTarget) return;
+
+			sessionStorage.setItem(REDIRECT_FLAG, "1");
+			window.location.replace(normalizedTarget); // no extra history entry w/ .replace()
+		} catch (e) {
+			console.warn("Landing redirect failed", e);
+		}
+	}
+
+	private async _resolveTargetSite(): Promise<string | null> {
+		// Provide a typed fallback if manifest properties are missing
+		const props: ILandingRedirectExtApplicationCustomizerProperties = this
+			.properties ?? {
+			defaultSiteUrl: "/sites/pd-internal",
+			redirectMap: [],
+		};
+
+		const groupIds = await this._getUserGroupIds(); // set of lowercase GUIDs
+		console.log("groupsprops", groupIds, props);
+		throw console.log("i threw");
+		// for (const rule of props.redirectRules) {
+		// 	if (!rule || !Array.isArray(rule.groups) || !rule.targetURL)
+		// 		continue; // guard against bad manifest data
+		// 	const hit = rule.groups.some((g) => groupIds.has(g.toLowerCase()));
+		// 	if (hit) return rule.targetURL;
+		// }
+
+		// return props.defaultURL || null;
+	}
+
+	private async _getUserGroupIds(): Promise<Map<string, string>> {
+		const client = await this.context.aadHttpClientFactory.getClient(
+			"https://graph.microsoft.com"
+		);
+
+		const options: IHttpClientOptions = {
+			headers: { Accept: "application/json" },
+		};
+
+		// Cast to groups and select id + displayName (add more if you want)
+		let next: string | null =
+			"https://graph.microsoft.com/v1.0/me/transitiveMemberOf/microsoft.graph.group?$select=id,displayName";
+
+		const result = new Map<string, string>(); // id -> displayName
+
+		while (next) {
+			const res = await client.get(
+				next,
+				AadHttpClient.configurations.v1,
+				options
+			);
+			if (!res.ok) break;
+
+			const json: {
+				value?: Array<{ id?: string; displayName?: string }>;
+				["@odata.nextLink"]?: string;
+			} = await res.json();
+
+			for (const g of json.value ?? []) {
+				if (g.id) result.set(g.id.toLowerCase(), g.displayName ?? "");
+			}
+			next = json["@odata.nextLink"] ?? null;
+		}
+
+		return result;
+	}
+	// private async _getUserGroupIds(): Promise<Set<string>> {
+	// 	const client = await this.context.aadHttpClientFactory.getClient(
+	// 		"https://graph.microsoft.com"
+	// 	);
+
+	// 	const options: IHttpClientOptions = {
+	// 		headers: { Accept: "application/json" },
+	// 	};
+
+	// 	let next: string | null =
+	// 		"https://graph.microsoft.com/v1.0/me/transitiveMemberOf?$select=id";
+	// 	const ids = new Set<string>();
+
+	// 	while (next) {
+	// 		const res = await client.get(
+	// 			next,
+	// 			AadHttpClient.configurations.v1,
+	// 			options
+	// 		);
+	// 		if (!res.ok) break;
+
+	// 		const json: {
+	// 			value?: Array<{ id?: string }>;
+	// 			["@odata.nextLink"]?: string;
+	// 		} = await res.json();
+
+	// 		for (const item of json.value ?? []) {
+	// 			if (item.id) ids.add(item.id.toLowerCase());
+	// 		}
+	// 		next = json["@odata.nextLink"] ?? null;
+	// 	}
+
+	// 	return ids;
+	// }
 }
