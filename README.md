@@ -1,32 +1,49 @@
-# sbpubdef-sol
-```docs/spfx sharepoint pnpm macos.md``` for details on dev environment w/ pnpm
+# SPFx Solution: "sbpubdef-sol"
 
-# install
-- laptops need: git, vscode, [chatgpt (edu)](https://www.calstatela.edu/genai/chatgpt-edu-faq)
-- node w/ pnpm
-  - ```pnpm env use --global lts```
-1. ```git clone https://github.com/steventhestudent/sbpubdef.git```
-2. ```pnpm install```
-3. ```pnpm npx gulp trust-dev-cert```
+### docs/
+
+-   [sbpubdef todo.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/sbpubdef%20todo.md)
+-   [laptop notes.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/laptop%20notes.md)
+-   [spfx sharepoint pnpm macos.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/spfx%20sharepoint%20pnpm%20macos.md)
+    &nbsp;
+
+## Install
+
+-   laptops need: git, vscode, [chatgpt (edu)](https://www.calstatela.edu/genai/chatgpt-edu-faq)
+-   node w/ pnpm
+    -   `pnpm env use --global lts`
+
+1. `git clone https://github.com/steventhestudent/sbpubdef.git`
+2. `cd sbpudef`
+3. `pnpm install`
+4. `pnpm npx gulp trust-dev-cert`
+5. **optionally:** scraped forms / resource folder (private repo, so that this one can stay public): `git clone git@github.com:steventhestudent/sbpubdef-resources.git resource` ask for an invite
 
 now live reload server works:
 
-```pnpm npx gulp serve```
+`pnpm npx gulp serve`
 
 &nbsp;
 
+**dev environment details:** `spfx sharepoint pnpm macos.md`
+
+**using npm:** just run `npm install`... also run w/o leading 'pnpm npx' (i.e.: instead of `pnpm npx gulp trust-dev-cert`, you will run `gulp trust-dev-cert`)
+
 &nbsp;
 
-# production release + install as sharepoint app
+## Production release + install as sharepoint app
+
 see README @ steventhestudent/sbpubdef-legacy for detailed instructions
 
 &nbsp;
 
 &nbsp;
 
-# laptop rotation
+## ¿ Laptop rotation ?
+
 services i am logged in:
-- git cli &nbsp; &nbsp;-so you will have to ```git config --local user.name "x" && git config --local user.email "x@x.com"```
-- browser:
-  - github
-  - chatgpt
+
+-   git cli &nbsp; &nbsp;-so you will have to `git config --local user.name "x" && git config --local user.email "x@x.com"`
+-   browser:
+    -   github
+    -   chatgpt

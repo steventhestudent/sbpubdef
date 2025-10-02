@@ -1,3 +1,6 @@
+# nested repo(s)
+resource/
+
 # ides.gitignore
 # VIM
 *.swp
