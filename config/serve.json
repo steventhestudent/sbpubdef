@@ -9,21 +9,39 @@
 				"2196e02f-20bc-4d3c-a967-c4e98420d1bb": {
 					"location": "ClientSideExtension.ApplicationCustomizer",
 					"properties": {
-						"testMessage": "Test message"
-					}
-				}
-			}
-		},
-		"landingRedirectExt": {
-			"pageUrl": "https://countyofsb.sharepoint.com/sites/PD-Internal",
-			"customActions": {
-				"2196e02f-20bc-4d3c-a967-c4e98420d1bb": {
-					"location": "ClientSideExtension.ApplicationCustomizer",
-					"properties": {
-						"testMessage": "Test message"
+						"defaultURL": "/sites/PD-Internal",
+						"redirectRules": [
+							{
+								"groups": [
+									// "65cd4ea4-6038-4bc0-b568-9576bacc0d80" // "steventheworker" (Azure AD group objectId)
+								],
+								"URL": "/sites/PD-Internal"
+							},
+							{
+								"groups": [
+									"37ebab93-fa36-4dea-8cf8-0e622f942a22", // "All Company"
+									"65cd4ea4-6038-4bc0-b568-9576bacc0d80" // "steventheworker" (Azure AD group objectId)
+								],
+								"URL": "/sites/Attorney"
+							}
+						]
 					}
 				}
 			}
 		}
+		// "landingRedirectExt": {
+		// 	"pageUrl": "https://countyofsb.sharepoint.com/sites/PD-Internal",
+		// 	"customActions": {
+		// 		"2196e02f-20bc-4d3c-a967-c4e98420d1bb": {
+		// 			"location": "ClientSideExtension.ApplicationCustomizer",
+		// 			"properties": {
+		// 				"defaultURL": "/sites/PD-Internal",
+		// 				"redirectRules": [
+
+		// 				]
+		// 			}
+		// 		}
+		// 	}
+		// }
 	}
 }
