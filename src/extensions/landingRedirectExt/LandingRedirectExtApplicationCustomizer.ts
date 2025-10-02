@@ -20,21 +20,22 @@ export default class LandingRedirectExtApplicationCustomizer extends BaseApplica
 
 		try {
 			const target = await this._resolveTargetSite();
-			if (!target) return;
+			console.debug("redirection target:", target);
+			// if (!target) return;
 
-			const currentOrigin = window.location.origin.toLowerCase();
-			const currentPath = window.location.pathname.toLowerCase();
-			const normalizedTarget = target.toLowerCase();
+			// const currentOrigin = window.location.origin.toLowerCase();
+			// const currentPath = window.location.pathname.toLowerCase();
+			// const normalizedTarget = target.toLowerCase();
 
-			const onTarget =
-				(currentOrigin + currentPath).startsWith(
-					currentOrigin + normalizedTarget
-				) || currentPath.startsWith(normalizedTarget);
+			// const onTarget =
+			// 	(currentOrigin + currentPath).startsWith(
+			// 		currentOrigin + normalizedTarget
+			// 	) || currentPath.startsWith(normalizedTarget);
 
-			if (onTarget) return;
+			// if (onTarget) return;
 
-			sessionStorage.setItem(REDIRECT_FLAG, "1");
-			window.location.replace(normalizedTarget); // no extra history entry w/ .replace()
+			// sessionStorage.setItem(REDIRECT_FLAG, "1");
+			// window.location.replace(normalizedTarget); // no extra history entry w/ .replace()
 		} catch (e) {
 			console.warn("Landing redirect failed", e);
 		}
@@ -44,24 +45,24 @@ export default class LandingRedirectExtApplicationCustomizer extends BaseApplica
 		// Provide a typed fallback if manifest properties are missing
 		const props: ILandingRedirectExtApplicationCustomizerProperties = this
 			.properties ?? {
-			defaultSiteUrl: "/sites/pd-internal",
-			redirectMap: [],
+			defaultURL: "/sites/pd-internal",
+			redirectRules: [],
 		};
 
 		const groupIds = await this._getUserGroupIds(); // set of lowercase GUIDs
-		console.log("groupsprops", groupIds, props);
-		throw console.log("i threw");
-		// for (const rule of props.redirectRules) {
-		// 	if (!rule || !Array.isArray(rule.groups) || !rule.targetURL)
-		// 		continue; // guard against bad manifest data
-		// 	const hit = rule.groups.some((g) => groupIds.has(g.toLowerCase()));
-		// 	if (hit) return rule.targetURL;
-		// }
+		console.debug("props", props);
+		console.debug("logged in user groups", groupIds);
+		for (const rule of props.redirectRules) {
+			if (!rule || !Array.isArray(rule.groups) || !rule.targetURL)
+				continue; // guard against bad manifest data
+			const hit = rule.groups.some((g) => groupIds.has(g.toLowerCase()));
+			if (hit) return rule.targetURL;
+		}
 
-		// return props.defaultURL || null;
+		return props.defaultURL || null;
 	}
 
-	private async _getUserGroupIds(): Promise<Map<string, string>> {
+	private async _getUserGroupIds(): Promise<Set<string>> {
 		const client = await this.context.aadHttpClientFactory.getClient(
 			"https://graph.microsoft.com"
 		);
@@ -70,11 +71,9 @@ export default class LandingRedirectExtApplicationCustomizer extends BaseApplica
 			headers: { Accept: "application/json" },
 		};
 
-		// Cast to groups and select id + displayName (add more if you want)
 		let next: string | null =
-			"https://graph.microsoft.com/v1.0/me/transitiveMemberOf/microsoft.graph.group?$select=id,displayName";
-
-		const result = new Map<string, string>(); // id -> displayName
+			"https://graph.microsoft.com/v1.0/me/transitiveMemberOf?$select=id";
+		const ids = new Set<string>();
 
 		while (next) {
 			const res = await client.get(
@@ -85,50 +84,16 @@ export default class LandingRedirectExtApplicationCustomizer extends BaseApplica
 			if (!res.ok) break;
 
 			const json: {
-				value?: Array<{ id?: string; displayName?: string }>;
+				value?: Array<{ id?: string }>;
 				["@odata.nextLink"]?: string;
 			} = await res.json();
 
-			for (const g of json.value ?? []) {
-				if (g.id) result.set(g.id.toLowerCase(), g.displayName ?? "");
+			for (const item of json.value ?? []) {
+				if (item.id) ids.add(item.id.toLowerCase());
 			}
 			next = json["@odata.nextLink"] ?? null;
 		}
 
-		return result;
+		return ids;
 	}
-	// private async _getUserGroupIds(): Promise<Set<string>> {
-	// 	const client = await this.context.aadHttpClientFactory.getClient(
-	// 		"https://graph.microsoft.com"
-	// 	);
-
-	// 	const options: IHttpClientOptions = {
-	// 		headers: { Accept: "application/json" },
-	// 	};
-
-	// 	let next: string | null =
-	// 		"https://graph.microsoft.com/v1.0/me/transitiveMemberOf?$select=id";
-	// 	const ids = new Set<string>();
-
-	// 	while (next) {
-	// 		const res = await client.get(
-	// 			next,
-	// 			AadHttpClient.configurations.v1,
-	// 			options
-	// 		);
-	// 		if (!res.ok) break;
-
-	// 		const json: {
-	// 			value?: Array<{ id?: string }>;
-	// 			["@odata.nextLink"]?: string;
-	// 		} = await res.json();
-
-	// 		for (const item of json.value ?? []) {
-	// 			if (item.id) ids.add(item.id.toLowerCase());
-	// 		}
-	// 		next = json["@odata.nextLink"] ?? null;
-	// 	}
-
-	// 	return ids;
-	// }
 }
