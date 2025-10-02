@@ -5,7 +5,7 @@ const REDIRECT_FLAG = "spfx-landing-redirected";
 
 export interface RoleBasedRedirectRule {
 	groups: string[] /** Azure AD group object IDs (GUIDs) */;
-	targetURL: string /** Target site path, e.g. "/sites/attorney" */;
+	URL: string /** Target site path, e.g. "/sites/attorney" */;
 }
 
 export interface ILandingRedirectExtApplicationCustomizerProperties {
@@ -21,6 +21,8 @@ export default class LandingRedirectExtApplicationCustomizer extends BaseApplica
 		try {
 			const target = await this._resolveTargetSite();
 			console.debug("redirection target:", target);
+
+			/* uncomment below to start redirecting */
 			// if (!target) return;
 
 			// const currentOrigin = window.location.origin.toLowerCase();
@@ -53,10 +55,9 @@ export default class LandingRedirectExtApplicationCustomizer extends BaseApplica
 		console.debug("props", props);
 		console.debug("logged in user groups", groupIds);
 		for (const rule of props.redirectRules) {
-			if (!rule || !Array.isArray(rule.groups) || !rule.targetURL)
-				continue; // guard against bad manifest data
+			if (!rule || !Array.isArray(rule.groups) || !rule.URL) continue; // guard against bad manifest data
 			const hit = rule.groups.some((g) => groupIds.has(g.toLowerCase()));
-			if (hit) return rule.targetURL;
+			if (hit) return rule.URL;
 		}
 
 		return props.defaultURL || null;

@@ -162,8 +162,12 @@ is not an admin.
 }
 ```
 
-...for some reason it doesn't list (for my new sharepoint (also doesn't show in Entra ID -> groups)):
+<s>...for some reason it doesn't list (for my new sharepoint (also doesn't show in Entra ID -> groups)):
+</s>
 
 b262bfd2-effd-4d28-9850-5e13beaebddb
 
-(due to no name? but it does appear w/ $select=id (as in original function))
+<s>(due to no name? but it does appear w/ $select=id (as in original function))
+</s>
+
+can ignore this (no groups were missing on countyofsb.sharepoint.com)
