@@ -9,10 +9,19 @@
           "manifest": "./src/extensions/landingRedirectExt/LandingRedirectExtApplicationCustomizer.manifest.json"
         }
       ]
+    },
+    "welcome-message-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/welcomeMessage/WelcomeMessageWebPart.js",
+          "manifest": "./src/webparts/welcomeMessage/WelcomeMessageWebPart.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},
   "localizedResources": {
-    "LandingRedirectExtApplicationCustomizerStrings": "lib/extensions/landingRedirectExt/loc/{locale}.js"
+    "LandingRedirectExtApplicationCustomizerStrings": "lib/extensions/landingRedirectExt/loc/{locale}.js",
+    "WelcomeMessageWebPartStrings": "lib/webparts/welcomeMessage/loc/{locale}.js"
   }
 }

@@ -45,3 +45,8 @@ add to package.json "scripts":
 ```
 "preinstall": "npx only-allow pnpm",
 ```
+
+
+&nbsp;
+
+# had to ```pnpm add mem-fs``` (to add to the solution)
