@@ -25,12 +25,30 @@
           "manifest": "./src/webparts/officeInformation/OfficeInformationWebPart.manifest.json"
         }
       ]
+    },
+    "manuals-and-handbooks-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/manualsAndHandbooks/ManualsAndHandbooksWebPart.js",
+          "manifest": "./src/webparts/manualsAndHandbooks/ManualsAndHandbooksWebPart.manifest.json"
+        }
+      ]
+    },
+    "most-common-forms-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/mostCommonForms/MostCommonFormsWebPart.js",
+          "manifest": "./src/webparts/mostCommonForms/MostCommonFormsWebPart.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},
   "localizedResources": {
     "LandingRedirectExtApplicationCustomizerStrings": "lib/extensions/landingRedirectExt/loc/{locale}.js",
     "WelcomeMessageWebPartStrings": "lib/webparts/welcomeMessage/loc/{locale}.js",
-    "OfficeInformationWebPartStrings": "lib/webparts/officeInformation/loc/{locale}.js"
+    "OfficeInformationWebPartStrings": "lib/webparts/officeInformation/loc/{locale}.js",
+    "ManualsAndHandbooksWebPartStrings": "lib/webparts/manualsAndHandbooks/loc/{locale}.js",
+    "MostCommonFormsWebPartStrings": "lib/webparts/mostCommonForms/loc/{locale}.js"
   }
 }

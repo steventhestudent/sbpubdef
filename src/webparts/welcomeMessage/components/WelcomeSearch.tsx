@@ -1,7 +1,7 @@
 import * as React from "react";
 import {Label} from "@fluentui/react";
 
-export const WelcomeSearch = () => (<form role="search">
+export const WelcomeSearch = () => (<form role="search" style={{textAlign: "center"}}>
 	<Label>
 		Search:
 		<input role="combobox" type="search" aria-autocomplete="list" aria-controls="ms-searchux-popup-0" accessKey="S"
