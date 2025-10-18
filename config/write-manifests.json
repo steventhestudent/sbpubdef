@@ -1,4 +1,4 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/write-manifests.schema.json",
-  "cdnBasePath": "<!-- PATH TO CDN -->"
+	"$schema": "https://developer.microsoft.com/json-schemas/spfx-build/write-manifests.schema.json",
+	"cdnBasePath": "https://csproject25.sharepoint.com/sites/AppCatalog/ClientSideAssets1/sbpubdef-sol/1.0.0"
 }
