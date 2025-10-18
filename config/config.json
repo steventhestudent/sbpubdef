@@ -41,6 +41,46 @@
           "manifest": "./src/webparts/mostCommonForms/MostCommonFormsWebPart.manifest.json"
         }
       ]
+    },
+    "announcements-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/announcements/AnnouncementsWebPart.js",
+          "manifest": "./src/webparts/announcements/AnnouncementsWebPart.manifest.json"
+        }
+      ]
+    },
+    "upcoming-events-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/upcomingEvents/UpcomingEventsWebPart.js",
+          "manifest": "./src/webparts/upcomingEvents/UpcomingEventsWebPart.manifest.json"
+        }
+      ]
+    },
+    "attorney-assignments-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/attorneyAssignments/AttorneyAssignmentsWebPart.js",
+          "manifest": "./src/webparts/attorneyAssignments/AttorneyAssignmentsWebPart.manifest.json"
+        }
+      ]
+    },
+    "expert-witness-directory-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/expertWitnessDirectory/ExpertWitnessDirectoryWebPart.js",
+          "manifest": "./src/webparts/expertWitnessDirectory/ExpertWitnessDirectoryWebPart.manifest.json"
+        }
+      ]
+    },
+    "staff-directory-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/staffDirectory/StaffDirectoryWebPart.js",
+          "manifest": "./src/webparts/staffDirectory/StaffDirectoryWebPart.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},
@@ -49,6 +89,11 @@
     "WelcomeMessageWebPartStrings": "lib/webparts/welcomeMessage/loc/{locale}.js",
     "OfficeInformationWebPartStrings": "lib/webparts/officeInformation/loc/{locale}.js",
     "ManualsAndHandbooksWebPartStrings": "lib/webparts/manualsAndHandbooks/loc/{locale}.js",
-    "MostCommonFormsWebPartStrings": "lib/webparts/mostCommonForms/loc/{locale}.js"
+    "MostCommonFormsWebPartStrings": "lib/webparts/mostCommonForms/loc/{locale}.js",
+    "AnnouncementsWebPartStrings": "lib/webparts/announcements/loc/{locale}.js",
+    "UpcomingEventsWebPartStrings": "lib/webparts/upcomingEvents/loc/{locale}.js",
+    "AttorneyAssignmentsWebPartStrings": "lib/webparts/attorneyAssignments/loc/{locale}.js",
+    "ExpertWitnessDirectoryWebPartStrings": "lib/webparts/expertWitnessDirectory/loc/{locale}.js",
+    "StaffDirectoryWebPartStrings": "lib/webparts/staffDirectory/loc/{locale}.js"
   }
 }
