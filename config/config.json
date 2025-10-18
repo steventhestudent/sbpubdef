@@ -17,11 +17,20 @@
           "manifest": "./src/webparts/welcomeMessage/WelcomeMessageWebPart.manifest.json"
         }
       ]
+    },
+    "office-information-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/officeInformation/OfficeInformationWebPart.js",
+          "manifest": "./src/webparts/officeInformation/OfficeInformationWebPart.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},
   "localizedResources": {
     "LandingRedirectExtApplicationCustomizerStrings": "lib/extensions/landingRedirectExt/loc/{locale}.js",
-    "WelcomeMessageWebPartStrings": "lib/webparts/welcomeMessage/loc/{locale}.js"
+    "WelcomeMessageWebPartStrings": "lib/webparts/welcomeMessage/loc/{locale}.js",
+    "OfficeInformationWebPartStrings": "lib/webparts/officeInformation/loc/{locale}.js"
   }
 }
