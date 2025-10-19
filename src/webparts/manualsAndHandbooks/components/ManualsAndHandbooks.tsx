@@ -18,6 +18,8 @@ export default class ManualsAndHandbooks extends React.Component<IManualsAndHand
 				<h4>Manuals / Handbooks:</h4>
 				<ul>
 					<li>...</li>
+					<li>...</li>
+					<li>...</li>
 				</ul>
 			</section>
 		);

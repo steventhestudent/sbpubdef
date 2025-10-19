@@ -21,7 +21,7 @@
 
 now live reload server works:
 
-`pnpm npx gulp serve`
+`pnpm npx gulp serve` (webparts) or ```gulp serve --config landingRedirectExt``` etc. 
 
 &nbsp;
 

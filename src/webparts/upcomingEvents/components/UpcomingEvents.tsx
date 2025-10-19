@@ -17,10 +17,13 @@ export default class UpcomingEvents extends React.Component<IUpcomingEventsProps
 			<section>
 				<h4>Upcoming Events</h4>
 				<table>
-					<tr><td>...</td></tr>
-					<tr><td>...</td></tr>
-					<tr><td>...</td></tr>
-					<tr><td>...</td></tr>
+					<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+					<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+					<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+					<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+					<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+					<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+					<tr><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
 				</table>
 			</section>
 		);

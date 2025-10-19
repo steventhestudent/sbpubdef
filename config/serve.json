@@ -1,54 +1,54 @@
 {
-	"$schema": "https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json",
-	"port": 4321,
-	"https": true,
-	//"initialPage": "https://csproject25.sharepoint.com/_layouts/workbench.aspx",
-	"serveConfigurations": {
-		"default": {
-			"pageUrl": "https://csproject25.sharepoint.com/_layouts/workbench.aspx",
-		},
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json",
+  "port": 4321,
+  "https": true,
+  //"initialPage": "https://csproject25.sharepoint.com/_layouts/workbench.aspx",
+  "serveConfigurations": {
+    "default": {
+      "pageUrl": "https://csproject25.sharepoint.com/_layouts/workbench.aspx",
+    },
 
-		// gulp serve --config landingRedirectExt
-		"landingRedirectExt": {
-			"pageUrl": "https://csproject25.sharepoint.com/sites/PD-Internal",
-			"customActions": {
-				"2196e02f-20bc-4d3c-a967-c4e98420d1bb": {
-					"location": "ClientSideExtension.ApplicationCustomizer",
-					"properties": {
-						"defaultURL": "/sites/PD-Internal", // in case of no redirectRule for group(s)
-						"redirectRules": [
-							{
-								"groups": [
-									// my new sharepoint user's groups:
-									// "37ebab93-fa36-4dea-8cf8-0e622f942a22", // "All Company" (Azure AD group objectId)
-									// "65cd4ea4-6038-4bc0-b568-9576bacc0d80" // "steventheworker"
-									//
-									// pubdefextern08's groups:
-									// PUBDEF NetMotion Access - Users,  SBC SG M365 Users,  SBC SG M365 Pilot Testing,
-									// PUBDEF LOGIN SETTINGS,  PDExtern,  Public Defender,  PUBDEF VPN Remote Access,
-									// SBC-M365-Teams Playground,  PUBDEF SG M365 Users,  SBC Everyone,  SBC SG All Users,
-									// SBC SG M365 SSPR,  SBC SG M365 OWA Access,  SBC NetMotion Access - Users,
-									// SBC SG M365 Conditional Access Migration,  Public Defender-Santa Barbara,
-									// PUBDEF SG M365 SSPR,  PUBDEF SG M365 OWA Access,  SBC APP M365 Teams User Deployment
-								],
-								"URL": "/sites/PD-Internal"
-							},
-							{
-								"groups": [
-									"dce3904a-9ef8-45ea-9e00-c69a34b6f5c2" // "attorney"
-								],
-								"URL": "/sites/Attorney"
-							},
-							{
-								"groups": [
-									"d432c291-bad0-4da5-bbb5-08bb5251e19c" // "hr"
-								],
-								"URL": "/sites/HR"
-							}
-						]
-					}
-				}
-			}
-		}
-	}
+    // gulp serve --config landingRedirectExt
+    "landingRedirectExt": {
+      "pageUrl": "https://csproject25.sharepoint.com/sites/PD-Internal",
+      "customActions": {
+        "2196e02f-20bc-4d3c-a967-c4e98420d1bb": {
+          "location": "ClientSideExtension.ApplicationCustomizer",
+          "properties": {
+            "defaultURL": "/sites/PD-Internal", // in case of no redirectRule for group(s)
+            "redirectRules": [
+              {
+                "groups": [
+                  // my new sharepoint user's groups:
+                  // "37ebab93-fa36-4dea-8cf8-0e622f942a22", // "All Company" (Azure AD group objectId)
+                  // "65cd4ea4-6038-4bc0-b568-9576bacc0d80" // "steventheworker"
+                  //
+                  // pubdefextern08's groups:
+                  // PUBDEF NetMotion Access - Users,  SBC SG M365 Users,  SBC SG M365 Pilot Testing,
+                  // PUBDEF LOGIN SETTINGS,  PDExtern,  Public Defender,  PUBDEF VPN Remote Access,
+                  // SBC-M365-Teams Playground,  PUBDEF SG M365 Users,  SBC Everyone,  SBC SG All Users,
+                  // SBC SG M365 SSPR,  SBC SG M365 OWA Access,  SBC NetMotion Access - Users,
+                  // SBC SG M365 Conditional Access Migration,  Public Defender-Santa Barbara,
+                  // PUBDEF SG M365 SSPR,  PUBDEF SG M365 OWA Access,  SBC APP M365 Teams User Deployment
+                ],
+                "URL": "/sites/PD-Internal"
+              },
+              {
+                "groups": [
+                  "dce3904a-9ef8-45ea-9e00-c69a34b6f5c2" // "attorney"
+                ],
+                "URL": "/sites/Attorney"
+              },
+              {
+                "groups": [
+                  "d432c291-bad0-4da5-bbb5-08bb5251e19c" // "hr"
+                ],
+                "URL": "/sites/HR"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
 }
