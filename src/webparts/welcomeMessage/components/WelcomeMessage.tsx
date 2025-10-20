@@ -3,7 +3,6 @@ import styles from './WelcomeMessage.module.scss';
 import type { IWelcomeMessageProps } from './IWelcomeMessageProps';
 import { escape } from '@microsoft/sp-lodash-subset';
 import {WelcomeSearch} from "./WelcomeSearch";
-// import "../../../../dist/tailwind.css";
 
 export default class WelcomeMessage extends React.Component<IWelcomeMessageProps> {
 	public render(): React.ReactElement<IWelcomeMessageProps> {

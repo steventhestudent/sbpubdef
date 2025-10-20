@@ -16,6 +16,7 @@ build.rig.getTasks = function () {
 
 
 
+// tailwind
 const postcss = require("gulp-postcss");
 const tailwind = require("@tailwindcss/postcss");
 
@@ -35,17 +36,16 @@ const tailwindcss = build.subTask(
 );
 build.rig.addPreBuildTask(tailwindcss);
 
-
-
+// aliases
 build.configureWebpack.mergeConfig({
     additionalConfiguration: (generatedConfig) => {
         generatedConfig.resolve = generatedConfig.resolve || {};
         generatedConfig.resolve.alias = {
             ...(generatedConfig.resolve.alias || {}),
             '@dist': path.resolve(__dirname, 'dist'),
-            '@styles': path.resolve(__dirname, 'src/styles'),
-            '@webparts': path.resolve(__dirname, 'src/webparts'),
-            '@extensions': path.resolve(__dirname, 'src/extensions'),
+            '@styles': path.resolve(__dirname, 'lib/styles'),
+            '@webparts': path.resolve(__dirname, 'lib/webparts'),
+            '@extensions': path.resolve(__dirname, 'lib/extensions'),
         };
         return generatedConfig;
     },

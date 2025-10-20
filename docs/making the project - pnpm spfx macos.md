@@ -87,3 +87,36 @@ I've done this steps to setup:
 	24	  
 	25	Finally add in core of spfx typescript import "../../../dist/tailwind.css" and setup button:
 </details>
+
+
+# Aliases
+add in tsconfig compileroptions:
+```
+		"baseUrl": ".",
+		"paths": {
+			"@dist/*": ["dist/*"],
+			"@styles/*": ["src/styles/*"],
+			"@webparts/*": ["src/webparts/*"],
+			"@extensions/*": ["src/extensions/*"],
+		},
+```
+
+add to gulpfile.js (before ```build.initialize(require('gulp'));```):
+```
+// aliases
+build.configureWebpack.mergeConfig({
+    additionalConfiguration: (generatedConfig) => {
+        generatedConfig.resolve = generatedConfig.resolve || {};
+        generatedConfig.resolve.alias = {
+            ...(generatedConfig.resolve.alias || {}),
+            '@dist': path.resolve(__dirname, 'dist'),
+            '@styles': path.resolve(__dirname, 'lib/styles'),
+            '@webparts': path.resolve(__dirname, 'lib/webparts'),
+            '@extensions': path.resolve(__dirname, 'lib/extensions'),
+        };
+        return generatedConfig;
+    },
+});
+```
+
+now you can: ```import "@webparts/welcomeMessage/components/"``` or ```import "@dist/tailwind.css"```
