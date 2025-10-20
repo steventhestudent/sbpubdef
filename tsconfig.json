@@ -22,7 +22,16 @@
 			"es2015.core",
 			"es2015.collection",
 			"es2015.promise"
-		]
+		],
+
+
+		"baseUrl": ".",
+		"paths": {
+			"@dist/*": ["dist/*"],
+			"@styles/*": ["src/styles/*"],
+			"@webparts/*": ["src/webparts/*"],
+			"@extensions/*": ["src/extensions/*"],
+		},
 	},
 	"include": ["src/**/*.ts", "src/**/*.tsx"]
 }
