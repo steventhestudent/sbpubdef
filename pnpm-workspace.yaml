@@ -1,1 +1,9 @@
+onlyBuiltDependencies:
+  - '@tailwindcss/oxide'
+  - core-js
+  - es5-ext
+  - fsevents
+  - spawn-sync
+  - yo
+
 shamefullyHoist: true

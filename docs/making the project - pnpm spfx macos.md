@@ -4,62 +4,61 @@ node 22 lts
 
 ### install deps to scaffold:
 
-```
-pnpm add yo gulp-cli @microsoft/generator-sharepoint
-```
+```pnpm add yo gulp-cli @microsoft/generator-sharepoint mem-fs```
+
+whenever it asks to approve-builds, do so, with: ```pnpm approve-builds```
 
 ### call `pnpm i --shamefully-hoist` when `pnpm install` is called:
-```
-pnpm config set shamefully-hoist true --location project
-```
+```pnpm config set shamefully-hoist true --location project```
 
 ### scaffold project:
 
 if installing w/ npm, run _yo_ w/o _pnpm npx_
-```
-pnpm npx yo @microsoft/sharepoint --skip-install
-```
+```pnpm npx yo @microsoft/sharepoint --skip-install```
 
 ### install proj dependencies:
 
-```
-pnpm install
-```
+```pnpm install```
 
 ### run once:
-- ```pnpm approve-builds``` (yo)
 - ```pnpm npx gulp trust-dev-cert```
 
 ### develop:
 
-```
-npm npx gulp serve –nobrowser
-```
+```pnpm npx gulp serve```
 
-### recommended (only allow pnpm pkg management):
+### ~~recommended (only allow pnpm pkg management):~~
 
 add to package.json "scripts":
 
+```"preinstall": "npx only-allow pnpm",```
+
+
+
+&nbsp;
+
+&nbsp;
+
+
+
+# Tailwind (with SPFx)
+- pnpm add tailwindcss @tailwindcss/postcss postcss gulp-postcss
+- pnpm approve-builds
+- files to add/modify: postcss.config.js + gulpfilejs + src/styles/tailwind.css (@import "tailwindcss";)
+  - postcss.config.js:
 ```
-"preinstall": "npx only-allow pnpm",
+export default {
+    plugins: {
+        // '@tailwindcss/postcss': {},
+        tailwindcss: {},
+        autoprefixer: {},
+    },
+};
+now you can import tailwind.css in your .tsx (test w/ className="text-red-900", etc.)
 ```
-
-
-&nbsp;
-
-# had to ```pnpm add mem-fs``` (to add to the solution)
-
-
-
-&nbsp;
-
-
-&nbsp;
-
-# Tailwind
 <details>
 <summary>Setup tailwind 4 with SPFx #16102</summary>
-https://tailwindcss.com/docs/installation/using-postcss
+[Official Docs (using-postcss)](https://tailwindcss.com/docs/installation/using-postcss)
 When I try to use tailwind 4 with rsuitejs, rsuite.min.css is render higher than tailwind.css.
 I've done this steps to setup:
 	1	Create spfx project (obviously), install plugin for tailwind (if not installed)
