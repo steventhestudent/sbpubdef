@@ -12,23 +12,27 @@
     "test": "gulp test"
   },
   "dependencies": {
+    "@fluentui/react": "^8.106.4",
     "@microsoft/decorators": "1.21.1",
     "@microsoft/generator-sharepoint": "^1.21.1",
     "@microsoft/sp-application-base": "1.21.1",
+    "@microsoft/sp-component-base": "1.21.1",
     "@microsoft/sp-core-library": "1.21.1",
     "@microsoft/sp-dialog": "1.21.1",
-    "gulp-cli": "^3.1.0",
-    "mem-fs": "^4.1.2",
-    "tslib": "2.3.1",
-    "yo": "^5.1.0",
-    "react": "17.0.1",
-    "react-dom": "17.0.1",
-    "@fluentui/react": "^8.106.4",
-    "@microsoft/sp-component-base": "1.21.1",
+    "@microsoft/sp-lodash-subset": "1.21.1",
+    "@microsoft/sp-office-ui-fabric-core": "1.21.1",
     "@microsoft/sp-property-pane": "1.21.1",
     "@microsoft/sp-webpart-base": "1.21.1",
-    "@microsoft/sp-lodash-subset": "1.21.1",
-    "@microsoft/sp-office-ui-fabric-core": "1.21.1"
+    "@tailwindcss/postcss": "^4.1.14",
+    "autoprefixer": "^10.4.21",
+    "gulp-cli": "^3.1.0",
+    "gulp-postcss": "^10.0.0",
+    "mem-fs": "^4.1.2",
+    "react": "17.0.1",
+    "react-dom": "17.0.1",
+    "tailwindcss": "^4.1.14",
+    "tslib": "2.3.1",
+    "yo": "^5.1.0"
   },
   "devDependencies": {
     "@microsoft/eslint-config-spfx": "1.21.1",
@@ -37,13 +41,13 @@
     "@microsoft/sp-build-web": "1.21.1",
     "@microsoft/sp-module-interfaces": "1.21.1",
     "@rushstack/eslint-config": "4.0.1",
+    "@types/react": "17.0.45",
+    "@types/react-dom": "17.0.17",
     "@types/webpack-env": "~1.15.2",
     "ajv": "^6.12.5",
     "eslint": "8.57.1",
+    "eslint-plugin-react-hooks": "4.3.0",
     "gulp": "4.0.2",
-    "typescript": "~5.3.3",
-    "@types/react": "17.0.45",
-    "@types/react-dom": "17.0.17",
-    "eslint-plugin-react-hooks": "4.3.0"
+    "typescript": "~5.3.3"
   }
 }

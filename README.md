@@ -4,7 +4,7 @@
 
 -   [sbpubdef todo.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/sbpubdef%20todo.md)
 -   [laptop notes.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/laptop%20notes.md)
--   [spfx sharepoint pnpm macos.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/spfx%20sharepoint%20pnpm%20macos.md)
+-   [making the project - pnpm spfx macos.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/making%20the%20project%20-%20pnpm%20spfx%20macos.md)
     &nbsp;
 
 ## Install
