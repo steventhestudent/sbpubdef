@@ -11,8 +11,8 @@
     "clean": "gulp clean",
     "test": "gulp test",
     "serve": "fast-serve",
-    "tailwind:build": "tailwindcss -i ./src/styles/tailwind.css -o ./dist/tailwind.css --minify",
-    "tailwind:watch": "tailwindcss -i ./src/styles/tailwind.css -o ./dist/tailwind.css --watch",
+    "tailwind:build": "pnpm npx @tailwindcss/cli -i ./src/styles/tailwind.css -o ./dist/tailwind.css --minify",
+    "tailwind:watch": "pnpm npx @tailwindcss/cli -i ./src/styles/tailwind.css -o ./dist/tailwind.css --watch",
     "dev": "concurrently \"pnpm run tailwind:watch\" \"pnpm exec fast-serve\""
   },
   "dependencies": {
