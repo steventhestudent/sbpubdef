@@ -42,6 +42,7 @@ add to package.json "scripts":
 
 
 # Tailwind (with SPFx)
+- ```pnpm add tailwindcss @tailwindcss/cli```
 - pnpm add tailwindcss @tailwindcss/postcss postcss gulp-postcss
 - pnpm add -D autoprefixer@10
 - pnpm approve-builds
@@ -62,33 +63,6 @@ now you can import tailwind.css in your .tsx (test w/ className="text-red-900", 
 <details>
 <summary>Setup tailwind 4 with SPFx #16102</summary>
 [Official Docs (using-postcss)](https://tailwindcss.com/docs/installation/using-postcss)
-When I try to use tailwind 4 with rsuitejs, rsuite.min.css is render higher than tailwind.css.
-I've done this steps to setup:
-	1	Create spfx project (obviously), install plugin for tailwind (if not installed)
-	2	install this packages: npm i tailwindcss @tailwindcss/postcss autoprefixer gulp-postcss
-	3	  
-	4	Create somewhere tailwind.css in /src/ folder and put in it following code: @import "tailwindcss";
-	5	  
-	6	Put in gulpe.json this code before build.initialize(require('gulp')); (almost there): const postcss = require("gulp-postcss");
-	7	const tailwind = require("@tailwindcss/postcss");
-	8	
-	9	const tailwindcss = build.subTask(
-	10	"@tailwindcss/postcss",
-	11	function (gulp, buildOptions, done) {
-	12	    gulp
-	13	        .src("./src/tailwind.css")
-	14	        .pipe(
-	15	            postcss([
-	16	            tailwind("./tailwind.config.js"),
-	17	            ])
-	18	        )
-	19	        .pipe(gulp.dest("dist"));
-	20	    done();
-	21	}
-	22	);
-	23	build.rig.addPreBuildTask(tailwindcss);
-	24	  
-	25	Finally add in core of spfx typescript import "../../../dist/tailwind.css" and setup button:
 </details>
 
 
@@ -141,3 +115,14 @@ now you can: ```import "@webparts/welcomeMessage/components/"``` or ```import "@
 - ```pnpm exec spfx-fast-serve```
 
 now, you can: ```pnpm exec fast-serve``` or ```fast-serve``` (npm)
+...but we are going to use ```pnpm run dev``` which will run that + our tailwind watcher
+- ```pnpm add -D concurrently```
+
+package.json — add into scripts {...}
+```
+    "tailwind:build": "tailwindcss -i ./src/styles/tailwind.css -o ./dist/tailwind.css --minify",
+    "tailwind:watch": "tailwindcss -i ./src/styles/tailwind.css -o ./dist/tailwind.css --watch",
+    "dev": "concurrently \"pnpm exec tailwind:watch\" \"pnpm exec fast-serve\""
+```
+now you can ```pnpm run tailwind:watch``` in one tab, ```pnpm exec fast-serve``` in another
+or (equivalent): ```pnpm run dev```
