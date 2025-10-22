@@ -17,7 +17,7 @@ export default class WelcomeMessage extends React.Component<IWelcomeMessageProps
 		return (
 			<section className={`${styles.welcomeMessage} ${hasTeamsContext ? styles.teams : ''}`}>
 				<div className={styles.welcome}>
-					<div className="text-blue-900 lowercase text-2xl bg-red-900"> norway</div>
+					<div className="text-orange-900 lowercase text-2xl bg-red-900"> norway</div>
 					<h2>Welcome to the Public Defender Resource Center, {escape(userDisplayName)}!</h2>
 				</div>
 				<WelcomeSearch />

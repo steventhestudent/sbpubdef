@@ -1,6 +1,7 @@
 onlyBuiltDependencies:
   - '@tailwindcss/oxide'
   - core-js
+  - core-js-pure
   - es5-ext
   - fsevents
   - spawn-sync
