@@ -13,7 +13,8 @@
     "serve": "fast-serve",
     "tailwind:build": "pnpm npx @tailwindcss/cli -i ./src/styles/tailwind.css -o ./dist/tailwind.css --minify",
     "tailwind:watch": "pnpm npx @tailwindcss/cli -i ./src/styles/tailwind.css -o ./dist/tailwind.css --watch",
-    "dev": "concurrently \"pnpm run tailwind:watch\" \"pnpm exec fast-serve\""
+    "dev": "concurrently \"pnpm run tailwind:watch\" \"pnpm exec fast-serve\"",
+    "make": "pnpm npx gulp bundle --ship && pnpm npx gulp package-solution --ship"
   },
   "dependencies": {
     "@fluentui/react": "^8.106.4",

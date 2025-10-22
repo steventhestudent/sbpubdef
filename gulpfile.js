@@ -29,6 +29,19 @@ build.configureWebpack.mergeConfig({
     },
 });
 
+// keep dist on gulp clean
+const { resolve } = path;
+build.configureWebpack.mergeConfig({
+    additionalConfiguration: (generatedConfig) => {
+        generatedConfig.resolve.alias = {
+            ...(generatedConfig.resolve.alias || {}),
+            '@dist': resolve(__dirname, 'dist'),
+        };
+        return generatedConfig;
+    },
+});
+
+
 /* fast-serve */
 const { addFastServe } = require("spfx-fast-serve-helpers");
 addFastServe(build);

@@ -1,26 +1,30 @@
 import * as React from 'react';
-// import styles from './MostCommonForms.module.scss';
 import type { IMostCommonFormsProps } from './IMostCommonFormsProps';
-// import { escape } from '@microsoft/sp-lodash-subset';
 
 export default class MostCommonForms extends React.Component<IMostCommonFormsProps> {
 	public render(): React.ReactElement<IMostCommonFormsProps> {
-		// const {
-			// description,
-			// isDarkTheme,
-			// environmentMessage,
-			// hasTeamsContext,
-			// userDisplayName
-		// } = this.props;
+		const forms = [
+			{ label: 'Time Off Request', href: '#' },
+			{ label: 'Mileage Reimbursement', href: '#' },
+			{ label: 'County Employee Handbook', href: '#' }
+		];
 
 		return (
-			<section>
-				<h4>Most Common Forms:</h4>
-				<ul>
-					<li><a href="">Time Off Request</a></li>
-					<li><a href="">Mileage Reimbursement</a></li>
-					<li><a href="">County Employee Handbook</a></li>
-				</ul>
+			<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+				<header className="border-b border-slate-200 px-4 py-3">
+					<h4 className="text-base font-semibold text-slate-800">Most Common Forms</h4>
+				</header>
+				<div className="p-4">
+					<div className="grid gap-3 sm:grid-cols-2">
+						{forms.map((f, i) => (
+							<a key={i} href={f.href} className="group rounded-lg border border-slate-200 p-4 hover:border-blue-300 hover:bg-blue-50">
+								<p className="text-sm font-medium text-slate-800 group-hover:text-blue-800">{f.label}</p>
+								<p className="text-xs text-slate-500">Opens form</p>
+							</a>
+						))}
+					</div>
+					<p className="mt-3 text-xs text-slate-500"><em>Placeholder: Wire to form URLs or list items later.</em></p>
+				</div>
 			</section>
 		);
 	}

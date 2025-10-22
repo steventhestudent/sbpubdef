@@ -1,92 +1,79 @@
 import * as React from 'react';
-// import styles from './OfficeInformation.module.scss';
 import type { IOfficeInformationProps } from './IOfficeInformationProps';
-// import { escape } from '@microsoft/sp-lodash-subset';
 
 export default class OfficeInformation extends React.Component<IOfficeInformationProps> {
 	public render(): React.ReactElement<IOfficeInformationProps> {
-		// const {
-			// description,
-			// isDarkTheme,
-			// environmentMessage,
-			// hasTeamsContext,
-			// userDisplayName
-		// } = this.props;
+		const offices = [
+			{
+				name: 'Santa Barbara Office Courthouse',
+				lines: ['1100 Anacapa Street', 'Santa Barbara, CA 93101'],
+				phone: '(805) 568-3470',
+				fax: '(805) 568-3536'
+			},
+			{
+				name: 'Santa Maria Office',
+				lines: ['312-P East Cook Street', 'Santa Maria, CA 93454'],
+				phone: '(805) 346-7500',
+				fax: '(805) 614-6735'
+			},
+			{
+				name: 'Santa Maria Juvenile Office',
+				lines: ['4285 California Blvd., Suite C', 'Santa Maria, CA 93455'],
+				phone: '(805) 934-6944',
+				fax: '(805) 934-6945'
+			},
+			{
+				name: 'Lompoc Office',
+				lines: ['115 Civic Center Plaza', 'Lompoc, CA 93436'],
+				phone: '(805) 737-7770',
+				fax: '(805) 737-7881'
+			}
+		];
 
-		const offices = `
-            Office Locations
-        Santa Barbara Office Courthouse
-        1100 Anacapa Street
-        Santa Barbara, CA 93101
-        Phone:  (805) 568-3470
-        Fax:  (805) 568-3536
-
-        (805) 568-3564
-
-
-
-        Santa Maria Office
-        312-P East Cook Street
-        Santa Maria, CA   93454
-        Phone:  (805) 346-7500
-        Fax:  (805) 614-6735
-
-
-
-        Santa Maria Juvenile Office
-        Juvenile Court Facility
-        4285 California Blvd., Suite C
-        Santa Maria, CA  93455
-        Phone:  (805) 934-6944
-        Fax:  (805) 934-6945
-
-
-
-        Lompoc Office
-        115 Civic Center Plaza
-        Lompoc, CA    93436
-        Phone:  (805) 737-7770
-        Fax:  (805) 737-7881
-    `;
 		return (
-			<section>
-				<ul>
-					<li>
-						<a href="https://countyofsb.sharepoint.com/:x:/r/sites/PD-Internal/_layouts/15/Doc.aspx?sourcedoc=%7BBD6AA71E-FBCE-4515-ACF0-34B36E1B08F2%7D&file=Department-Phone-List_Last-Updated_05-09-2024.xlsx&action=default&mobileredirect=true">
-							Contact List
-						</a>
-					</li>
-					<li>
-						<a href="https://countyofsb.sharepoint.com/sites/PD-Internal/SiteAssets/Forms/AllItems.aspx?id=%2Fsites%2FPD%2DInternal%2FSiteAssets%2FSitePages%2FHome%2FAtty%5FLOP%5FCDD%2DStaffing%5FUpdated%5F3%5F10%5F25%2Epdf&parent=%2Fsites%2FPD%2DInternal%2FSiteAssets%2FSitePages%2FHome">
-							Organizational Chart
-						</a>
-					</li>
-					<li>
-						<a href="https://countyofsb.sharepoint.com/sites/PD-Internal/SiteAssets/Forms/AllItems.aspx?id=%2Fsites%2FPD%2DInternal%2FSiteAssets%2FSitePages%2FHome%2FInvestigator%2DIn%2DPerson%2DSchedule%2Epdf&parent=%2Fsites%2FPD%2DInternal%2FSiteAssets%2FSitePages%2FHome">
-							Investigator-In-Person-Schedule
-						</a>
-					</li>
-					<li>
-						<a href="https://countyofsb.sharepoint.com/sites/IT-Connect/SitePages/How-to-Report-a-Suspicious-Email.aspx">
-							How to report a suspicious Email
-						</a>
-					</li>
-				</ul>
+			<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+				<header className="border-b border-slate-200 px-4 py-3">
+					<h4 className="text-base font-semibold text-slate-800">Office Information</h4>
+				</header>
 
-				<textarea wrap="yes" style={{width: 333, height: 200}}>{offices}</textarea>
+				<div className="grid gap-4 p-4 sm:grid-cols-2">
+					{offices.map((o, i) => (
+						<div key={i} className="rounded-lg border border-slate-200 p-4">
+							<h5 className="text-sm font-semibold text-slate-800">{o.name}</h5>
+							<p className="mt-1 text-sm text-slate-700">{o.lines[0]}<br />{o.lines[1]}</p>
+							<p className="mt-1 text-sm"><span className="text-slate-500">Phone:</span> {o.phone}</p>
+							<p className="text-sm"><span className="text-slate-500">Fax:</span> {o.fax}</p>
+						</div>
+					))}
+				</div>
 
-				<ul>
-					Other County Agencies
-					<li>
-						<a href="https://da.countyofsb.org/">DA</a>
-					</li>
-					<li>
-						<a href="https://www.sbsheriff.org/home/who-is-in-custody/">SBCO Jail Inmate Info</a>
-					</li>
-					<li>
-						<a href="https://www.countyofsb.org/389/Probation">Probation</a>
-					</li>
-				</ul>
+				<div className="border-t border-slate-200 px-4 py-3">
+					<ul className="flex flex-wrap gap-4 text-sm">
+						<li>
+							<a className="text-blue-700 hover:underline" href="https://countyofsb.sharepoint.com/:x:/r/sites/PD-Internal/_layouts/15/Doc.aspx?sourcedoc=%7BBD6AA71E-FBCE-4515-ACF0-34B36E1B08F2%7D&file=Department-Phone-List_Last-Updated_05-09-2024.xlsx&action=default&mobileredirect=true">Contact List</a>
+						</li>
+						<li>
+							<a className="text-blue-700 hover:underline" href="https://countyofsb.sharepoint.com/sites/PD-Internal/SiteAssets/Forms/AllItems.aspx?id=%2Fsites%2FPD%2DInternal%2FSiteAssets%2FSitePages%2FHome%2FAtty%5FLOP%5FCDD%2DStaffing%5FUpdated%5F3%5F10%5F25%2Epdf&parent=%2Fsites%2FPD%2DInternal%2FSiteAssets%2FSitePages%2FHome">Organizational Chart</a>
+						</li>
+						<li>
+							<a className="text-blue-700 hover:underline" href="https://countyofsb.sharepoint.com/sites/PD-Internal/SiteAssets/Forms/AllItems.aspx?id=%2Fsites%2FPD%2DInternal%2FSiteAssets%2FSitePages%2FHome%2FInvestigator%2DIn%2DPerson%2DSchedule%2Epdf&parent=%2Fsites%2FPD%2DInternal%2FSiteAssets%2FSitePages%2FHome">Investigator In-Person Schedule</a>
+						</li>
+						<li>
+							<a className="text-blue-700 hover:underline" href="https://countyofsb.sharepoint.com/sites/IT-Connect/SitePages/How-to-Report-a-Suspicious-Email.aspx">Report Suspicious Email</a>
+						</li>
+					</ul>
+				</div>
+
+				<div className="border-t border-slate-200 px-4 py-3">
+					<h5 className="mb-1 text-sm font-semibold text-slate-800">Other County Agencies</h5>
+					<ul className="flex flex-wrap gap-4 text-sm">
+						<li><a className="text-blue-700 hover:underline" href="https://da.countyofsb.org/">DA</a></li>
+						<li><a className="text-blue-700 hover:underline" href="https://www.sbsheriff.org/home/who-is-in-custody/">SBCO Jail Inmate Info</a></li>
+						<li><a className="text-blue-700 hover:underline" href="https://www.countyofsb.org/389/Probation">Probation</a></li>
+					</ul>
+				</div>
+
+				<p className="px-4 pb-4 text-xs text-slate-500"><em>Placeholder: Static office cards now; replace with CMS content later.</em></p>
 			</section>
 		);
 	}

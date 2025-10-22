@@ -1,23 +1,37 @@
 import * as React from 'react';
-// import styles from './StaffDirectory.module.scss';
 import type { IStaffDirectoryProps } from './IStaffDirectoryProps';
-// import { escape } from '@microsoft/sp-lodash-subset';
 
 export default class StaffDirectory extends React.Component<IStaffDirectoryProps> {
 	public render(): React.ReactElement<IStaffDirectoryProps> {
-		// const {
-			// description,
-			// isDarkTheme,
-			// environmentMessage,
-			// hasTeamsContext,
-			// userDisplayName
-		// } = this.props;
-
 		return (
-			<section>
-				<h4>StaffDirectory</h4>
-				<div style={{textAlign: "center"}}><input type="search" /></div>
-				Results...
+			<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+				<header className="border-b border-slate-200 px-4 py-3">
+					<h4 className="text-base font-semibold text-slate-800">Staff Directory</h4>
+				</header>
+
+				<div className="p-4">
+					<form role="search" className="mx-auto max-w-lg">
+						<label className="block text-sm font-medium text-slate-700" htmlFor="staff-search">Search staff</label>
+						<input id="staff-search" type="search" placeholder="Name, role, office…" className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" />
+					</form>
+
+					<ul className="mt-4 divide-y divide-slate-200">
+						{[1,2,3].map(i => (
+							<li key={i} className="flex items-center justify-between px-1 py-3">
+								<div className="flex items-center gap-3">
+									<span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-700">AB</span>
+									<div>
+										<p className="text-sm font-medium text-slate-800">Alex Barrister</p>
+										<p className="text-xs text-slate-600">Attorney • Santa Barbara</p>
+									</div>
+								</div>
+								<a href="#" className="text-sm text-blue-700 hover:underline">Details</a>
+							</li>
+						))}
+					</ul>
+
+					<p className="mt-3 text-xs text-slate-500"><em>Placeholder: Will search a staff directory source.</em></p>
+				</div>
 			</section>
 		);
 	}

@@ -1,6 +1,6 @@
 # sharepoint spfx pnpm (macos)
 
-node 22 lts
+Node 22 LTS (spfx 1.21.1 tailwind 4.1.15 spfx-fast-serve 4.0.2)
 
 ### install deps to scaffold:
 
@@ -52,11 +52,10 @@ add to package.json "scripts":
 const tailwindPlugin = require('@tailwindcss/postcss');
 const autoprefixer = require('autoprefixer');
 
-module.exports = {
+export default {
     plugins: {
-        '@tailwindcss/postcss': tailwindPlugin(),
-        autoprefixer: autoprefixer(),
-    },
+        '@tailwindcss/postcss': {}
+    }
 };
 now you can import tailwind.css in your .tsx (test w/ className="text-red-900", etc.)
 ```
@@ -107,7 +106,7 @@ module.exports = {
 };
 ```
 
-now you can: ```import "@webparts/welcomeMessage/components/"``` or ```import "@dist/tailwind.css"```
+now you can: ```import "@webparts/welcomeMessage/components/"```, ```import "@dist/tailwind.css"```, etc.
 
 # fast-serve (hot reload)
 - ```pnpm add spfx-fast-serve```
@@ -126,3 +125,20 @@ package.json — add into scripts {...}
 ```
 now you can ```pnpm run tailwind:watch``` in one tab, ```pnpm exec fast-serve``` in another
 or (equivalent): ```pnpm run dev```
+
+
+# 
+add to gulpfile (keep dist on gulp clean):
+```
+// keep dist on gulp clean
+const { resolve } = path;
+build.configureWebpack.mergeConfig({
+    additionalConfiguration: (generatedConfig) => {
+        generatedConfig.resolve.alias = {
+            ...(generatedConfig.resolve.alias || {}),
+            '@dist': resolve(__dirname, 'dist'),
+        };
+        return generatedConfig;
+    },
+});
+```

@@ -19,21 +19,24 @@
 4. `pnpm npx gulp trust-dev-cert`
 5. **optionally:** scraped forms / resource folder (private repo, so that this one can stay public): `git clone git@github.com:steventhestudent/sbpubdef-resources.git resource` ask for an invite
 
-now live reload server works:
+#### now hot reload + tailwind (gulp) server works:
+```pnpm run dev```
 
-`pnpm npx gulp serve` (webparts) or ```gulp serve --config landingRedirectExt``` etc. 
+~~`pnpm npx gulp serve` (webparts) or ```gulp serve --config landingRedirectExt``` etc.~~
+
+#### upload to app catalog
+```pnpm run make``` (.sppkg can be found in sharepoint/ dir)
+
+**Production release + install as sharepoint app**
+
+see [README](https://github.com/steventhestudent/sbpubdef-legacy.git) (sbpubdef-legacy) for detailed instructions
+
 
 &nbsp;
 
 **dev environment details:** `spfx sharepoint pnpm macos.md`
 
 **using npm:** just run `npm install`... also run w/o leading 'pnpm npx' (i.e.: instead of `pnpm npx gulp trust-dev-cert`, you will run `gulp trust-dev-cert`)
-
-&nbsp;
-
-## Production release + install as sharepoint app
-
-see README @ steventhestudent/sbpubdef-legacy for detailed instructions
 
 &nbsp;
 
