@@ -43,15 +43,18 @@ add to package.json "scripts":
 
 # Tailwind (with SPFx)
 - pnpm add tailwindcss @tailwindcss/postcss postcss gulp-postcss
+- pnpm add -D autoprefixer@10
 - pnpm approve-builds
 - files to add/modify: postcss.config.js + gulpfilejs + src/styles/tailwind.css (@import "tailwindcss";)
   - postcss.config.js:
 ```
-export default {
+const tailwindPlugin = require('@tailwindcss/postcss');
+const autoprefixer = require('autoprefixer');
+
+module.exports = {
     plugins: {
-        // '@tailwindcss/postcss': {},
-        tailwindcss: {},
-        autoprefixer: {},
+        '@tailwindcss/postcss': tailwindPlugin(),
+        autoprefixer: autoprefixer(),
     },
 };
 now you can import tailwind.css in your .tsx (test w/ className="text-red-900", etc.)
@@ -118,5 +121,23 @@ build.configureWebpack.mergeConfig({
     },
 });
 ```
+#### tailwind.config.js
+```
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: ['./src/**/*.{ts,tsx,scss,html}'],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+};
+```
 
 now you can: ```import "@webparts/welcomeMessage/components/"``` or ```import "@dist/tailwind.css"```
+
+# fast-serve (hot reload)
+- ```pnpm add spfx-fast-serve```
+- ```pnpm add spfx-fast-serve-helpers --save-dev```
+- ```pnpm exec spfx-fast-serve```
+
+now, you can: ```pnpm exec fast-serve``` or ```fast-serve``` (npm)
