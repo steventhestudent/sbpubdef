@@ -2,9 +2,10 @@
 
 ### docs/
 
--   [sbpubdef todo.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/sbpubdef%20todo.md)
--   [laptop notes.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/laptop%20notes.md)
 -   [making the project - pnpm spfx macos.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/making%20the%20project%20-%20pnpm%20spfx%20macos.md)
+-   [laptop notes.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/laptop%20notes.md)
+-   [sbpubdef todo.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/sbpubdef%20todo.md)
+-   [flow — Add Embed Page (List Item) - New Page-Embed.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/flow%20%E2%80%94%20Add%20Embed%20Page%20(List%20item)%20-%20New%20Page-Embed.md)
     &nbsp;
 
 ## Install
