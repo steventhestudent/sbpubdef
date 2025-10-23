@@ -171,3 +171,18 @@ b262bfd2-effd-4d28-9850-5e13beaebddb
 </s>
 
 can ignore this (no groups were missing on countyofsb.sharepoint.com)
+
+
+```
+// my new sharepoint user's groups:
+// "37ebab93-fa36-4dea-8cf8-0e622f942a22", // "All Company" (Azure AD group objectId)
+// "65cd4ea4-6038-4bc0-b568-9576bacc0d80" // "steventhestudent"
+//
+// pubdefextern08's groups:
+// PUBDEF NetMotion Access - Users,  SBC SG M365 Users,  SBC SG M365 Pilot Testing,
+// PUBDEF LOGIN SETTINGS,  PDExtern,  Public Defender,  PUBDEF VPN Remote Access,
+// SBC-M365-Teams Playground,  PUBDEF SG M365 Users,  SBC Everyone,  SBC SG All Users,
+// SBC SG M365 SSPR,  SBC SG M365 OWA Access,  SBC NetMotion Access - Users,
+// SBC SG M365 Conditional Access Migration,  Public Defender-Santa Barbara,
+// PUBDEF SG M365 SSPR,  PUBDEF SG M365 OWA Access,  SBC APP M365 Teams User Deployment
+```

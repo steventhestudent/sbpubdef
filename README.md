@@ -32,14 +32,15 @@
 ```pnpm run make``` (.sppkg can be found in sharepoint/ dir)
 
 **troubleshoot**: retry after
-```pnpm npx gulp clean```
-```pnpm run build```
+~~```pnpm npx gulp clean```~~
+~~```pnpm run build```~~
 ```pnpm run tailwind:build```
 
 **Production release + install as sharepoint app**
 
 see [README](https://github.com/steventhestudent/sbpubdef-legacy.git) (sbpubdef-legacy) for detailed instructions
 
+- extensions: ensure they exist in ClientSideInstance.xml (define prod props here), elements.xml, ... you only put props in extension's .manifest.js for defaults used only if no instance props are supplied at deploy time.
 
 &nbsp;
 

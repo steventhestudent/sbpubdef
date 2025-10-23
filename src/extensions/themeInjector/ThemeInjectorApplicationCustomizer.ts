@@ -4,8 +4,9 @@ import * as strings from 'ThemeInjectorApplicationCustomizerStrings';
 import "@dist/tailwind.css"; // comment out in production?
 
 export default class ThemeInjectorApplicationCustomizer extends BaseApplicationCustomizer<{}> {
-  public onInit(): Promise<void> {
+  public async onInit(): Promise<void> {
     Log.info('ThemeInjectorApplicationCustomizer', `Initialized ${strings.Title}`);
+    console.log(`themeInjector.properties:`, this.properties);
 
     // inject <style> (ensure these tailwind classes exist)
     const text = document.createTextNode(`

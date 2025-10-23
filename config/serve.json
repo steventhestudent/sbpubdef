@@ -40,9 +40,7 @@
       "customActions": {
         "3428f2ca-3584-4a31-aab2-c02d8cf38951": {
           "location": "ClientSideExtension.ApplicationCustomizer",
-          "properties": {
-            "testMessage": "Test message"
-          }
+          "properties": {}
         }
       }
     }

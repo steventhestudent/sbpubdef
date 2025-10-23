@@ -10,6 +10,14 @@
         }
       ]
     },
+    "theme-injector-application-customizer": {
+      "components": [
+        {
+          "entrypoint": "./lib/extensions/themeInjector/ThemeInjectorApplicationCustomizer.js",
+          "manifest": "./src/extensions/themeInjector/ThemeInjectorApplicationCustomizer.manifest.json"
+        }
+      ]
+    },
     "welcome-message-web-part": {
       "components": [
         {
@@ -103,14 +111,6 @@
         {
           "entrypoint": "./lib/webparts/portalAssignments/PortalAssignmentsWebPart.js",
           "manifest": "./src/webparts/portalAssignments/PortalAssignmentsWebPart.manifest.json"
-        }
-      ]
-    },
-    "theme-injector-application-customizer": {
-      "components": [
-        {
-          "entrypoint": "./lib/extensions/themeInjector/ThemeInjectorApplicationCustomizer.js",
-          "manifest": "./src/extensions/themeInjector/ThemeInjectorApplicationCustomizer.manifest.json"
         }
       ]
     }
