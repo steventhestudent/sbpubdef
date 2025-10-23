@@ -105,6 +105,14 @@
           "manifest": "./src/webparts/portalAssignments/PortalAssignmentsWebPart.manifest.json"
         }
       ]
+    },
+    "theme-injector-application-customizer": {
+      "components": [
+        {
+          "entrypoint": "./lib/extensions/themeInjector/ThemeInjectorApplicationCustomizer.js",
+          "manifest": "./src/extensions/themeInjector/ThemeInjectorApplicationCustomizer.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},
@@ -121,6 +129,7 @@
     "StaffDirectoryWebPartStrings": "lib/webparts/staffDirectory/loc/{locale}.js",
     "PortalCalendarWebPartStrings": "lib/webparts/portalCalendar/loc/{locale}.js",
     "PortalBlogPostAnnouncementWebPartStrings": "lib/webparts/portalBlogPostAnnouncement/loc/{locale}.js",
-    "PortalAssignmentsWebPartStrings": "lib/webparts/portalAssignments/loc/{locale}.js"
+    "PortalAssignmentsWebPartStrings": "lib/webparts/portalAssignments/loc/{locale}.js",
+    "ThemeInjectorApplicationCustomizerStrings": "lib/extensions/themeInjector/loc/{locale}.js"
   }
 }

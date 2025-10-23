@@ -6,7 +6,6 @@
     "default": {
       "pageUrl": "https://csproject25.sharepoint.com/_layouts/workbench.aspx"
     },
-
     "landingRedirectExt": {
       "pageUrl": "https://csproject25.sharepoint.com/sites/PD-Internal",
       "customActions": {
@@ -16,8 +15,7 @@
             "defaultURL": "/sites/PD-Internal",
             "redirectRules": [
               {
-                "groups": [
-                ],
+                "groups": [],
                 "URL": "/sites/PD-Internal"
               },
               {
@@ -33,6 +31,17 @@
                 "URL": "/sites/HR"
               }
             ]
+          }
+        }
+      }
+    },
+    "themeInjector": {
+      "pageUrl": "https://csproject25.sharepoint.com/sites/Attorney",
+      "customActions": {
+        "3428f2ca-3584-4a31-aab2-c02d8cf38951": {
+          "location": "ClientSideExtension.ApplicationCustomizer",
+          "properties": {
+            "testMessage": "Test message"
           }
         }
       }

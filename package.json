@@ -14,6 +14,7 @@
     "tailwind:build": "pnpm npx @tailwindcss/cli -i ./src/styles/tailwind.css -o ./dist/tailwind.css --minify",
     "tailwind:watch": "pnpm npx @tailwindcss/cli -i ./src/styles/tailwind.css -o ./dist/tailwind.css --watch",
     "dev": "concurrently \"pnpm run tailwind:watch\" \"pnpm exec fast-serve\"",
+    "theme": "concurrently \"pnpm run tailwind:watch\" \"pnpm exec fast-serve --config=themeInjector\"",
     "make": "pnpm npx gulp bundle --ship && pnpm npx gulp package-solution --ship"
   },
   "dependencies": {

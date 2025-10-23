@@ -1,7 +1,8 @@
-{
+const serveConfig = {
     "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json",
     "port": 4321,
     "https": true,
+    "hostname": "0.0.0.0", // LAN access (192.168.0.x)
     //"initialPage": "https://csproject25.sharepoint.com/_layouts/workbench.aspx",
     "serveConfigurations": {
         "default": {
@@ -49,6 +50,18 @@
                     }
                 }
             }
+        },
+        "themeInjector": {
+            "pageUrl": "https://{tenantDomain}/SitePages/myPage.aspx",
+            "customActions": {
+                "3428f2ca-3584-4a31-aab2-c02d8cf38951": {
+                    "location": "ClientSideExtension.ApplicationCustomizer",
+                    "properties": {
+                        "testMessage": "Test message"
+                    }
+                }
+            }
         }
     }
 }
+serveConfig.neverUsed = false; // fix err: serveConfig never used

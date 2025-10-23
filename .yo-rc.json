@@ -13,6 +13,7 @@
     "solutionShortDescription": "sbpubdef-sol description",
     "skipFeatureDeployment": true,
     "isDomainIsolated": false,
-    "componentType": "webpart"
+    "componentType": "extension",
+    "extensionType": "ApplicationCustomizer"
   }
 }

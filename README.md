@@ -21,9 +21,10 @@
 5. **optionally:** scraped forms / resource folder (private repo, so that this one can stay public): `git clone git@github.com:steventhestudent/sbpubdef-resources.git resource` ask for an invite
 
 #### now, hot reload + tailwind (gulp) server works:
-```pnpm run dev```
 
-~~`pnpm npx gulp serve` (webparts) or ```gulp serve --config landingRedirectExt``` etc.~~
+**webpart workbench:** ```pnpm run dev```
+
+**extension:** ```pnpm npx fast-serve --config=themeInjector```~~`pnpm npx gulp serve` (webparts) or ```gulp serve --config landingRedirectExt``` etc.~~
 
 &nbsp;
 
