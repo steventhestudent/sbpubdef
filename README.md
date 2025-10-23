@@ -20,13 +20,20 @@
 4. `pnpm npx gulp trust-dev-cert`
 5. **optionally:** scraped forms / resource folder (private repo, so that this one can stay public): `git clone git@github.com:steventhestudent/sbpubdef-resources.git resource` ask for an invite
 
-#### now hot reload + tailwind (gulp) server works:
+#### now, hot reload + tailwind (gulp) server works:
 ```pnpm run dev```
 
 ~~`pnpm npx gulp serve` (webparts) or ```gulp serve --config landingRedirectExt``` etc.~~
 
-#### upload to app catalog
+&nbsp;
+
+#### Upload to AppCatalog
 ```pnpm run make``` (.sppkg can be found in sharepoint/ dir)
+
+**troubleshoot**: retry after
+```pnpm npx gulp clean```
+```pnpm run build```
+```pnpm run tailwind:build```
 
 **Production release + install as sharepoint app**
 
@@ -35,10 +42,14 @@ see [README](https://github.com/steventhestudent/sbpubdef-legacy.git) (sbpubdef-
 
 &nbsp;
 
-**dev environment details:** `spfx sharepoint pnpm macos.md`
+**Dev Environment (Details):** `making the project - pnpm spfx macos.md`
 
-**using npm:** just run `npm install`... also run w/o leading 'pnpm npx' (i.e.: instead of `pnpm npx gulp trust-dev-cert`, you will run `gulp trust-dev-cert`)
+&nbsp;
 
+### **Using NPM:** just run `npm install`... also run w/o leading 'pnpm npx' (i.e.: instead of `pnpm npx gulp trust-dev-cert`, you will run `gulp trust-dev-cert`)
+**Note:** you will have to change Package.json scripts to use npm-style (i.e.: drop the '```pnpm npx```')
+
+then ```npm run dev``` works.
 &nbsp;
 
 &nbsp;

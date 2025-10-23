@@ -7,6 +7,12 @@ export default class UpcomingEvents extends React.Component<IUpcomingEventsProps
 			{ date: 'Nov 5', time: '12:00 PM', title: 'CLE: Recent Case Law', where: 'Teams' },
 			{ date: 'Nov 12', time: '9:00 AM', title: 'Investigator Workshop', where: 'Santa Maria' },
 			{ date: 'Nov 20', time: '3:00 PM', title: 'Office Hours: IT', where: 'SB Courthouse' },
+			{ date: 'Nov 5', time: '12:00 PM', title: 'CLE: Recent Case Law', where: 'Teams' },
+			{ date: 'Nov 12', time: '9:00 AM', title: 'Investigator Workshop', where: 'Santa Maria' },
+			{ date: 'Nov 20', time: '3:00 PM', title: 'Office Hours: IT', where: 'SB Courthouse' },
+			{ date: 'Nov 5', time: '12:00 PM', title: 'CLE: Recent Case Law', where: 'Teams' },
+			{ date: 'Nov 12', time: '9:00 AM', title: 'Investigator Workshop', where: 'Santa Maria' },
+			{ date: 'Nov 20', time: '3:00 PM', title: 'Office Hours: IT', where: 'SB Courthouse' },
 		];
 		return (
 			<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
