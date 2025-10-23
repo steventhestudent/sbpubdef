@@ -43,10 +43,9 @@ see [README](https://github.com/steventhestudent/sbpubdef-legacy.git) (sbpubdef-
 
 &nbsp;
 
-## ¿ Laptop rotation ?
+## Laptop rotation
 
-services i am logged in:
-
+Logged in on:
 -   git cli &nbsp; &nbsp;-so you will have to `git config --local user.name "x" && git config --local user.email "x@x.com"`
 -   browser:
     -   github

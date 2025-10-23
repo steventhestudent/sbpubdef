@@ -24,6 +24,9 @@ build.configureWebpack.mergeConfig({
             '@styles': path.resolve(__dirname, 'lib/styles'),
             '@webparts': path.resolve(__dirname, 'lib/webparts'),
             '@extensions': path.resolve(__dirname, 'lib/extensions'),
+            '@components': path.resolve(__dirname, 'lib/components'),
+            '@types': path.resolve(__dirname, 'lib/types'),
+            '@utils': path.resolve(__dirname, 'lib/utils'),
         };
         return generatedConfig;
     },

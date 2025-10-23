@@ -31,6 +31,9 @@
 			"@styles/*": ["src/styles/*"],
 			"@webparts/*": ["src/webparts/*"],
 			"@extensions/*": ["src/extensions/*"],
+			"@components/*": ["src/components/*"],
+			"@types/*": ["src/types/*"],
+			"@utils/*": ["src/utils/*"],
 		},
 	},
 	"include": ["src/**/*.ts", "src/**/*.tsx"]
