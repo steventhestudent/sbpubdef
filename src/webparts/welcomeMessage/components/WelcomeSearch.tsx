@@ -26,6 +26,5 @@ export const WelcomeSearch: () => JSX.Element = () => (
 			/>
 			<button className="rounded-r-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700" aria-label="Run search">↠</button>
 		</div>
-		<p className="mt-1 text-xs text-slate-500">Placeholder: routes to global search later.</p>
 	</form>
 );

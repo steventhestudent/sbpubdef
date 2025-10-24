@@ -17,6 +17,8 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
     document.body.appendChild(styles);
 
     document.querySelector(".CanvasComponent")!.children[0].classList.add("!max-w-full");
+    Array.from(document.querySelectorAll(".CanvasZoneSectionContainer")).forEach((el) => el.classList.add("!max-w-full"));
+    // document.querySelector("div[aria-label=\"DismissibleAnnouncementStrip\"]")?.querySelector("");
 
     return Promise.resolve();
   }
