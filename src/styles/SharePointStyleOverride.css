@@ -4,19 +4,22 @@
     max-width
 */
 .CanvasComponent > div:first-of-type, .CanvasZoneSectionContainer {max-width: 100% !important;}
+.CanvasZone {padding: 0 !important;}
+.CanvasZoneSectionContainer .CanvasSection {padding: 0 !important;}
+.CanvasSection .ControlZone {margin: 0 !important; padding: 0 !important;}
 
 
 /*
-    navbar
+    site navbar
 */
 /* add opaque bg to navbar links */
 #spSiteHeader .ms-FocusZone:last-of-type, /* site header nav */
 #spSiteHeader #showOverlayText, /*  * Following & Site Access btn's */
 .od-TopBar-header .ms-FocusZone:last-of-type, /* site header nav (site contents) */
 .od-TopBar-header #showOverlayText /*  * Following & Site Access btn's (site contents) */
-{background-color: rgba(86, 103, 168, 0.5) !important; border-radius: 10px 10px 0px 0px !important;}
+    {background-color: rgba(86, 103, 168, 0.5) !important; border-radius: 10px 10px 0px 0px !important;}
 /* links text */
-#spSiteHeader .ms-HorizontalNavItem-linkText, .od-TopBar-header .ms-HorizontalNavItem-linkText {color: white !important; font-weight: bold !important; text-shadow: 1px 1px 0px black !important;}
+#spSiteHeader .ms-HorizontalNavItem-linkText, .od-TopBar-header .ms-HorizontalNavItem-linkText{color: white !important; font-weight: bold !important; text-shadow: 1px 1px 0px black !important;}
 #spSiteHeader .ms-HorizontalNavItem-linkText:hover, .od-TopBar-header .ms-HorizontalNavItem-linkText:hover {text-decoration: underline !important;}
 /* SharePoint buttons */
 #spSiteHeader #showOverlayText button:first-of-type, .od-TopBar-header #showOverlayText button:first-of-type {margin-left: 1em !important;} /*  * 1st btn margin */
@@ -30,6 +33,7 @@
 /* shyHeader */
 #SiteHeaderTitleMinimal {text-shadow: 0 0 10px black;}
 #SiteHeaderTitleMinimal:hover {text-decoration: underline !important;}
+
 
 /*
     footer
