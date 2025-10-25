@@ -1,0 +1,2 @@
+/* override sharepoint max-width */
+.CanvasComponent > div:first-of-type, .CanvasZoneSectionContainer {max-width: 100% !important;}
