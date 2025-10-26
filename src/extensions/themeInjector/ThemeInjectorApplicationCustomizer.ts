@@ -8,18 +8,38 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
     Log.info('ThemeInjectorApplicationCustomizer', `Initialized ${strings.Title}`);
     console.log(`themeInjector.properties:`, this.properties);
 
-    // // inject <style> (ensure these tailwind classes exist)
-    // const text = document.createTextNode(`
-    //   .\\!max-w-full {max-width: 100% !important;}
-    // `);
-    // const styles = document.createElement('style');
-    // styles.appendChild(text);
-    // document.body.appendChild(styles);
-    //
-    // document.querySelector(".CanvasComponent")!.children[0].classList.add("!max-w-full");
-    // Array.from(document.querySelectorAll(".CanvasZoneSectionContainer")).forEach((el) => el.classList.add("!max-w-full"));
-    // // document.querySelector("div[aria-label=\"DismissibleAnnouncementStrip\"]")?.querySelector("");
+    /*
+      DismissibleAnnouncementStrip
+    */
+    function DismissibleAnnouncementStrip(): HTMLDivElement {
+      const strip = document.createElement('div');
+      strip.id = 'DismissibleAnnouncementStrip';
+      strip.style.textAlign = "center";
+      strip.style.backgroundColor = "black";
+      strip.style.color = "white";
+      strip.style.padding = "4px";
+      strip.style.cursor = "pointer";
+      if (localStorage.getItem("ThemeInjector.DismissibleAnnouncementStripCollapsed")) strip.style.height = "5px";
+      strip.addEventListener('click', (event: MouseEvent) => {
+        // strip.style.position = "absolute";
+        // strip.style.left = "50%";
+        // strip.style.marginLeft = "-25px";
+        // strip.style.marginTop = "-25px";
+        // strip.style.width = "50px";
+        if (strip.style.height) localStorage.removeItem("ThemeInjector.DismissibleAnnouncementStripCollapsed"); else localStorage.setItem("ThemeInjector.DismissibleAnnouncementStripCollapsed", "true");
+        strip.style.height = strip.style.height ? "" : "5px";
+      });
+      strip.appendChild(document.createTextNode("Covid-19 message / wash your hands! The wifi password is: (Click me)"));
+      return strip;
+    }
+    const getCanvasComponent: () => HTMLElement | null = () => document.querySelector('.CanvasComponent');
+    const stripInsertion: () => void = () => getCanvasComponent()?.insertBefore(DismissibleAnnouncementStrip(), getCanvasComponent()!.children[0]);
+    (function pollInsert() {if (!getCanvasComponent()) setTimeout(pollInsert, 333); else setTimeout(stripInsertion, 0);})();
 
+
+    /*
+      Compact Mode
+    */
     function addCompactModeStylesheet(): void {
       const stylesheet = document.createElement('style');
       stylesheet.id = "themeInjector.CompactModeStylesheet";
