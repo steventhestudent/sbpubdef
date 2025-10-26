@@ -39,10 +39,10 @@ export default class OfficeInformation extends React.Component<IOfficeInformatio
 				<div className="grid gap-2 p-2 sm:grid-cols-2">
 					{offices.map((o, i) => (
 						<div key={i} className="rounded-lg border border-slate-200 p-2 overflow-x-auto scrollbar-thin">
-							<h5 className="text-xs font-semibold text-slate-800 text-nowrap">{o.name}</h5>
+							<h5 className="text-2xs font-semibold text-slate-800 text-nowrap">{o.name}</h5>
 							<p className="mt-1 text-xs text-slate-700 text-nowrap">{o.lines[0]}<br />{o.lines[1]}</p>
-							<p className="mt-1 text-xs"><span className="text-slate-500">Phone:</span> {o.phone}</p>
-							<p className="text-xs"><span className="text-slate-500">Fax:</span> {o.fax}</p>
+							<p className="mt-1 text-xs text-nowrap"><span className="text-slate-500">Phone:</span> {o.phone}</p>
+							<p className="text-xs text-nowrap"><span className="text-slate-500">Fax:</span> {o.fax}</p>
 						</div>
 					))}
 				</div>
