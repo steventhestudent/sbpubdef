@@ -6,8 +6,7 @@ import { WelcomeSearch } from './WelcomeSearch';
 
 export default class WelcomeMessage extends React.Component<IWelcomeMessageProps> {
 	public render(): React.ReactElement<IWelcomeMessageProps> {
-		let { hasTeamsContext, userDisplayName } = this.props;
-		hasTeamsContext = !hasTeamsContext;
+		const { userDisplayName } = this.props;
 		return (
 			<section>
 				<div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">

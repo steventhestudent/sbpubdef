@@ -20,7 +20,7 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
     // Array.from(document.querySelectorAll(".CanvasZoneSectionContainer")).forEach((el) => el.classList.add("!max-w-full"));
     // // document.querySelector("div[aria-label=\"DismissibleAnnouncementStrip\"]")?.querySelector("");
 
-    function MarginBtn() {
+    function MarginBtn() : HTMLButtonElement {
       const btn = document.createElement("button");
       btn.innerText = "⏹️";btn.style.fontSize = "18px";btn.style.cursor = "pointer";btn.title = "Toggle Webpart Margin / Padding (ThemeInjector.MarginBtn)";
       btn.addEventListener("click", () => {
@@ -36,8 +36,8 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
       });
       return btn;
     }
-    const getToolbar = () => document.querySelector(".fui-Toolbar .ms-OverflowSet:last-of-type, .fui-FluentProvider .ms-OverflowSet:last-of-type"); // add after ↙↗ 'Expand Content' btn. fui-FluentProvider = Site Contents view
-    const performInsert = () =>
+    const getToolbar: () => HTMLElement | null = () => document.querySelector(".fui-Toolbar .ms-OverflowSet:last-of-type, .fui-FluentProvider .ms-OverflowSet:last-of-type"); // add after ↙↗ 'Expand Content' btn. fui-FluentProvider = Site Contents view
+    const performInsert: () => number = () =>
       setTimeout(() => getToolbar()?.appendChild(MarginBtn()), 333);
     (function pollInsert() {
       if (!getToolbar()) setTimeout(pollInsert, 333); else setTimeout(performInsert, 333);
