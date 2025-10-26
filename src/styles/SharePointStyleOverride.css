@@ -4,9 +4,9 @@
     max-width
 */
 .CanvasComponent > div:first-of-type, .CanvasZoneSectionContainer {max-width: 100% !important;}
-.CanvasZone {padding: 0 !important;}
-.CanvasZoneSectionContainer .CanvasSection {padding: 0 !important;}
-.CanvasSection .ControlZone {margin: 0 !important; padding: 0 !important;}
+/*.CanvasZone {padding: 0 !important;}*/
+/*.CanvasZoneSectionContainer .CanvasSection {padding: 0 !important;}*/
+/*.CanvasSection .ControlZone {margin: 0 !important; padding: 0 !important;}*/
 
 
 /*

@@ -1,11 +1,7 @@
 import * as React from 'react';
-import { Label } from '@fluentui/react';
 
 export const WelcomeSearch: () => JSX.Element = () => (
 	<form role="search" className="mx-auto max-w-lg" onSubmit={(e) => e.preventDefault()}>
-		<Label className="!mb-1 block text-sm font-medium text-slate-700">
-			Search
-		</Label>
 		<div className="flex">
 			<input
 				role="combobox"

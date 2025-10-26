@@ -1,7 +1,8 @@
-/*@import 'tailwindcss/preflight';*/
+/*@import 'tailwindcss/preflight';*/ /* <--- overrides a lot of padding/margin so we don't use it (import order/timing?) */
 @import "tailwindcss";
 @import 'tailwindcss/utilities';
 
+/* tailwind 3 imports */
 /*@tailwind base;*/
 /*@tailwind components;*/
 /*@tailwind utilities;*/

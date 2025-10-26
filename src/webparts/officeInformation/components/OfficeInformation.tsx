@@ -36,13 +36,13 @@ export default class OfficeInformation extends React.Component<IOfficeInformatio
 					<h4 className="text-base font-semibold text-slate-800">Office Information</h4>
 				</header>
 
-				<div className="grid gap-4 p-4 sm:grid-cols-2">
+				<div className="grid gap-2 p-2 sm:grid-cols-2">
 					{offices.map((o, i) => (
-						<div key={i} className="rounded-lg border border-slate-200 p-4">
-							<h5 className="text-sm font-semibold text-slate-800">{o.name}</h5>
-							<p className="mt-1 text-sm text-slate-700">{o.lines[0]}<br />{o.lines[1]}</p>
-							<p className="mt-1 text-sm"><span className="text-slate-500">Phone:</span> {o.phone}</p>
-							<p className="text-sm"><span className="text-slate-500">Fax:</span> {o.fax}</p>
+						<div key={i} className="rounded-lg border border-slate-200 p-2 overflow-x-auto scrollbar-thin">
+							<h5 className="text-xs font-semibold text-slate-800 text-nowrap">{o.name}</h5>
+							<p className="mt-1 text-xs text-slate-700 text-nowrap">{o.lines[0]}<br />{o.lines[1]}</p>
+							<p className="mt-1 text-xs"><span className="text-slate-500">Phone:</span> {o.phone}</p>
+							<p className="text-xs"><span className="text-slate-500">Fax:</span> {o.fax}</p>
 						</div>
 					))}
 				</div>
@@ -72,8 +72,6 @@ export default class OfficeInformation extends React.Component<IOfficeInformatio
 						<li><a className="text-blue-700 hover:underline" href="https://www.countyofsb.org/389/Probation">Probation</a></li>
 					</ul>
 				</div>
-
-				<p className="px-4 pb-4 text-xs text-slate-500"><em>Placeholder: Static office cards now; replace with CMS content later.</em></p>
 			</section>
 		);
 	}
