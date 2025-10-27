@@ -1,48 +1,48 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json",
-  "port": 4321,
-  "https": true,
-  "serveConfigurations": {
-    "default": {
-      "pageUrl": "https://csproject25.sharepoint.com/_layouts/workbench.aspx"
-    },
-    "landingRedirectExt": {
-      "pageUrl": "https://csproject25.sharepoint.com/sites/PD-Internal",
-      "customActions": {
-        "2196e02f-20bc-4d3c-a967-c4e98420d1bb": {
-          "location": "ClientSideExtension.ApplicationCustomizer",
-          "properties": {
-            "defaultURL": "/sites/PD-Internal",
-            "redirectRules": [
-              {
-                "groups": [],
-                "URL": "/sites/PD-Internal"
-              },
-              {
-                "groups": [
-                  "dce3904a-9ef8-45ea-9e00-c69a34b6f5c2"
-                ],
-                "URL": "/sites/Attorney"
-              },
-              {
-                "groups": [
-                  "d432c291-bad0-4da5-bbb5-08bb5251e19c"
-                ],
-                "URL": "/sites/HR"
-              }
-            ]
-          }
-        }
-      }
-    },
-    "themeInjector": {
-      "pageUrl": "https://csproject25.sharepoint.com/sites/PD-Intranet",
-      "customActions": {
-        "3428f2ca-3584-4a31-aab2-c02d8cf38951": {
-          "location": "ClientSideExtension.ApplicationCustomizer",
-          "properties": {}
-        }
-      }
-    }
-  }
+	"$schema": "https://developer.microsoft.com/json-schemas/spfx-build/spfx-serve.schema.json",
+	"port": 4321,
+	"https": true,
+	"serveConfigurations": {
+		"default": {
+			"pageUrl": "https://csproject25.sharepoint.com/_layouts/workbench.aspx"
+		},
+		"landingRedirectExt": {
+			"pageUrl": "https://csproject25.sharepoint.com/sites/PD-Internal",
+			"customActions": {
+				"2196e02f-20bc-4d3c-a967-c4e98420d1bb": {
+					"location": "ClientSideExtension.ApplicationCustomizer",
+					"properties": {
+						"defaultURL": "/sites/PD-Internal",
+						"redirectRules": [
+							{
+								"groups": [],
+								"URL": "/sites/PD-Internal"
+							},
+							{
+								"groups": [
+									"dce3904a-9ef8-45ea-9e00-c69a34b6f5c2"
+								],
+								"URL": "/sites/Attorney"
+							},
+							{
+								"groups": [
+									"d432c291-bad0-4da5-bbb5-08bb5251e19c"
+								],
+								"URL": "/sites/HR"
+							}
+						]
+					}
+				}
+			}
+		},
+		"themeInjector": {
+			"pageUrl": "https://csproject25.sharepoint.com/sites/PD-Intranet",
+			"customActions": {
+				"3428f2ca-3584-4a31-aab2-c02d8cf38951": {
+					"location": "ClientSideExtension.ApplicationCustomizer",
+					"properties": {}
+				}
+			}
+		}
+	}
 }

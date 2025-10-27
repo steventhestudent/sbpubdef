@@ -3,27 +3,27 @@
 */
 /* Always reserve space for the scrollbar */
 .scrollbar-thin {
-    scrollbar-width: thin; /* For Firefox */
-    scrollbar-color: transparent transparent;
+	scrollbar-width: thin; /* For Firefox */
+	scrollbar-color: transparent transparent;
 }
 .scrollbar-thin:hover {
-    scrollbar-color: silver white;
-    transition: scrollbar-color 0.666s;
+	scrollbar-color: silver white;
+	transition: scrollbar-color 0.666s;
 }
 
 /* Hide scrollbar in WebKit browsers */
 .scrollbar-thin::-webkit-scrollbar {
-    width: 4px; /* For Chrome, Safari, and Edge */
-    opacity: 0; /* Initially hide scrollbar */
-    transition: opacity 0.2s; /* Smooth transition */
+	width: 4px; /* For Chrome, Safari, and Edge */
+	opacity: 0; /* Initially hide scrollbar */
+	transition: opacity 0.2s; /* Smooth transition */
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.5); /* Color of the scrollbar */
-    border-radius: 10px; /* Rounded corners */
+	background-color: rgba(0, 0, 0, 0.5); /* Color of the scrollbar */
+	border-radius: 10px; /* Rounded corners */
 }
 
 /* Show scrollbar on hover */
 .scrollbar-thin:hover::-webkit-scrollbar {
-    opacity: 1; /* Show scrollbar on hover */
+	opacity: 1; /* Show scrollbar on hover */
 }

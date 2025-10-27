@@ -1,135 +1,135 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
-  "version": "2.0",
-  "bundles": {
-    "landing-redirect-ext-application-customizer": {
-      "components": [
-        {
-          "entrypoint": "./lib/extensions/landingRedirectExt/LandingRedirectExtApplicationCustomizer.js",
-          "manifest": "./src/extensions/landingRedirectExt/LandingRedirectExtApplicationCustomizer.manifest.json"
-        }
-      ]
-    },
-    "theme-injector-application-customizer": {
-      "components": [
-        {
-          "entrypoint": "./lib/extensions/themeInjector/ThemeInjectorApplicationCustomizer.js",
-          "manifest": "./src/extensions/themeInjector/ThemeInjectorApplicationCustomizer.manifest.json"
-        }
-      ]
-    },
-    "welcome-message-web-part": {
-      "components": [
-        {
-          "entrypoint": "./lib/webparts/welcomeMessage/WelcomeMessageWebPart.js",
-          "manifest": "./src/webparts/welcomeMessage/WelcomeMessageWebPart.manifest.json"
-        }
-      ]
-    },
-    "office-information-web-part": {
-      "components": [
-        {
-          "entrypoint": "./lib/webparts/officeInformation/OfficeInformationWebPart.js",
-          "manifest": "./src/webparts/officeInformation/OfficeInformationWebPart.manifest.json"
-        }
-      ]
-    },
-    "manuals-and-handbooks-web-part": {
-      "components": [
-        {
-          "entrypoint": "./lib/webparts/manualsAndHandbooks/ManualsAndHandbooksWebPart.js",
-          "manifest": "./src/webparts/manualsAndHandbooks/ManualsAndHandbooksWebPart.manifest.json"
-        }
-      ]
-    },
-    "most-common-forms-web-part": {
-      "components": [
-        {
-          "entrypoint": "./lib/webparts/mostCommonForms/MostCommonFormsWebPart.js",
-          "manifest": "./src/webparts/mostCommonForms/MostCommonFormsWebPart.manifest.json"
-        }
-      ]
-    },
-    "announcements-web-part": {
-      "components": [
-        {
-          "entrypoint": "./lib/webparts/announcements/AnnouncementsWebPart.js",
-          "manifest": "./src/webparts/announcements/AnnouncementsWebPart.manifest.json"
-        }
-      ]
-    },
-    "upcoming-events-web-part": {
-      "components": [
-        {
-          "entrypoint": "./lib/webparts/upcomingEvents/UpcomingEventsWebPart.js",
-          "manifest": "./src/webparts/upcomingEvents/UpcomingEventsWebPart.manifest.json"
-        }
-      ]
-    },
-    "attorney-assignments-web-part": {
-      "components": [
-        {
-          "entrypoint": "./lib/webparts/attorneyAssignments/AttorneyAssignmentsWebPart.js",
-          "manifest": "./src/webparts/attorneyAssignments/AttorneyAssignmentsWebPart.manifest.json"
-        }
-      ]
-    },
-    "expert-witness-directory-web-part": {
-      "components": [
-        {
-          "entrypoint": "./lib/webparts/expertWitnessDirectory/ExpertWitnessDirectoryWebPart.js",
-          "manifest": "./src/webparts/expertWitnessDirectory/ExpertWitnessDirectoryWebPart.manifest.json"
-        }
-      ]
-    },
-    "staff-directory-web-part": {
-      "components": [
-        {
-          "entrypoint": "./lib/webparts/staffDirectory/StaffDirectoryWebPart.js",
-          "manifest": "./src/webparts/staffDirectory/StaffDirectoryWebPart.manifest.json"
-        }
-      ]
-    },
-    "portal-calendar-web-part": {
-      "components": [
-        {
-          "entrypoint": "./lib/webparts/portalCalendar/PortalCalendarWebPart.js",
-          "manifest": "./src/webparts/portalCalendar/PortalCalendarWebPart.manifest.json"
-        }
-      ]
-    },
-    "portal-blog-post-announcement-web-part": {
-      "components": [
-        {
-          "entrypoint": "./lib/webparts/portalBlogPostAnnouncement/PortalBlogPostAnnouncementWebPart.js",
-          "manifest": "./src/webparts/portalBlogPostAnnouncement/PortalBlogPostAnnouncementWebPart.manifest.json"
-        }
-      ]
-    },
-    "portal-assignments-web-part": {
-      "components": [
-        {
-          "entrypoint": "./lib/webparts/portalAssignments/PortalAssignmentsWebPart.js",
-          "manifest": "./src/webparts/portalAssignments/PortalAssignmentsWebPart.manifest.json"
-        }
-      ]
-    }
-  },
-  "externals": {},
-  "localizedResources": {
-    "LandingRedirectExtApplicationCustomizerStrings": "lib/extensions/landingRedirectExt/loc/{locale}.js",
-    "WelcomeMessageWebPartStrings": "lib/webparts/welcomeMessage/loc/{locale}.js",
-    "OfficeInformationWebPartStrings": "lib/webparts/officeInformation/loc/{locale}.js",
-    "ManualsAndHandbooksWebPartStrings": "lib/webparts/manualsAndHandbooks/loc/{locale}.js",
-    "MostCommonFormsWebPartStrings": "lib/webparts/mostCommonForms/loc/{locale}.js",
-    "AnnouncementsWebPartStrings": "lib/webparts/announcements/loc/{locale}.js",
-    "UpcomingEventsWebPartStrings": "lib/webparts/upcomingEvents/loc/{locale}.js",
-    "AttorneyAssignmentsWebPartStrings": "lib/webparts/attorneyAssignments/loc/{locale}.js",
-    "ExpertWitnessDirectoryWebPartStrings": "lib/webparts/expertWitnessDirectory/loc/{locale}.js",
-    "StaffDirectoryWebPartStrings": "lib/webparts/staffDirectory/loc/{locale}.js",
-    "PortalCalendarWebPartStrings": "lib/webparts/portalCalendar/loc/{locale}.js",
-    "PortalBlogPostAnnouncementWebPartStrings": "lib/webparts/portalBlogPostAnnouncement/loc/{locale}.js",
-    "PortalAssignmentsWebPartStrings": "lib/webparts/portalAssignments/loc/{locale}.js",
-    "ThemeInjectorApplicationCustomizerStrings": "lib/extensions/themeInjector/loc/{locale}.js"
-  }
+	"$schema": "https://developer.microsoft.com/json-schemas/spfx-build/config.2.0.schema.json",
+	"version": "2.0",
+	"bundles": {
+		"landing-redirect-ext-application-customizer": {
+			"components": [
+				{
+					"entrypoint": "./lib/extensions/landingRedirectExt/LandingRedirectExtApplicationCustomizer.js",
+					"manifest": "./src/extensions/landingRedirectExt/LandingRedirectExtApplicationCustomizer.manifest.json"
+				}
+			]
+		},
+		"theme-injector-application-customizer": {
+			"components": [
+				{
+					"entrypoint": "./lib/extensions/themeInjector/ThemeInjectorApplicationCustomizer.js",
+					"manifest": "./src/extensions/themeInjector/ThemeInjectorApplicationCustomizer.manifest.json"
+				}
+			]
+		},
+		"welcome-message-web-part": {
+			"components": [
+				{
+					"entrypoint": "./lib/webparts/welcomeMessage/WelcomeMessageWebPart.js",
+					"manifest": "./src/webparts/welcomeMessage/WelcomeMessageWebPart.manifest.json"
+				}
+			]
+		},
+		"office-information-web-part": {
+			"components": [
+				{
+					"entrypoint": "./lib/webparts/officeInformation/OfficeInformationWebPart.js",
+					"manifest": "./src/webparts/officeInformation/OfficeInformationWebPart.manifest.json"
+				}
+			]
+		},
+		"manuals-and-handbooks-web-part": {
+			"components": [
+				{
+					"entrypoint": "./lib/webparts/manualsAndHandbooks/ManualsAndHandbooksWebPart.js",
+					"manifest": "./src/webparts/manualsAndHandbooks/ManualsAndHandbooksWebPart.manifest.json"
+				}
+			]
+		},
+		"most-common-forms-web-part": {
+			"components": [
+				{
+					"entrypoint": "./lib/webparts/mostCommonForms/MostCommonFormsWebPart.js",
+					"manifest": "./src/webparts/mostCommonForms/MostCommonFormsWebPart.manifest.json"
+				}
+			]
+		},
+		"announcements-web-part": {
+			"components": [
+				{
+					"entrypoint": "./lib/webparts/announcements/AnnouncementsWebPart.js",
+					"manifest": "./src/webparts/announcements/AnnouncementsWebPart.manifest.json"
+				}
+			]
+		},
+		"upcoming-events-web-part": {
+			"components": [
+				{
+					"entrypoint": "./lib/webparts/upcomingEvents/UpcomingEventsWebPart.js",
+					"manifest": "./src/webparts/upcomingEvents/UpcomingEventsWebPart.manifest.json"
+				}
+			]
+		},
+		"attorney-assignments-web-part": {
+			"components": [
+				{
+					"entrypoint": "./lib/webparts/attorneyAssignments/AttorneyAssignmentsWebPart.js",
+					"manifest": "./src/webparts/attorneyAssignments/AttorneyAssignmentsWebPart.manifest.json"
+				}
+			]
+		},
+		"expert-witness-directory-web-part": {
+			"components": [
+				{
+					"entrypoint": "./lib/webparts/expertWitnessDirectory/ExpertWitnessDirectoryWebPart.js",
+					"manifest": "./src/webparts/expertWitnessDirectory/ExpertWitnessDirectoryWebPart.manifest.json"
+				}
+			]
+		},
+		"staff-directory-web-part": {
+			"components": [
+				{
+					"entrypoint": "./lib/webparts/staffDirectory/StaffDirectoryWebPart.js",
+					"manifest": "./src/webparts/staffDirectory/StaffDirectoryWebPart.manifest.json"
+				}
+			]
+		},
+		"portal-calendar-web-part": {
+			"components": [
+				{
+					"entrypoint": "./lib/webparts/portalCalendar/PortalCalendarWebPart.js",
+					"manifest": "./src/webparts/portalCalendar/PortalCalendarWebPart.manifest.json"
+				}
+			]
+		},
+		"portal-blog-post-announcement-web-part": {
+			"components": [
+				{
+					"entrypoint": "./lib/webparts/portalBlogPostAnnouncement/PortalBlogPostAnnouncementWebPart.js",
+					"manifest": "./src/webparts/portalBlogPostAnnouncement/PortalBlogPostAnnouncementWebPart.manifest.json"
+				}
+			]
+		},
+		"portal-assignments-web-part": {
+			"components": [
+				{
+					"entrypoint": "./lib/webparts/portalAssignments/PortalAssignmentsWebPart.js",
+					"manifest": "./src/webparts/portalAssignments/PortalAssignmentsWebPart.manifest.json"
+				}
+			]
+		}
+	},
+	"externals": {},
+	"localizedResources": {
+		"LandingRedirectExtApplicationCustomizerStrings": "lib/extensions/landingRedirectExt/loc/{locale}.js",
+		"WelcomeMessageWebPartStrings": "lib/webparts/welcomeMessage/loc/{locale}.js",
+		"OfficeInformationWebPartStrings": "lib/webparts/officeInformation/loc/{locale}.js",
+		"ManualsAndHandbooksWebPartStrings": "lib/webparts/manualsAndHandbooks/loc/{locale}.js",
+		"MostCommonFormsWebPartStrings": "lib/webparts/mostCommonForms/loc/{locale}.js",
+		"AnnouncementsWebPartStrings": "lib/webparts/announcements/loc/{locale}.js",
+		"UpcomingEventsWebPartStrings": "lib/webparts/upcomingEvents/loc/{locale}.js",
+		"AttorneyAssignmentsWebPartStrings": "lib/webparts/attorneyAssignments/loc/{locale}.js",
+		"ExpertWitnessDirectoryWebPartStrings": "lib/webparts/expertWitnessDirectory/loc/{locale}.js",
+		"StaffDirectoryWebPartStrings": "lib/webparts/staffDirectory/loc/{locale}.js",
+		"PortalCalendarWebPartStrings": "lib/webparts/portalCalendar/loc/{locale}.js",
+		"PortalBlogPostAnnouncementWebPartStrings": "lib/webparts/portalBlogPostAnnouncement/loc/{locale}.js",
+		"PortalAssignmentsWebPartStrings": "lib/webparts/portalAssignments/loc/{locale}.js",
+		"ThemeInjectorApplicationCustomizerStrings": "lib/extensions/themeInjector/loc/{locale}.js"
+	}
 }

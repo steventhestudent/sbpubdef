@@ -17,7 +17,7 @@
 #spSiteHeader #showOverlayText, /*  * Following & Site Access btn's */
 .od-TopBar-header .ms-FocusZone:last-of-type, /* site header nav (site contents) */
 .od-TopBar-header #showOverlayText /*  * Following & Site Access btn's (site contents) */
-    {background-color: rgba(86, 103, 168, 0.5) !important; border-radius: 10px 10px 0px 0px !important;}
+{background-color: rgba(86, 103, 168, 0.5) !important; border-radius: 10px 10px 0px 0px !important;}
 /* links text */
 #spSiteHeader .ms-HorizontalNavItem-linkText, .od-TopBar-header .ms-HorizontalNavItem-linkText{color: white !important; font-weight: bold !important; text-shadow: 1px 1px 0px black !important;}
 #spSiteHeader .ms-HorizontalNavItem-linkText:hover, .od-TopBar-header .ms-HorizontalNavItem-linkText:hover {text-decoration: underline !important;}
@@ -25,7 +25,7 @@
 #spSiteHeader #showOverlayText button:first-of-type, .od-TopBar-header #showOverlayText button:first-of-type {margin-left: 1em !important;} /*  * 1st btn margin */
 #spSiteHeader #showOverlayText button .ms-ButtonSpan, .od-TopBar-header #showOverlayText button .ms-ButtonSpan, /*  * Following & Site Access btn's (text) */
 #spSiteHeader .ms-Button-label, .od-TopBar-header .ms-Button-label
-    { color: white !important; text-shadow: 1px 1px 0 darkblue !important; font-weight: bold; }
+{ color: white !important; text-shadow: 1px 1px 0 darkblue !important; font-weight: bold; }
 #spSiteHeader .ms-Icon, .od-TopBar-header .ms-Icon { color: #03787c !important; text-shadow: 1px 1px 1px #ffdfdf !important; font-weight: bold;}
 #spSiteHeader i[data-icon-name="FavoriteStar"], .od-TopBar-header i[data-icon-name="FavoriteStar"] { color: yellow !important;}
 #spSiteHeader i[data-icon-name="FavoriteStarFill"], .od-TopBar-header i[data-icon-name="FavoriteStarFill"] { color: yellow !important;}
