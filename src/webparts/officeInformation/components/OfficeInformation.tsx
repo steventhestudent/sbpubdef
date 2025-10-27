@@ -1,41 +1,13 @@
 import * as React from 'react';
 import type { IOfficeInformationProps } from './IOfficeInformationProps';
+import { offices } from './Offices';
+import {Collapsible} from "../../../components/Collapsible";
+// import {Collapsible} from "@components/Collapsible";
 
 export default class OfficeInformation extends React.Component<IOfficeInformationProps> {
 	public render(): React.ReactElement<IOfficeInformationProps> {
-		const offices = [
-			{
-				name: 'Santa Barbara Office Courthouse',
-				lines: ['1100 Anacapa Street', 'Santa Barbara, CA 93101'],
-				phone: '(805) 568-3470',
-				fax: '(805) 568-3536'
-			},
-			{
-				name: 'Santa Maria Office',
-				lines: ['312-P East Cook Street', 'Santa Maria, CA 93454'],
-				phone: '(805) 346-7500',
-				fax: '(805) 614-6735'
-			},
-			{
-				name: 'Santa Maria Juvenile Office',
-				lines: ['4285 California Blvd., Suite C', 'Santa Maria, CA 93455'],
-				phone: '(805) 934-6944',
-				fax: '(805) 934-6945'
-			},
-			{
-				name: 'Lompoc Office',
-				lines: ['115 Civic Center Plaza', 'Lompoc, CA 93436'],
-				phone: '(805) 737-7770',
-				fax: '(805) 737-7881'
-			}
-		];
-
 		return (
-			<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-				<header className="border-b border-slate-200 px-4 py-3">
-					<h4 className="text-base font-semibold text-slate-800">Office Information</h4>
-				</header>
-
+			<Collapsible instanceId={this.context.instanceId} title="Office Information">
 				<div className="grid gap-2 p-2 sm:grid-cols-2">
 					{offices.map((o, i) => (
 						<div key={i} className="rounded-lg border border-slate-200 p-2 overflow-x-auto scrollbar-thin">
@@ -72,7 +44,7 @@ export default class OfficeInformation extends React.Component<IOfficeInformatio
 						<li><a className="text-blue-700 hover:underline" href="https://www.countyofsb.org/389/Probation">Probation</a></li>
 					</ul>
 				</div>
-			</section>
+			</Collapsible>
 		);
 	}
 }
