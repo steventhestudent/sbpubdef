@@ -1,7 +1,9 @@
 import { Log } from "@microsoft/sp-core-library";
 import { BaseApplicationCustomizer } from "@microsoft/sp-application-base";
 import * as strings from "ThemeInjectorApplicationCustomizerStrings";
-import "../../styles"; // import '@styles'; // imports src/styles/index.ts									<--- for some reason this alias doesn't work, even though it points to a typescript file...
+import "@styles/SharePointStyleOverride.css";
+import "@styles/scrollbar-thin.css";
+import "@dist/tailwind.css"; // to do: comment out in production? (do webparts all include a copy of it!?)
 
 export default class ThemeInjectorApplicationCustomizer extends BaseApplicationCustomizer<{}> {
 	public async onInit(): Promise<void> {

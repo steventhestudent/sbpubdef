@@ -1,8 +1,7 @@
 import * as React from "react";
 import type { IOfficeInformationProps } from "./IOfficeInformationProps";
 import { offices } from "./Offices";
-import { Collapsible } from "../../../components/Collapsible";
-// import {Collapsible} from "@components/Collapsible";
+import { Collapsible } from "@components/Collapsible";
 
 export default class OfficeInformation extends React.Component<IOfficeInformationProps> {
 	public render(): React.ReactElement<IOfficeInformationProps> {
