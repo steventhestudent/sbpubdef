@@ -4,4 +4,5 @@ export interface IStaffDirectoryProps {
 	environmentMessage: string;
 	hasTeamsContext: boolean;
 	userDisplayName: string;
+	instanceId: string;
 }

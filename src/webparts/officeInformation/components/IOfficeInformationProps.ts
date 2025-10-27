@@ -4,4 +4,5 @@ export interface IOfficeInformationProps {
 	environmentMessage: string;
 	hasTeamsContext: boolean;
 	userDisplayName: string;
+	instanceId: string;
 }

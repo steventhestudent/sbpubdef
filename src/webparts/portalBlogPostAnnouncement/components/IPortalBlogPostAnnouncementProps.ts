@@ -4,4 +4,5 @@ export interface IPortalBlogPostAnnouncementProps {
 	environmentMessage: string;
 	hasTeamsContext: boolean;
 	userDisplayName: string;
+	instanceId: string;
 }

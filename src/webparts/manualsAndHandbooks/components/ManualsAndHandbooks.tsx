@@ -1,15 +1,14 @@
 import * as React from "react";
 import type { IManualsAndHandbooksProps } from "./IManualsAndHandbooksProps";
+import { Collapsible } from "@components/Collapsible";
 
 export default class ManualsAndHandbooks extends React.Component<IManualsAndHandbooksProps> {
 	public render(): React.ReactElement<IManualsAndHandbooksProps> {
 		return (
-			<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-				<header className="border-b border-slate-200 px-4 py-3">
-					<h4 className="text-base font-semibold text-slate-800">
-						Manuals &amp; Handbooks
-					</h4>
-				</header>
+			<Collapsible
+				instanceId={this.props.instanceId}
+				title="Manuals &amp; Handbooks"
+			>
 				<ul className="divide-y divide-slate-200">
 					{[
 						{ name: "County Employee Handbook (PDF)", href: "#" },
@@ -34,7 +33,7 @@ export default class ManualsAndHandbooks extends React.Component<IManualsAndHand
 						</li>
 					))}
 				</ul>
-			</section>
+			</Collapsible>
 		);
 	}
 }

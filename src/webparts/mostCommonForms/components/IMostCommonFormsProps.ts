@@ -4,4 +4,5 @@ export interface IMostCommonFormsProps {
 	environmentMessage: string;
 	hasTeamsContext: boolean;
 	userDisplayName: string;
+	instanceId: string;
 }

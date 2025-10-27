@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { IMostCommonFormsProps } from "./IMostCommonFormsProps";
+import { Collapsible } from "@components/Collapsible";
 
 export default class MostCommonForms extends React.Component<IMostCommonFormsProps> {
 	public render(): React.ReactElement<IMostCommonFormsProps> {
@@ -10,12 +11,10 @@ export default class MostCommonForms extends React.Component<IMostCommonFormsPro
 		];
 
 		return (
-			<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-				<header className="border-b border-slate-200 px-4 py-3">
-					<h4 className="text-base font-semibold text-slate-800">
-						Most Common Forms
-					</h4>
-				</header>
+			<Collapsible
+				instanceId={this.props.instanceId}
+				title="Most Common Forms"
+			>
 				<div className="p-4">
 					<div className="grid gap-3 sm:grid-cols-2">
 						{forms.map((f, i) => (
@@ -34,7 +33,7 @@ export default class MostCommonForms extends React.Component<IMostCommonFormsPro
 						))}
 					</div>
 				</div>
-			</section>
+			</Collapsible>
 		);
 	}
 }

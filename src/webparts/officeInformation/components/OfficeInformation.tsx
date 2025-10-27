@@ -7,7 +7,7 @@ export default class OfficeInformation extends React.Component<IOfficeInformatio
 	public render(): React.ReactElement<IOfficeInformationProps> {
 		return (
 			<Collapsible
-				instanceId={this.context.instanceId}
+				instanceId={this.props.instanceId}
 				title="Office Information"
 			>
 				<div className="grid gap-2 p-2 sm:grid-cols-2">

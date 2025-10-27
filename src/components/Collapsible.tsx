@@ -7,8 +7,15 @@ import * as React from "react";
  * Builds a stable localStorage key that is unique per PAGE and per WEB PART INSTANCE.
  * By default we scope to window.location.pathname (page X vs page Y) + instanceId.
  */
-function storageKey(instanceId: string, scope?: { pageKey?: string; prefix?: string }): string {
-	const pageKey = scope?.pageKey ?? (typeof window !== "undefined" ? window.location.pathname : "__no_window__");
+function storageKey(
+	instanceId: string,
+	scope?: { pageKey?: string; prefix?: string },
+): string {
+	const pageKey =
+		scope?.pageKey ??
+		(typeof window !== "undefined"
+			? window.location.pathname
+			: "__no_window__");
 	const prefix = scope?.prefix ?? "spfx:collapse";
 	return `${prefix}:${pageKey}:${instanceId}`;
 }
@@ -35,24 +42,30 @@ export type CollapsibleProps = {
 };
 
 export const Collapsible: React.FC<CollapsibleProps> = ({
-															instanceId,
-															pageKey,
-															defaultCollapsed = false,
-															title,
-															children,
-															headerClickable = true,
-															className = "",
-															contentClassName = "",
-															headerClassName = "",
-														}) => {
-	const key = React.useMemo(() => storageKey(instanceId, { pageKey }), [instanceId, pageKey]);
+	instanceId,
+	pageKey,
+	defaultCollapsed = false,
+	title,
+	children,
+	headerClickable = true,
+	className = "",
+	contentClassName = "",
+	headerClassName = "",
+}) => {
+	const key = React.useMemo(
+		() => storageKey(instanceId, { pageKey }),
+		[instanceId, pageKey],
+	);
 	const [collapsed, setCollapsed] = React.useState(defaultCollapsed);
 	const [hydrated, setHydrated] = React.useState(false);
 
 	// On mount, read localStorage to decide collapsed state for THIS page + instance
 	React.useEffect(() => {
 		try {
-			const inStore = typeof window !== "undefined" ? window.localStorage.getItem(key) : null;
+			const inStore =
+				typeof window !== "undefined"
+					? window.localStorage.getItem(key)
+					: null;
 			setCollapsed(!!inStore); // if key exists => collapsed
 		} catch (e) {
 			console.log(e); // localStorage might be blocked; keep default
@@ -94,14 +107,23 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 				className={`block transition-transform ${collapsed ? "rotate-0" : "rotate-180"}`}
 				aria-hidden="true"
 			>
-        {/* v/^ using SVG for consistent look */}
-				<svg viewBox="0 0 24 24" className="h-5 w-5"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2"/></svg>
-      </span>
+				{/* v/^ using SVG for consistent look */}
+				<svg viewBox="0 0 24 24" className="h-5 w-5">
+					<path
+						d="M6 9l6 6 6-6"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2"
+					/>
+				</svg>
+			</span>
 		</button>
 	);
 
 	return (
-		<section className={`rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}>
+		<section
+			className={`rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}
+		>
 			<header
 				className={`border-b border-slate-200 px-3 py-2 flex items-center justify-between select-none ${headerClassName}`}
 			>
@@ -113,9 +135,10 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 							aria-expanded={!collapsed}
 							aria-controls={`${instanceId}-content`}
 							className="text-left font-medium text-gray-800 hover:opacity-80 focus:outline-none"
-						><h4 className="text-base font-semibold text-slate-800">
-							{title}
-						</h4>
+						>
+							<h4 className="text-base font-semibold text-slate-800">
+								{title}
+							</h4>
 						</button>
 					) : (
 						<div className="font-medium text-gray-800">{title}</div>
@@ -127,10 +150,11 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 			{/* Content with smooth height transition */}
 			<div
 				id={`${instanceId}-content`}
-				className={
-					`transition-[grid-template-rows] duration-300 ease-in-out overflow-hidden ${contentClassName}`
-				}
-				style={{ display: "grid", gridTemplateRows: collapsed ? "0fr" : "1fr" }}
+				className={`transition-[grid-template-rows] duration-300 ease-in-out overflow-hidden ${contentClassName}`}
+				style={{
+					display: "grid",
+					gridTemplateRows: collapsed ? "0fr" : "1fr",
+				}}
 				aria-hidden={collapsed}
 			>
 				{/* inner wrapper participates in the CSS grid height animation */}
@@ -168,11 +192,14 @@ export default class MyCoolWebPart extends BaseClientSideWebPart<{}> {
 // If you already have a React component for your web part, wrap it to get the
 // collapse chrome without changing its internals.
 
-export function withCollapsible<P extends { instanceId: string; title?: React.ReactNode }>(
-	Component: React.ComponentType<P>
-): (props: P) => React.ReactElement<P> {
+export function withCollapsible<
+	P extends { instanceId: string; title?: React.ReactNode },
+>(Component: React.ComponentType<P>): (props: P) => React.ReactElement<P> {
 	return function Wrapped(props: P) {
-		const { instanceId, title, ...rest } = props as {instanceId: string; title?: React.ReactNode };
+		const { instanceId, title, ...rest } = props as {
+			instanceId: string;
+			title?: React.ReactNode;
+		};
 		return (
 			<Collapsible instanceId={instanceId} title={title}>
 				<Component {...(rest as P)} instanceId={instanceId} />

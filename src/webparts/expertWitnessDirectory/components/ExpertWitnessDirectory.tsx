@@ -1,16 +1,14 @@
 import * as React from "react";
 import type { IExpertWitnessDirectoryProps } from "./IExpertWitnessDirectoryProps";
+import { Collapsible } from "@components/Collapsible";
 
 export default class ExpertWitnessDirectory extends React.Component<IExpertWitnessDirectoryProps> {
 	public render(): React.ReactElement<IExpertWitnessDirectoryProps> {
 		return (
-			<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-				<header className="border-b border-slate-200 px-4 py-3">
-					<h4 className="text-base font-semibold text-slate-800">
-						Expert Witness Directory
-					</h4>
-				</header>
-
+			<Collapsible
+				instanceId={this.props.instanceId}
+				title="Expert Witness Directory"
+			>
 				<div className="p-4">
 					<form role="search" className="mx-auto max-w-lg">
 						<label
@@ -76,7 +74,7 @@ export default class ExpertWitnessDirectory extends React.Component<IExpertWitne
 						))}
 					</ul>
 				</div>
-			</section>
+			</Collapsible>
 		);
 	}
 }

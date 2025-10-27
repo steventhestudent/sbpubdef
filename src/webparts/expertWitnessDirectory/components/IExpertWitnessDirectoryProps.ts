@@ -4,4 +4,5 @@ export interface IExpertWitnessDirectoryProps {
 	environmentMessage: string;
 	hasTeamsContext: boolean;
 	userDisplayName: string;
+	instanceId: string;
 }

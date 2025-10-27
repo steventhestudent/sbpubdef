@@ -4,4 +4,5 @@ export interface IManualsAndHandbooksProps {
 	environmentMessage: string;
 	hasTeamsContext: boolean;
 	userDisplayName: string;
+	instanceId: string;
 }
