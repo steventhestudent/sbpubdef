@@ -34,6 +34,8 @@
 #SiteHeaderTitleMinimal {text-shadow: 0 0 10px black;}
 #SiteHeaderTitleMinimal:hover {text-decoration: underline !important;}
 
+/* comments like views save for later */
+#CommentsWrapper {opacity: 0.5;pointer-events: none;display: none;}
 
 /*
     footer
