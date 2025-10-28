@@ -1,4 +1,5 @@
 export function DismissibleAnnouncementStrip(): void {
+	if (document.querySelector("#DismissibleAnnouncementStrip")) return;
 	function DismissibleAnnouncementStrip(): HTMLDivElement {
 		const strip = document.createElement("div");
 		strip.appendChild(
