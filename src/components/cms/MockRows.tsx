@@ -1,4 +1,4 @@
-import { ContentRow } from "../../types/cms/ContentRow";
+import type { ContentRow } from "@type/cms/ContentRow";
 
 export function mockRows(
 	prefix: string,

@@ -2,7 +2,7 @@
 // Generic content table used by many managers
 // ────────────────────────────────────────────────────────────────────────────────
 import * as React from "react";
-import { ContentRow } from "../../types/cms/ContentRow";
+import type { ContentRow } from "@type/cms/ContentRow";
 import { StatusPill } from "@components/cms/StatusPill";
 
 export function ContentTable({
