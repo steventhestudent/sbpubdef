@@ -27,6 +27,7 @@ export default class OfficeInformation extends React.Component<IOfficeInformatio
 							<p className="mt-1 text-xs text-nowrap">
 								<span className="text-slate-500">Phone:</span>{" "}
 								<a
+									className="opacity-70"
 									href={
 										"tel:+1" +
 										o.phone.replace(/[()\s-]/g, "")

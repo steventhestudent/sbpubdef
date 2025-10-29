@@ -13,6 +13,7 @@ export function DismissibleAnnouncementStrip(): void {
 		strip.style.color = "black";
 		strip.style.padding = "4px";
 		strip.style.cursor = "pointer";
+		strip.style.overflow = "hidden";
 		if (
 			localStorage.getItem(
 				"ThemeInjector.DismissibleAnnouncementStripCollapsed",
