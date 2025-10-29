@@ -19,8 +19,10 @@
 .od-TopBar-header #showOverlayText /*  * Following & Site Access btn's (site contents) */
 {background-color: rgba(86, 103, 168, 0.5) !important; border-radius: 10px 10px 0px 0px !important;}
 /* links text */
-#spSiteHeader .ms-HorizontalNavItem-linkText, .od-TopBar-header .ms-HorizontalNavItem-linkText{color: white !important; font-weight: bold !important; text-shadow: 1px 1px 0px black !important;}
+#spSiteHeader .ms-HorizontalNavItem-linkText, .od-TopBar-header .ms-HorizontalNavItem-linkText {color: white !important; font-weight: bold !important; text-shadow: 1px 1px 0px black !important;}
 #spSiteHeader .ms-HorizontalNavItem-linkText:hover, .od-TopBar-header .ms-HorizontalNavItem-linkText:hover {text-decoration: underline !important;}
+/* links text (is-selected) */
+#spSiteHeader .ms-HorizontalNavItem-linkText.is-selected, .od-TopBar-header .ms-HorizontalNavItem-linkText.is-selected {color: #f5ffb1 !important;}
 /* SharePoint buttons */
 #spSiteHeader #showOverlayText button:first-of-type, .od-TopBar-header #showOverlayText button:first-of-type {margin-left: 1em !important;} /*  * 1st btn margin */
 #spSiteHeader #showOverlayText button .ms-ButtonSpan, .od-TopBar-header #showOverlayText button .ms-ButtonSpan, /*  * Following & Site Access btn's (text) */
