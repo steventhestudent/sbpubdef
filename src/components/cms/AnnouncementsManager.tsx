@@ -16,6 +16,7 @@ export function AnnouncementsManager({
 	onToggleSelect: (id: string) => void;
 }): JSX.Element {
 	const items = mockRows("ANN", 6);
+	console.log(`yo mama`);
 	return (
 		<ContentTable
 			kind="Announcement"

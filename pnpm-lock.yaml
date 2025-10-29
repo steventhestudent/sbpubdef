@@ -41,6 +41,15 @@ importers:
       '@microsoft/sp-webpart-base':
         specifier: 1.21.1
         version: 1.21.1(@microsoft/microsoft-graph-client@1.7.2-spfx(encoding@0.1.13))(@types/node@24.8.1)(@types/react-dom@17.0.17)(@types/react@17.0.45)(encoding@0.1.13)(scheduler@0.20.2)
+      '@pnp/graph':
+        specifier: ^4.17.0
+        version: 4.17.0
+      '@pnp/logging':
+        specifier: ^4.17.0
+        version: 4.17.0
+      '@pnp/sp':
+        specifier: ^4.17.0
+        version: 4.17.0
       '@tailwindcss/cli':
         specifier: ^4.1.15
         version: 4.1.15
@@ -1223,6 +1232,9 @@ packages:
   '@microsoft/microsoft-graph-client@1.7.2-spfx':
     resolution: {integrity: sha512-BQN50r3tohWYOaQ0de7LJ5eCRjI6eg4RQqLhGDlgRmZIZhWzH0bhR6QBMmmxtYtwKWifhPhJSxYDW+cP67TJVw==}
 
+  '@microsoft/microsoft-graph-types@2.43.0':
+    resolution: {integrity: sha512-sB9TZugdGH2SnN2mcV5rfKhhfDLPSAvF5VQ+94wtbKAqRpVLFKl9IfqZ+q2/264adkb8iBmgiUEbyrVmOmE2/g==}
+
   '@microsoft/rush-lib@5.150.0':
     resolution: {integrity: sha512-2SBN7A/iCVufTmuXdS+W1wY0MZaEyhxlme/NQTlXbTaYWaMGZJMso3YRBNKJJLE1T7NkxsvCVCp7/2QSh8k+JA==}
     engines: {node: '>=5.6.0'}
@@ -1638,6 +1650,26 @@ packages:
         optional: true
       webpack-plugin-serve:
         optional: true
+
+  '@pnp/core@4.17.0':
+    resolution: {integrity: sha512-BxSAHjH+NCPO9AWVlFAdZycgOAHFRD2WDIV3X0WZKS0LyuUMIfNDfZUd7gG45ziuZ65bm3bZ+PayqMZSDgL06w==}
+    engines: {node: '>=18.12.0'}
+
+  '@pnp/graph@4.17.0':
+    resolution: {integrity: sha512-hEmFWFMFITNkU4DN2XyyjqwxZfP16R5NfS0M2OIFu3w8s/tNSAWR6ElHjiiei0SSqesjxAqEEXnGXRVX6M7WRw==}
+    engines: {node: '>=18.12.0'}
+
+  '@pnp/logging@4.17.0':
+    resolution: {integrity: sha512-XOfePfUmj1AWYzmYkgoPa7QM0FNT9UrUQaelJwtmEbst/RuUrlZ6cS8fwI59S4toJrf9YSLH+79rhv6Dva+RLg==}
+    engines: {node: '>=18.12.0'}
+
+  '@pnp/queryable@4.17.0':
+    resolution: {integrity: sha512-MrioIPChZWacPdo17NclEcohUEg5Ej1+kvdP8ITw6aZdLiYIqzO8BXnQNfa2wmux6mm6Qr6n3oGppA3FR2pPIg==}
+    engines: {node: '>=18.12.0'}
+
+  '@pnp/sp@4.17.0':
+    resolution: {integrity: sha512-puv4ESxvmWuVXhb5GkswNvQCK36lVcDpbO2PPod5AxA+Gfb9hUNUMxytvuS3w9wFdcA42AB8gBeUqWXncAiacg==}
+    engines: {node: '>=18.12.0'}
 
   '@pnpm/config.env-replace@1.1.0':
     resolution: {integrity: sha512-htyl8TWnKL7K/ESFa1oW2UB5lVDxuF5DpM7tBi6Hu2LNL3mWkIzNLG6N4zoCUP1lCKNxWy/3iu8mS8MvToGd6w==}
@@ -12610,6 +12642,8 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
+  '@microsoft/microsoft-graph-types@2.43.0': {}
+
   '@microsoft/rush-lib@5.150.0(@types/node@24.8.1)':
     dependencies:
       '@pnpm/dependency-path': 5.1.7
@@ -13558,6 +13592,32 @@ snapshots:
     optionalDependencies:
       type-fest: 0.21.3
       webpack-dev-server: 5.0.4(webpack-cli@5.1.4)(webpack@5.95.0)
+
+  '@pnp/core@4.17.0':
+    dependencies:
+      tslib: 2.8.1
+
+  '@pnp/graph@4.17.0':
+    dependencies:
+      '@microsoft/microsoft-graph-types': 2.43.0
+      '@pnp/core': 4.17.0
+      '@pnp/queryable': 4.17.0
+      tslib: 2.8.1
+
+  '@pnp/logging@4.17.0':
+    dependencies:
+      tslib: 2.8.1
+
+  '@pnp/queryable@4.17.0':
+    dependencies:
+      '@pnp/core': 4.17.0
+      tslib: 2.8.1
+
+  '@pnp/sp@4.17.0':
+    dependencies:
+      '@pnp/core': 4.17.0
+      '@pnp/queryable': 4.17.0
+      tslib: 2.8.1
 
   '@pnpm/config.env-replace@1.1.0': {}
 
