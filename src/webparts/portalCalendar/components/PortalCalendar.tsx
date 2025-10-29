@@ -26,7 +26,7 @@ export default class PortalCalendar extends React.Component<IPortalCalendarProps
 					</div>
 				</header>
 
-				<div className="p-4 w-[100%]">
+				<div className="p-1 w-[100%]">
 					<table className="border-collapse table-fixed" width="100%">
 						<thead>
 							<tr>
