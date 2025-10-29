@@ -21,7 +21,7 @@ export default class Cms extends React.Component<ICmsProps> {
 			try {
 				const webUrl = `${window.location.origin}/sites/PD-Intranet`;
 				// Optionally
-				// const webSP = spfi(webUrl).using(SPFx({ pageContext: this._pageContext }));
+				// const webSP = spfi(webUrl).using(SPFx({ pageContext: this.context._pageContext }));
 				// const web = webSP.web;
 				const web = Web([this._sp.web, webUrl]);
 				if (!web) return console.log("pnp: no web");
