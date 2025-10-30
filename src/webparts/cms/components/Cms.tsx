@@ -1,24 +1,31 @@
-// Cms.tsx
+// @webparts/cms/components/Cms.tsx
 import * as React from "react";
 
 import { PNPWrapper } from "@utils/PNPWrapper";
 
 import type { ICmsProps } from "./ICmsProps";
-import { CMSContainer } from "./cmsContainer";
+import { CMSContainer } from "@components/cms/cmsContainer";
+
+import { AnnouncementsApi } from "@api/announcements";
 
 export default class Cms extends React.Component<ICmsProps> {
 	private pnpWrapper!: PNPWrapper;
+	private anns!: AnnouncementsApi;
 
 	public componentDidMount(): void {
-		this.pnpWrapper = new PNPWrapper(this.props.context);
+		this.pnpWrapper = new PNPWrapper(this.props.context, {
+			siteUrls: ["/sites/Attorney", "/sites/LOP", "/sites/HR"],
+			cache: false,
+		});
+		this.anns = new AnnouncementsApi(this.pnpWrapper);
 
 		setTimeout(async () => {
-			const anns = await this.pnpWrapper.getAnnouncements(12);
-			console.log("announcements:", anns);
-		}, 2000);
+			const data = await this.anns.getAnnouncements(12);
+			console.log("announcements:", data);
+		});
 	}
 
-	public render(): React.ReactElement<ICmsProps> {
+	public render(): React.ReactElement {
 		return <CMSContainer />;
 	}
 }

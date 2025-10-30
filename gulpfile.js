@@ -22,13 +22,14 @@ build.configureWebpack.mergeConfig({
 		generatedConfig.resolve = generatedConfig.resolve || {};
 		generatedConfig.resolve.alias = {
 			...(generatedConfig.resolve.alias || {}),
-			"@dist": path.resolve(__dirname, "dist"),
-			"@styles": path.resolve(__dirname, "lib/styles"),
-			"@webparts": path.resolve(__dirname, "lib/webparts"),
-			"@extensions": path.resolve(__dirname, "lib/extensions"),
+			"@api": path.resolve(__dirname, "lib/api"),
 			"@components": path.resolve(__dirname, "lib/components"),
+			"@dist": path.resolve(__dirname, "dist"),
+			"@extensions": path.resolve(__dirname, "lib/extensions"),
+			"@styles": path.resolve(__dirname, "lib/styles"),
 			"@type": path.resolve(__dirname, "lib/types"),
 			"@utils": path.resolve(__dirname, "lib/utils"),
+			"@webparts": path.resolve(__dirname, "lib/webparts"),
 		};
 		return generatedConfig;
 	},
