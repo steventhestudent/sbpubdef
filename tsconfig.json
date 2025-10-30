@@ -16,7 +16,7 @@
 
 		"typeRoots": ["./node_modules/@types", "./node_modules/@microsoft"],
 		"types": ["webpack-env"],
-		"lib": ["es5", "dom", "es2016"],
+		"lib": ["es5", "dom", "es2020"],
 
 		"baseUrl": ".",
 		"paths": {
