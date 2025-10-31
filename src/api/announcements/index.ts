@@ -5,6 +5,8 @@ import "@pnp/sp/content-types";
 import type { IContentTypeInfo } from "@pnp/sp/content-types/types";
 import "@pnp/sp/clientside-pages";
 import { ClientsideText } from "@pnp/sp/clientside-pages";
+import "@pnp/sp/fields";
+import "@pnp/sp/items";
 
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { PD } from "@api/config";
@@ -206,7 +208,6 @@ export class AnnouncementsApi {
 	async create(input: CreateAnnouncementInput): Promise<{ url: string }> {
 		const { title, department, html, targetSite } = input;
 
-		// pick target web
 		const web = targetSite
 			? Web([
 					this.pnpWrapper.spfi.web,
@@ -224,20 +225,35 @@ export class AnnouncementsApi {
 		);
 		await page.save();
 
-		// 2) set PD Announcement CT
-		const item = await page.getItem();
+		// 2) set PD Announcement CT (library copy)
+		let item = await page.getItem();
 		const cts = await web.lists
 			.getByTitle(PD.libs.SitePages)
 			.contentTypes.select("StringId", "Name")();
-
 		const pdCt = (cts as IContentTypeInfo[]).find(
 			(ct) => ct.Name === PD.contentType.Announcement,
 		);
+		if (pdCt) {
+			await item.update({ ContentTypeId: pdCt.StringId });
+			// IMPORTANT: re-fetch the item so it picks up the new CT's fields
+			const { Id } = await item.select("Id")();
+			item = web.lists.getByTitle(PD.libs.SitePages).items.getById(Id);
+		}
 
-		if (pdCt) await item.update({ ContentTypeId: pdCt.StringId });
+		// 3) set PD Department
+		if (department) {
+			// Resolve the list's internal name (handles PDDepartment vs PD_x0020_Department)
+			const deptField = await web.lists
+				.getByTitle(PD.libs.SitePages)
+				.fields.getByInternalNameOrTitle("PDDepartment")
+				.select("InternalName")();
 
-		// 3) set PDDepartment (internal name of “PD Department”)
-		if (department) await item.update({ PDDepartment: department });
+			// Robust write (works right after CT switch)
+			await item.validateUpdateListItem(
+				[{ FieldName: deptField.InternalName, FieldValue: department }],
+				true, // newDocumentUpdate = true
+			);
+		}
 
 		// 4) add text-only body from html
 		if (html) {
@@ -253,18 +269,20 @@ export class AnnouncementsApi {
 					? text.slice(0, SUMMARY_LEN - 1) + "…"
 					: text;
 
-			const section = page.addSection(); // one full-width section
-			const col = section.addColumn(12); // single column
-			col.addControl(new ClientsideText(summary)); // add text control
+			const sec = page.addSection();
+			const col = sec.addColumn(12);
+			const $txt = new ClientsideText(summary);
+			$txt.text = summary;
+			col.addControl($txt);
 			await page.save(true);
 		}
 
-		// 5) promote & publish
-		await page.promoteToNews(); // no args in v3
+		// 5) promote & publish (and approve if required)
+		await page.promoteToNews(); // sets PromotedState = 2
+		// await page.schedulePublish(new Date()); // publish major version
 
-		// 6) return absolute URL (read FileRef from the item)
-		const listItem = await page.getItem();
-		const li = await listItem.select("FileRef")();
+		// 6) return absolute URL
+		const li = await item.select("FileRef")();
 		const absolute =
 			new URL(web.toUrl(), window.location.origin).origin + li.FileRef;
 		return { url: absolute };

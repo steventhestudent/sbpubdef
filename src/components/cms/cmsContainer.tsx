@@ -15,6 +15,7 @@ import { HelpDrawer } from "@components/cms/HelpDrawer";
 import { mockRows } from "@components/cms/MockRows";
 import { NewPDAnnouncementDrawer } from "@components/cms/NewPDAnnouncementDrawer";
 import { PNPWrapper } from "@utils/PNPWrapper";
+import { AnnouncementsApi } from "@api/announcements";
 
 type TabKey =
 	| "announcements"
@@ -57,6 +58,7 @@ export const CMSContainer: ({
 	const [selectionMode, setSelectionMode] = React.useState<boolean>(false);
 	const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
 	const [showNewAnn, setShowNewAnn] = React.useState(false);
+	const announcementsApi = new AnnouncementsApi(pnpWrapper);
 
 	function clearSelection(): void {
 		setSelectedIds([]);
@@ -167,7 +169,7 @@ export const CMSContainer: ({
 											: [...prev, id],
 									)
 								}
-								pnpWrapper={pnpWrapper}
+								announcementsApi={announcementsApi}
 							/>
 						</SectionCard>
 					)}
@@ -254,6 +256,9 @@ export const CMSContainer: ({
 							: text;
 					}
 					payload.html = stripToText(payload.html); // to do: use images & styles (compatible w/ sharpeoint email news webparts)
+					setTimeout(
+						async () => await announcementsApi.create(payload),
+					);
 					setShowNewAnn(false);
 				}}
 			/>

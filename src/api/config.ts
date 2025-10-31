@@ -10,6 +10,7 @@ export const PD = {
 	},
 	fields: {
 		// internal names:
+		Department: "PDDepartment", // <-- internal name (very likely this)
 		ExpireDate: "PD_x0020_ExpireDate",
 		Summary: "Summary",
 		PinUntil: "PD_x0020_PinUntil",
