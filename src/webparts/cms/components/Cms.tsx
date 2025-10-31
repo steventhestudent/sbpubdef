@@ -14,7 +14,13 @@ export default class Cms extends React.Component<ICmsProps> {
 
 	public componentDidMount(): void {
 		this.pnpWrapper = new PNPWrapper(this.props.context, {
-			siteUrls: ["/sites/Attorney", "/sites/LOP", "/sites/HR"],
+			siteUrls: [
+				"/sites/PD-Intranet",
+				// "/sites/Attorney",
+				// "/sites/LOP",
+				"/sites/Tech-Team",
+				"/sites/HR",
+			],
 			cache: false,
 		});
 		this.anns = new AnnouncementsApi(this.pnpWrapper);

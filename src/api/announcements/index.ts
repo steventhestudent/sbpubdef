@@ -130,8 +130,10 @@ export class AnnouncementsApi {
 	}
 
 	async getAnnouncements(limit = 12): Promise<Announcement[]> {
-		// Search (hub) first; fallback to current site REST
-		const search = await this.getSearch(limit);
-		return search.length ? search : this.getRest(limit, [""]);
+		return this.pnpWrapper.chooseStrategy() === "rest"
+			? this.getRest(limit, this.pnpWrapper.siteUrls)
+			: this.getSearch(
+					limit /* uses hubId inside */ /* optionally use CT filter elsewhere if you prefer a param */,
+				);
 	}
 }
