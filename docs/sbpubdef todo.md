@@ -1,10 +1,9 @@
-# sbpubdef todo  
-- they currently use */sites/PD-Internal/SitePages/<role>.aspx*  
-    - [ ] create /sites/<role>  
-- **SPFx extension:**  
-    - *ApplicationCustomizer*:  
-        - [x] landing-redirect-ext  
-        - [ ] HR-landing-redirect-ext (can ***landing-redirect-ext*** be modified???)  
+# todo
+- cms
+
+&nbsp;
+# old todo
+
 - **SPFx forms**  
     - there's a LOT of forms we can turn into SPFx webparts:  
         - [ ] **see if webpart is ok?**  
@@ -72,18 +71,7 @@
   
   
   
-# landing-redirect-ext todo  
-- [x] create groups on Entra (on my .[sharepoint.com](http://sharepoint.com))  
-    - [x] attorney  
-    - [x] hr  
-- [x] copy group id's (from entra id (no access??? can (at least) grab logged in user groups in spfx w/ graph api))    —into landing-redirect-ext manifest.json ***redirectRules*** property  
-- [x] graph api:  redirectTarget now points to  /sites/x based on groups (w/ my .[sharepoint.com](http://sharepoint.com))  
-        * **currently it just logs: ** redirectRules, logged in user groups, redirectionTarget (and it works)  
-- [ ] figure out deploying on my .[sharepoint.com](http://sharepoint.com)  
-    - [ ] Ask for Graph permissions (once, at deploy time)  
+# ~~landing-redirect-ext todo  ~~
     - [ ] ![In config/package-solution.json, request Microsoft Graph group read:](Attachments/Pasted%20Graphic.tiff)  
-    - [ ] If you only want it on /sites/pd-internal, deploy tenant-wide but **only associate** the extension to that site (via a tenant-wide list entry or feature association), or keep skipFeatureDeployment: false and activate the feature only on that site.  
-- [ ] verify that it works on [countyofsb.sharepoint.com](http://countyofsb.sharepoint.com): (**++can't++** until they create security groups & share the object id's from Entra)  
-    - [ ] deploy: upload app/solution, bundle to AppCatalog/ClientSideAssets, etc.  
   
 hint: see *docs/laptop notes.md *for group ids/names  
