@@ -1,7 +1,20 @@
 import * as React from "react";
 import { mockRows } from "@components/cms/MockRows";
 import { ContentTable } from "@components/cms/ContentTable";
-import { AnnouncementsApi } from "@api/announcements";
+import { Announcement, AnnouncementsApi } from "@api/announcements";
+import { ContentRow } from "@type/cms/ContentRow";
+
+function announcementContentRow(data: Announcement, i: number): ContentRow {
+	return {
+		id: i + "",
+		title: data.title,
+		subtitle: undefined,
+		site: data.siteUrl ?? "",
+		when: data.published?.toDateString() ?? "—",
+		owner: "<owner>",
+		status: data.published ? "published" : "draft",
+	};
+}
 
 export function AnnouncementsManager({
 	sites,
@@ -18,7 +31,7 @@ export function AnnouncementsManager({
 	onToggleSelect: (id: string) => void;
 	announcementsApi: AnnouncementsApi;
 }): JSX.Element {
-	const items = mockRows("ANN", 6);
+	const [items, setItems] = React.useState(mockRows("ANN", 6));
 
 	React.useEffect(() => {
 		setTimeout(async () => {
@@ -31,6 +44,7 @@ export function AnnouncementsManager({
 				  enforcePdCt: true                  // keep true if your CMS sets the CT
 				});
 			*/
+			setItems(data.map((el, i) => announcementContentRow(el, i)));
 			console.log("announcements: ", data);
 		});
 	}, []);
