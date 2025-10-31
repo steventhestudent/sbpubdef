@@ -15,4 +15,5 @@ export const PD = {
 		PinUntil: "PD_x0020_PinUntil",
 		Urgency: "PD_x0020_Urgency",
 	},
+	search: { departmentMp: "Dept" }, // OPTIONAL alias for mapped managed property
 };

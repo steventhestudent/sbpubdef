@@ -1,5 +1,11 @@
 // api/announcements/Announcements.ts
 import type { ISearchResult } from "@pnp/sp/search";
+import { Web } from "@pnp/sp/webs";
+import "@pnp/sp/content-types";
+import type { IContentTypeInfo } from "@pnp/sp/content-types/types";
+import "@pnp/sp/clientside-pages";
+import { ClientsideText } from "@pnp/sp/clientside-pages";
+
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { PD } from "@api/config";
 
@@ -23,20 +29,51 @@ export type Announcement = {
 	siteUrl?: string;
 };
 
+type SearchOpts = {
+	enforcePdCt?: boolean;
+	department?: string; // filter value (e.g., "PD-Intranet")
+	departmentMp?: string; // mapped managed property alias, e.g., "Dept"
+};
+
+type GetOpts = {
+	targetSites?: string[]; // e.g., ["/sites/Attorney"]
+	department?: string;
+	enforcePdCt?: boolean;
+	departmentMp?: string;
+};
+
+type CreateAnnouncementInput = {
+	title: string;
+	department?: string; // "PD-Intranet"
+	html?: string; // contenteditable HTML (we’ll strip to text for now)
+	targetSite?: string; // "/sites/Attorney" or absolute; omit for current site
+};
+
 export class AnnouncementsApi {
 	constructor(private pnpWrapper: PNPWrapper) {}
 
-	async getSearch(limit = 12): Promise<Announcement[]> {
-		// Keyword Query Language (KQL)
-		const kql = [
-			`PromotedState=2`,
-			`ContentType:"${PD.contentType.Announcement}"`,
-			this.pnpWrapper.hubSiteId
-				? `DepartmentId:${this.pnpWrapper.hubSiteId}`
-				: undefined,
-		]
-			.filter(Boolean)
-			.join(" AND ");
+	// ---------------- GET (SEARCH) ----------------
+	async getSearch(limit = 12, opts?: SearchOpts): Promise<Announcement[]> {
+		const { enforcePdCt = true, department, departmentMp } = opts || {};
+		const parts = [`PromotedState=2`];
+
+		if (enforcePdCt)
+			parts.push(`ContentType:"${PD.contentType.Announcement}"`);
+
+		if (this.pnpWrapper.hubSiteId) {
+			parts.push(`DepartmentId:${this.pnpWrapper.hubSiteId}`);
+		} else if (this.pnpWrapper.siteUrls.length) {
+			parts.push(
+				`(${this.pnpWrapper.siteUrls.map((p) => `Path:${p}*`).join(" OR ")})`,
+			);
+		}
+
+		// Department filter in KQL only if you’ve mapped a managed property
+		if (department && departmentMp) {
+			parts.push(`${departmentMp}="${department}"`);
+		}
+
+		const kql = parts.join(" AND ");
 
 		return this.pnpWrapper.exec<Announcement[]>(
 			async () => {
@@ -55,7 +92,7 @@ export class AnnouncementsApi {
 					],
 					TrimDuplicates: true,
 				});
-				return res.PrimarySearchResults.map((raw) => {
+				let rows = res.PrimarySearchResults.map((raw) => {
 					const r = raw as NewsSearchResult;
 					return {
 						title: r.Title ?? "(untitled)",
@@ -65,20 +102,41 @@ export class AnnouncementsApi {
 							: undefined,
 						summary: r.Description,
 						siteUrl: r.SPSiteUrl,
-					};
+					} as Announcement;
 				});
+
+				// Optional client-side fallback filter if no managed property yet
+				if (department && !departmentMp) {
+					rows = rows.filter((a) =>
+						(a.summary || "")
+							.toLowerCase()
+							.includes(department.toLowerCase()),
+					);
+				}
+				return rows;
 			},
 			[],
 			"AnnouncementsApi.getSearch",
 		);
 	}
 
-	async getRest(limitPerSite = 8, sites?: string[]): Promise<Announcement[]> {
+	// ---------------- GET (REST) ----------------
+	async getRest(
+		limitPerSite = 8,
+		sites?: string[],
+		department?: string,
+	): Promise<Announcement[]> {
 		const targets = sites ?? this.pnpWrapper.siteUrls;
 		const siteList = targets.length ? targets : [""];
 
 		const calls = siteList.map(async (siteUrl) => {
 			const w = this.pnpWrapper.web(siteUrl);
+			const filters: string[] = [`PromotedState eq 2`];
+			if (department)
+				filters.push(
+					`PDDepartment eq '${department.replace(/'/g, "''")}'`,
+				);
+
 			const items = await w.lists
 				.getByTitle(PD.libs.SitePages)
 				.items.select(
@@ -88,9 +146,8 @@ export class AnnouncementsApi {
 					"PromotedState",
 					"FirstPublishedDate",
 					PD.fields.Summary,
-					PD.fields.ExpireDate,
 				)
-				.filter("PromotedState eq 2")
+				.filter(filters.join(" and "))
 				.orderBy("FirstPublishedDate", false)
 				.top(limitPerSite)();
 
@@ -102,9 +159,6 @@ export class AnnouncementsApi {
 						? new Date(i.FirstPublishedDate)
 						: undefined,
 					summary: (i[PD.fields.Summary] as string) ?? undefined,
-					expireDate: i[PD.fields.ExpireDate]
-						? new Date(i[PD.fields.ExpireDate] as string)
-						: undefined,
 					siteUrl: siteUrl || window.location.pathname,
 				}),
 			);
@@ -129,11 +183,90 @@ export class AnnouncementsApi {
 		);
 	}
 
-	async getAnnouncements(limit = 12): Promise<Announcement[]> {
-		return this.pnpWrapper.chooseStrategy() === "rest"
-			? this.getRest(limit, this.pnpWrapper.siteUrls)
-			: this.getSearch(
-					limit /* uses hubId inside */ /* optionally use CT filter elsewhere if you prefer a param */,
-				);
+	// ---------------- CHOOSE STRATEGY ----------------
+	async getAnnouncements(
+		limit = 12,
+		opts?: GetOpts,
+	): Promise<Announcement[]> {
+		const {
+			targetSites,
+			department,
+			enforcePdCt = true,
+			departmentMp,
+		} = opts || {};
+		const strategy = this.pnpWrapper.chooseStrategy();
+
+		if (strategy === "rest") {
+			return this.getRest(limit, targetSites, department);
+		}
+		return this.getSearch(limit, { enforcePdCt, department, departmentMp });
+	}
+
+	// ---------------- CREATE ----------------
+	async create(input: CreateAnnouncementInput): Promise<{ url: string }> {
+		const { title, department, html, targetSite } = input;
+
+		// pick target web
+		const web = targetSite
+			? Web([
+					this.pnpWrapper.spfi.web,
+					targetSite.startsWith("http")
+						? targetSite
+						: `${window.location.origin}${targetSite.startsWith("/") ? "" : "/"}${targetSite}`,
+				])
+			: this.pnpWrapper.spfi.web;
+
+		// 1) create page shell
+		const page = await web.addClientsidePage(
+			`${title}.aspx`,
+			title,
+			"Article",
+		);
+		await page.save();
+
+		// 2) set PD Announcement CT
+		const item = await page.getItem();
+		const cts = await web.lists
+			.getByTitle(PD.libs.SitePages)
+			.contentTypes.select("StringId", "Name")();
+
+		const pdCt = (cts as IContentTypeInfo[]).find(
+			(ct) => ct.Name === PD.contentType.Announcement,
+		);
+
+		if (pdCt) await item.update({ ContentTypeId: pdCt.StringId });
+
+		// 3) set PDDepartment (internal name of “PD Department”)
+		if (department) await item.update({ PDDepartment: department });
+
+		// 4) add text-only body from html
+		if (html) {
+			const SUMMARY_LEN = 260;
+			const div = document.createElement("div");
+			div.innerHTML = html;
+			div.querySelectorAll(
+				"img,video,source,iframe,script,style",
+			).forEach((el) => el.remove());
+			const text = (div.textContent || "").replace(/\s+/g, " ").trim();
+			const summary =
+				text.length > SUMMARY_LEN
+					? text.slice(0, SUMMARY_LEN - 1) + "…"
+					: text;
+
+			const section = page.addSection(); // one full-width section
+			const col = section.addColumn(12); // single column
+			col.addControl(new ClientsideText(summary)); // add text control
+			await page.save(true);
+		}
+
+		// 5) promote & publish
+		await page.promoteToNews(); // no args in v3
+
+		// 6) return absolute URL (read FileRef from the item)
+		const listItem = await page.getItem();
+		const li = await listItem.select("FileRef")();
+		const absolute =
+			new URL(web.toUrl(), window.location.origin).origin + li.FileRef;
+		return { url: absolute };
 	}
 }

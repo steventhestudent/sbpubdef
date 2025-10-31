@@ -14,6 +14,7 @@ import { ContentTable } from "@components/cms/ContentTable";
 import { HelpDrawer } from "@components/cms/HelpDrawer";
 import { mockRows } from "@components/cms/MockRows";
 import { NewPDAnnouncementDrawer } from "@components/cms/NewPDAnnouncementDrawer";
+import { PNPWrapper } from "@utils/PNPWrapper";
 
 type TabKey =
 	| "announcements"
@@ -44,7 +45,11 @@ export function PublishQueue({ sites }: { sites: string[] }): JSX.Element {
  * - Tailwind classes only; no additional libraries required.
  */
 
-export const CMSContainer: () => JSX.Element = () => {
+export const CMSContainer: ({
+	pnpWrapper,
+}: {
+	pnpWrapper: PNPWrapper;
+}) => JSX.Element = ({ pnpWrapper }) => {
 	const [activeTab, setActiveTab] = React.useState<TabKey>("announcements");
 	const [sites, setSites] = React.useState<string[]>(["/sites/PD-Intranet"]);
 	const [query, setQuery] = React.useState("");
@@ -162,6 +167,7 @@ export const CMSContainer: () => JSX.Element = () => {
 											: [...prev, id],
 									)
 								}
+								pnpWrapper={pnpWrapper}
 							/>
 						</SectionCard>
 					)}
@@ -233,11 +239,21 @@ export const CMSContainer: () => JSX.Element = () => {
 				onClose={() => setShowNewAnn(false)}
 				onOpenHelp={() => setShowHelp(true)}
 				onSubmit={(payload) => {
-					// Demo only: payload will be { title, department, html }
-					alert(
-						"Submit payload (placeholder):\n" +
-							JSON.stringify(payload, null, 2),
-					);
+					// payload will be { title, department, html }
+					function stripToText(html: string, maxLen = 240): string {
+						const div = document.createElement("div");
+						div.innerHTML = html;
+						// remove <img>, <video>, etc.
+						div.querySelectorAll(
+							"img,video,source,iframe,script,style",
+						).forEach((el) => el.remove());
+						const text =
+							div.textContent?.replace(/\s+/g, " ").trim() ?? "";
+						return text.length > maxLen
+							? text.slice(0, maxLen - 1) + "…"
+							: text;
+					}
+					payload.html = stripToText(payload.html); // to do: use images & styles (compatible w/ sharpeoint email news webparts)
 					setShowNewAnn(false);
 				}}
 			/>
