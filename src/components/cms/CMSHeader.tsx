@@ -2,8 +2,10 @@ import * as React from "react";
 
 export function CMSHeader({
 	onOpenHelp,
+	onNewAnnouncement,
 }: {
 	onOpenHelp: () => void;
+	onNewAnnouncement: () => void;
 }): JSX.Element {
 	return (
 		<header className="flex flex-wrap items-center justify-between gap-3">
@@ -13,8 +15,22 @@ export function CMSHeader({
 				</h1>
 			</div>
 			<div className="flex items-center gap-2">
-				<button className="rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50">
-					New…
+				<button
+					className="rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
+					onClick={onNewAnnouncement}
+				>
+					＋ New
+					<svg
+						viewBox="0 0 24 24"
+						className="h-4 w-4 float-right color-gray-900 mt-1"
+					>
+						<path
+							d="M6 9l6 6 6-6"
+							fill="none"
+							stroke="currentColor"
+							strokeWidth="2"
+						/>
+					</svg>
 				</button>
 				<button className="rounded-md border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50">
 					Settings

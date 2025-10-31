@@ -13,6 +13,7 @@ import { AuditLog } from "@components/cms/AuditLog";
 import { ContentTable } from "@components/cms/ContentTable";
 import { HelpDrawer } from "@components/cms/HelpDrawer";
 import { mockRows } from "@components/cms/MockRows";
+import { NewPDAnnouncementDrawer } from "@components/cms/NewPDAnnouncementDrawer";
 
 type TabKey =
 	| "announcements"
@@ -50,6 +51,7 @@ export const CMSContainer: () => JSX.Element = () => {
 	const [showHelp, setShowHelp] = React.useState(false);
 	const [selectionMode, setSelectionMode] = React.useState<boolean>(false);
 	const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+	const [showNewAnn, setShowNewAnn] = React.useState(false);
 
 	function clearSelection(): void {
 		setSelectedIds([]);
@@ -58,7 +60,10 @@ export const CMSContainer: () => JSX.Element = () => {
 
 	return (
 		<div className="mx-auto max-w-[1200px] p-4">
-			<CMSHeader onOpenHelp={() => setShowHelp(true)} />
+			<CMSHeader
+				onOpenHelp={() => setShowHelp(true)}
+				onNewAnnouncement={() => setShowNewAnn(true)}
+			/>{" "}
 			<section className="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm">
 				<div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
 					<MultiSitePicker value={sites} onChange={setSites} />
@@ -222,8 +227,20 @@ export const CMSContainer: () => JSX.Element = () => {
 					)}
 				</div>
 			</section>
-
 			<HelpDrawer open={showHelp} onClose={() => setShowHelp(false)} />
+			<NewPDAnnouncementDrawer
+				open={showNewAnn}
+				onClose={() => setShowNewAnn(false)}
+				onOpenHelp={() => setShowHelp(true)}
+				onSubmit={(payload) => {
+					// Demo only: payload will be { title, department, html }
+					alert(
+						"Submit payload (placeholder):\n" +
+							JSON.stringify(payload, null, 2),
+					);
+					setShowNewAnn(false);
+				}}
+			/>
 		</div>
 	);
 };

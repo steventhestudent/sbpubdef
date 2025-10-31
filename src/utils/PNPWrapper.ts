@@ -33,7 +33,8 @@ export class PNPWrapper {
 		this.hubSiteId =
 			opts?.hubSiteId || "d074d04a-ee38-4373-a580-326ed5580edb"; // default hub PD-Intranet
 		this.siteUrls = opts?.siteUrls ?? [];
-		if (this.siteUrls.length == 0) this.siteUrls.push("/sites/PD-Intranet");
+		if (this.siteUrls.length === 0)
+			this.siteUrls.push("/sites/PD-Intranet");
 		Logger.activeLogLevel = LogLevel.Info;
 
 		// const site = ctx.pageContext.site.serverRelativeUrl || "/";
