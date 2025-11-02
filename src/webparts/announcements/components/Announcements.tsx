@@ -1,8 +1,69 @@
 import * as React from "react";
 import type { IAnnouncementsProps } from "./IAnnouncementsProps";
+import { PNPWrapper } from "@utils/PNPWrapper";
+import { Announcement, AnnouncementsApi } from "@api/announcements";
 
-export default class Announcements extends React.Component<IAnnouncementsProps> {
+type AnnouncementListItem = {
+	title: string;
+	date: string;
+};
+
+type IAnnouncementsState = {
+	items: AnnouncementListItem[];
+};
+
+export default class Announcements extends React.Component<
+	IAnnouncementsProps,
+	IAnnouncementsState
+> {
+	private pnpWrapper: PNPWrapper;
+	private announcementsApi: AnnouncementsApi;
+
+	constructor(props: IAnnouncementsProps) {
+		super(props);
+
+		// non-state plumbing
+		this.pnpWrapper = new PNPWrapper(this.props.context, {
+			siteUrls: [
+				"/sites/PD-Intranet",
+				// "/sites/Attorney",
+				// "/sites/LOP",
+				"/sites/Tech-Team",
+				"/sites/HR",
+			],
+			cache: false,
+		});
+		this.announcementsApi = new AnnouncementsApi(this.pnpWrapper);
+
+		// initial UI state
+		this.state = {
+			items: [
+				{
+					title: "Office closure on Friday for training",
+					date: "Oct 10",
+				},
+				{ title: "New mileage reimbursement form", date: "Oct 02" },
+				{ title: "Security reminder: phishing drill", date: "Sep 27" },
+			],
+		};
+	}
+
+	public async componentDidMount(): Promise<void> {
+		await this.load();
+	}
+
+	private load = async (): Promise<void> => {
+		const data = await this.announcementsApi.getAnnouncements(12);
+		const items: AnnouncementListItem[] = data.map((el: Announcement) => ({
+			title: el.title ?? "(untitled)",
+			date: el.published ? el.published.toDateString() : "",
+		}));
+		this.setState({ items });
+	};
+
 	public render(): React.ReactElement<IAnnouncementsProps> {
+		const { items } = this.state;
+
 		return (
 			<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
 				<header className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
@@ -18,20 +79,7 @@ export default class Announcements extends React.Component<IAnnouncementsProps> 
 				</header>
 
 				<ul className="divide-y divide-slate-200">
-					{[
-						{
-							title: "Office closure on Friday for training",
-							date: "Oct 10",
-						},
-						{
-							title: "New mileage reimbursement form",
-							date: "Oct 02",
-						},
-						{
-							title: "Security reminder: phishing drill",
-							date: "Sep 27",
-						},
-					].map((a, idx) => (
+					{items.map((a, idx) => (
 						<li key={idx} className="px-4 py-3 hover:bg-slate-50">
 							<a className="flex items-start gap-3" href="#">
 								<span
