@@ -11,25 +11,31 @@ import { Logger, LogLevel } from "@pnp/logging";
 import { Caching } from "@pnp/queryable";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 
+const DEFAULT_CACHE = false;
+type cacheSettingType = boolean | "true"; //"true" is true... it uses cache, but then subsequent requests do not (initialCachedRequestFlag / shouldUseCache())
+
 export type SpClientOptions = {
 	hubSiteId?: string /* https://csproject25-admin.sharepoint.com/_layouts/15/online/AdminHome.aspx#/siteManagement/view/ALL%20SITES then pick hub and copy hub id from url */;
 	siteUrls?: string[];
-	cache?: boolean;
+	cache?: cacheSettingType;
 };
 
 export class PNPWrapper {
-	private sp: SPFI;
+	private _spfi: SPFI;
+	private _spfi_use_cache: SPFI;
 	public readonly hubSiteId?: string;
 	public readonly siteUrls: string[];
 	// private currentSitePath: string;
 	private currentWebPath: string;
+	private cacheSetting!: cacheSettingType;
+	private initialCachedRequestFlag: boolean; //todo: flagDict (initialCachedRequestFlag for each unique set of query options), accessing .sp triggers this... shouldn't it be when accessing .web() or .sp.web()???
 
 	constructor(ctx: WebPartContext, opts?: SpClientOptions) {
-		const base = spfi().using(SPFx(ctx));
-		this.sp =
-			(opts?.cache ?? true)
-				? base.using(Caching({ store: "session" }))
-				: base;
+		this._spfi = spfi().using(SPFx(ctx));
+		this._spfi_use_cache = spfi()
+			.using(SPFx(ctx))
+			.using(Caching({ store: "session" }));
+		this.cacheSetting = opts?.cache ?? DEFAULT_CACHE;
 		this.hubSiteId =
 			opts?.hubSiteId || "d074d04a-ee38-4373-a580-326ed5580edb"; // default hub PD-Intranet
 		this.siteUrls = opts?.siteUrls ?? [];
@@ -82,24 +88,34 @@ export class PNPWrapper {
 		return Web([this.sp.web, full]);
 	}
 
-	public async exec<T>(
-		fn: () => Promise<T>,
-		fallback: T,
-		label: string,
-	): Promise<T> {
+	public async exec<T>(fn: () => Promise<T>): Promise<T | undefined> {
 		try {
 			return await fn();
 		} catch (err: unknown) {
 			const msg =
 				err instanceof Error ? err.message : JSON.stringify(err);
 			console.error("PNPWrapper exec err:", msg);
-			Logger.write(`[PNPWrapper] ${label} - ${msg}`, LogLevel.Error);
-			return fallback;
+			Logger.write(`[PNPWrapper] \${label} - ${msg}`, LogLevel.Error);
+			return undefined;
 		}
 	}
 
-	// expose raw primitives you’ll reuse
-	public get spfi(): SPFI {
-		return this.sp;
+	private shouldUseCache(): boolean {
+		if (this.cacheSetting === "true") return !this.initialCachedRequestFlag;
+		return this.cacheSetting;
+	}
+
+	get spfi(): SPFI {
+		return this._spfi;
+	}
+	get spfi_use_cache(): SPFI {
+		return this._spfi_use_cache;
+	}
+	get sp(): SPFI {
+		const shouldUseCache = this.shouldUseCache();
+		if (!this.initialCachedRequestFlag && shouldUseCache)
+			this.initialCachedRequestFlag = true; // don't use cache on subsequent requests (on this.pnpWrapper)
+		console.log(`shoulduse cache: ${shouldUseCache}`);
+		return shouldUseCache ? this.spfi_use_cache : this.spfi;
 	}
 }

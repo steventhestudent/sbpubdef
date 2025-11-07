@@ -1,8 +1,10 @@
 import * as React from "react";
 import { mockRows } from "@components/cms/MockRows";
 import { ContentTable } from "@components/cms/ContentTable";
-import { Announcement, AnnouncementsApi } from "@api/announcements";
+import { AnnouncementsApi } from "@api/announcements";
 import { ContentRow } from "@type/cms/ContentRow";
+import { Announcement } from "@type/PDAnnouncement";
+import * as Utils from "@utils";
 
 function announcementContentRow(data: Announcement, i: number): ContentRow {
 	return {
@@ -31,22 +33,15 @@ export function AnnouncementsManager({
 	onToggleSelect: (id: string) => void;
 	announcementsApi: AnnouncementsApi;
 }): JSX.Element {
-	const [items, setItems] = React.useState(mockRows("ANN", 6));
+	const [items, setItems] = React.useState(mockRows("ANN", 1));
 
+	async function load(): Promise<void> {
+		const data = await announcementsApi.getAnnouncements(12);
+		if (data) setItems(data.map((el, i) => announcementContentRow(el, i)));
+		console.log("announcements: ", data);
+	}
 	React.useEffect(() => {
-		setTimeout(async () => {
-			const data = await announcementsApi.getAnnouncements(12);
-			/*
-				const items = await announcementsApi.getAnnouncements(12, {
-				  targetSites: ["/sites/Attorney"],  // or omit for current site
-				  department: "PD-Intranet",
-				  // departmentMp: "Dept",           // add after you map search managed property
-				  enforcePdCt: true                  // keep true if your CMS sets the CT
-				});
-			*/
-			setItems(data.map((el, i) => announcementContentRow(el, i)));
-			console.log("announcements: ", data);
-		});
+		Utils.loadCachedThenRefresh(load); // pnpWrapper.cacheVal is "true" <--- not bool: true (subsequent req's are not cached)
 	}, []);
 
 	return (

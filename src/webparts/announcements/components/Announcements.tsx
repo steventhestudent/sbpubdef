@@ -1,7 +1,9 @@
 import * as React from "react";
 import type { IAnnouncementsProps } from "./IAnnouncementsProps";
 import { PNPWrapper } from "@utils/PNPWrapper";
-import { Announcement, AnnouncementsApi } from "@api/announcements";
+import { AnnouncementsApi } from "@api/announcements";
+import { Announcement } from "@type/PDAnnouncement";
+import * as Utils from "@utils";
 
 type AnnouncementListItem = {
 	title: string;
@@ -31,7 +33,7 @@ export default class Announcements extends React.Component<
 				"/sites/Tech-Team",
 				"/sites/HR",
 			],
-			cache: false,
+			cache: "true",
 		});
 		this.announcementsApi = new AnnouncementsApi(this.pnpWrapper);
 
@@ -39,21 +41,20 @@ export default class Announcements extends React.Component<
 		this.state = {
 			items: [
 				{
-					title: "Office closure on Friday for training",
-					date: "Oct 10",
+					title: "No Events",
+					date: new Date().toDateString(),
 				},
-				{ title: "New mileage reimbursement form", date: "Oct 02" },
-				{ title: "Security reminder: phishing drill", date: "Sep 27" },
 			],
 		};
 	}
 
-	public async componentDidMount(): Promise<void> {
-		await this.load();
+	public componentDidMount(): void {
+		Utils.loadCachedThenRefresh(this.load);
 	}
 
 	private load = async (): Promise<void> => {
 		const data = await this.announcementsApi.getAnnouncements(12);
+		if (!data) return;
 		const items: AnnouncementListItem[] = data.map((el: Announcement) => ({
 			title: el.title ?? "(untitled)",
 			date: el.published ? el.published.toDateString() : "",

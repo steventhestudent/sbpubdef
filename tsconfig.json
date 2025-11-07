@@ -24,8 +24,10 @@
 			"@components/*": ["src/components/*"],
 			"@dist/*": ["dist/*"],
 			"@extensions/*": ["src/extensions/*"],
+			"@styles": ["src/styles"],
 			"@styles/*": ["src/styles/*"],
 			"@type/*": ["src/types/*"],
+			"@utils": ["src/utils"],
 			"@utils/*": ["src/utils/*"],
 			"@webparts/*": ["src/webparts/*"]
 		}

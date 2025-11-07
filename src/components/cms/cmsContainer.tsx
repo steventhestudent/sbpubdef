@@ -70,7 +70,7 @@ export const CMSContainer: ({
 			<CMSHeader
 				onOpenHelp={() => setShowHelp(true)}
 				onNewAnnouncement={() => setShowNewAnn(true)}
-			/>{" "}
+			/>
 			<section className="mt-6 rounded-xl border border-slate-200 bg-white shadow-sm">
 				<div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
 					<MultiSitePicker value={sites} onChange={setSites} />
