@@ -1,5 +1,6 @@
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { Announcement, GetOpts, SearchOpts } from "@type/PDAnnouncement";
+import { PD } from "@api/config";
 
 export class QueryPart {
 	constructor(
@@ -36,12 +37,21 @@ export class CustomContentApi {
 		return buffer;
 	}
 
+	get odata(): string {
+		let buf = "";
+		this.parts.forEach((p) => {
+			const joiner = p.conditionType === "and" ? " and " : " or ";
+			buf += (buf ? joiner : "") + p.condition;
+		});
+		return buf;
+	}
+
 	/*
 		get
 	 */
 	async get(limit = 12, opts?: GetOpts): Promise<Announcement[] | undefined> {
 		const { targetSites, department } = opts || {};
-		return this.pnpWrapper.chooseStrategy() === "rest"
+		return this.pnpWrapper.chooseStrategy(targetSites) === "rest"
 			? this.getRest(limit, targetSites, department)
 			: this.getSearch(limit, opts);
 	}
@@ -83,6 +93,10 @@ export class CustomContentApi {
 		department?: string,
 	): Promise<Announcement[] | undefined> {
 		this.preprocess({ department });
+		if (department)
+			this.and(
+				`${PD.siteColumn.PDDepartment} eq '${department.replace(/'/g, "''")}'`,
+			);
 		return undefined;
 	}
 }

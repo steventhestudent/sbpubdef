@@ -64,14 +64,15 @@ export class PNPWrapper {
 		);
 	}
 
-	public chooseStrategy(): "rest" | "search" {
-		if (!this.siteUrls || this.siteUrls.length === 0) {
+	public chooseStrategy(targetSites?: string[]): "rest" | "search" {
+		const sites = targetSites || this.siteUrls;
+		if (!sites || sites.length === 0) {
 			// No targets provided => current web/site
 			return "rest";
 		}
-		if (this.siteUrls.length > 1) return "search";
+		if (sites.length > 1) return "search";
 
-		const target = this.toAbsolutePathLike(this.siteUrls[0]);
+		const target = this.toAbsolutePathLike(sites[0]);
 
 		// SAFEST: only treat as "current web" if it exactly matches the current web path.
 		// Example: current "/sites/Attorney", target "/sites/Attorney" => REST

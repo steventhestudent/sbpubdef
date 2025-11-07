@@ -1,0 +1,49 @@
+CheckoutUser: ""
+​​
+Created_x005f_x0020_x005f_Date: "10/30/2025 1:12 AM"
+​​
+Description: "Good News Everyone Lorem ipsum dolor sit amet. Excepteur dapibus minim nisi qui occaecat dolore dapibus. Laboris minim voluptate reprehenderit duis amet esse nisi do. Mollit officia quis dolore sint aute. Duis massa. Do elementum nisi praesent excep…"
+​​
+Editor: "Steven Gonzales"
+​​
+FSObjType: "0"
+​​
+FileLeafRef: "Good-News-Everyone.aspx"
+​​
+FileRef: "/sites/PD-Intranet/SitePages/Good-News-Everyone.aspx"
+​​
+FirstPublishedDate: "10/30/2025 1:12 AM"
+​​
+HTML_x005f_x0020_x005f_File_x005f_x0020_x005f_Type: ""
+​​
+ID: "21"
+​​
+Last_x005f_x0020_x005f_Modified: "10/30/2025 1:18 AM"
+​​
+MetaInfo: 'a1d384ab-8fe1-4467-9afd-11a61fcfb638;#Good-News-Everyone.aspx;#00000000-0000-0000-0000-000000000000;#"{08569231-EE8A-46C0-9DA8-EA11AEA2B819},15";#"{08569231-EE8A-46C0-9DA8-EA11AEA2B819},16";#0x02CB58BD6991A6ED7FDE896E047C04BB57CB22E4FC;#6856;#0\r\nPRTSubscriptionExpiration:SW|2025-10-30T16:12:23.0964177Z\r\nvti_description:SW|Good News Everyone Lorem ipsum dolor sit amet. Excepteur dapibus minim nisi qui occaecat dolore dapibus. Laboris minim voluptate reprehenderit duis amet esse nisi do. Mollit officia quis dolore sint aute. Duis massa. Do elementum nisi praesent excep…\r\nvti_priorversioncreationtime:TR|30 Oct 2025 08:12:26 -0000\r\nvti_timelastwnssent:TR|30 Oct 2025 08:18:22 -0000\r\nvti_supportsZipIt:BW|false\r\nvti_foldersubfolderitemcount:IR|0\r\n_TopicHeader:SW|\r\nBannerImageUrl:SW|https://csproject25.sharepoint.com/_layouts/15/images/sleektemplateimagetile.jpg, https://csproject25.sharepoint.com/_layouts/15/images/sleektemplateimagetile.jpg\r\nvti_cachedcustomprops:VX|PageLayoutType _SPSitePageFlags PRTDocumentId FirstPublishedDate CanvasContent1 _SPCollaborators PRTTenantId _TopicHeader BannerImageUrl _SPThumbnailPacToken ContentTypeId ClientSideApplicationId PRTWebSocketUrl PRTUniqueId LayoutWebpartsContent _SPAuthoringMetadata vti_title PromotedState PRTSubscriptionExpiration\r\nvti_iplabelpromotionversion:IW|0\r\nvti_cachedtitle:SR|Good News Everyone\r\nvti_title:SR|Good News Everyone\r\nLayoutWebpartsContent:SW|<div></div>\r\n_SPAuthoringMetadata:SW|\r\nvti_areHybridOrphanHashedBlobsCleaned:BW|false\r\nvti_streamSyncTokenSequenceNumber:IW|964\r\n'
+​​
+Modified: "10/30/2025 1:18 AM"
+​​
+OData__x005f_Level: "1"
+​​
+OData__x005f_ModerationStatus: "Approved"
+​​
+PD_x005f_x0020_x005f_Department: ""
+​​
+ProgId: ""
+​​
+PromotedState: "2"
+​​
+ScopeId: "{97695891-52F2-4AC0-BA8D-C16E361B3282}"
+​​
+Title: "Good News Everyone"
+​​
+UniqueId: "08569231-ee8a-46c0-9da8-ea11aea2b819"
+​​
+"odata.editLink": "Web/Lists(guid'7f8cb621-d987-461a-83d1-c5abf026e697')/Items(21)/FieldValuesAsText"
+​​
+"odata.id": "https://csproject25.sharepoint.com/sites/PD-Intranet/_api/Web/Lists(guid'7f8cb621-d987-461a-83d1-c5abf026e697')/Items(21)/FieldValuesAsText"
+​​
+"odata.type": "SP.FieldStringValues"
+​​
+owshiddenversion: "15"

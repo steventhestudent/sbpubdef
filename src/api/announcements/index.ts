@@ -77,35 +77,52 @@ export class AnnouncementsApi extends CustomContentApi {
 		// map of pnpWrapper.web calls
 		const calls = siteList.map(async (siteUrl) => {
 			const w = this.pnpWrapper.web(siteUrl);
-			const filters: string[] = [`PromotedState eq 2`];
-			if (department)
-				filters.push(
-					`PDDepartment eq '${department.replace(/'/g, "''")}'`,
-				);
-			const items = await w.lists
-				.getByTitle(SP.contentType.SitePages)
-				.items.select(
+			this.and("PromotedState eq 2");
+			const list = w.lists.getByTitle(SP.contentType.SitePages);
+
+			// --- get the PD Announcement CT id for THIS library ---
+			const cts = await list.contentTypes.select("StringId", "Name")();
+			const pdCtId = cts.find(
+				(ct: any) => ct.Name === PD.contentType.Announcement,
+			)?.StringId;
+			// this.and(`ContentTypeId eq '${pdCtId}'`);
+			this.and(`startswith(ContentTypeId,'${pdCtId}')'`);
+
+			const deptField = await list.fields
+				.getByInternalNameOrTitle(PD.siteColumn.PDDepartment) // "PDDepartment"
+				.select("InternalName")();
+			const deptInternal: string = deptField.InternalName;
+
+			console.log(`aaa`, deptInternal);
+			const items = await list.items
+				.filter(this.odata)
+
+				.select(
 					"Id",
 					"Title",
 					"FileRef",
 					"PromotedState",
 					"FirstPublishedDate",
-					PD.siteColumn.Summary,
+					"Description",
+					`PD_x0020_Department`, // safe even if column missing
 				)
-				.filter(filters.join(" and "))
+				// .expand("FieldValuesAsText")
 				.orderBy("FirstPublishedDate", false)
 				.top(limitPerSite)();
-			return (items as SitePageItem[]).map(
-				(i): Announcement => ({
+			return (items as SitePageItem[]).map((i): Announcement => {
+				console.log(i);
+				return {
 					title: i.Title ?? "(untitled)",
 					url: i.FileRef ?? "#",
 					published: i.FirstPublishedDate
 						? new Date(i.FirstPublishedDate)
 						: undefined,
-					summary: (i[PD.siteColumn.Summary] as string) ?? undefined,
+					summary: (i["Description"] as string) ?? undefined,
 					siteUrl: siteUrl || window.location.pathname,
-				}),
-			);
+					PDDepartment:
+						(i["PD_x0020_Department"] as string) ?? undefined,
+				};
+			});
 		});
 		// send requests + flatten/sort results
 		return this.pnpWrapper.exec<Announcement[]>(async () => {

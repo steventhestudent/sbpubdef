@@ -17,6 +17,7 @@ export type Announcement = {
 	summary?: string;
 	expireDate?: Date;
 	siteUrl?: string;
+	PDDepartment?: string;
 };
 export type SearchOpts = {
 	contentType?: string;
