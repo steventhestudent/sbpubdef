@@ -9,4 +9,5 @@ export interface ContentRow {
 	when: string;
 	owner: string;
 	status: "Draft" | "Scheduled" | "Published" | "Archived" | "Error" | string;
+	PDDeparment?: string;
 }

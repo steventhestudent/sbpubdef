@@ -4,6 +4,8 @@ import { PNPWrapper } from "@utils/PNPWrapper";
 import { AnnouncementsApi } from "@api/announcements";
 import { Announcement } from "@type/PDAnnouncement";
 import * as Utils from "@utils";
+// import { getGroups } from "@utils/graph/getGroups";
+// import { AadHttpClient, IHttpClientOptions } from "@microsoft/sp-http";
 
 type AnnouncementListItem = {
 	title: string;
@@ -50,6 +52,10 @@ export default class Announcements extends React.Component<
 
 	public componentDidMount(): void {
 		Utils.loadCachedThenRefresh(this.load);
+		setTimeout(async () => {
+			const groups = await this._getUserGroupIds();
+			console.log("groupids", groups);
+		});
 	}
 
 	private load = async (): Promise<void> => {
@@ -101,5 +107,9 @@ export default class Announcements extends React.Component<
 				</ul>
 			</section>
 		);
+	}
+
+	private async _getUserGroupIds(): Promise<Set<string>> {
+		return new Set();
 	}
 }

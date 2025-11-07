@@ -17,10 +17,10 @@ export default class Cms extends React.Component<ICmsProps, ICmsState> {
 					"/sites/PD-Intranet",
 					// "/sites/Attorney",
 					// "/sites/LOP",
-					"/sites/Tech-Team",
-					"/sites/HR",
+					// "/sites/Tech-Team",
+					// "/sites/HR",
 				],
-				cache: "true",
+				cache: "true", //todo: change to "true"
 			}),
 		};
 	}

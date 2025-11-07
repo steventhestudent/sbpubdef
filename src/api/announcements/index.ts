@@ -83,7 +83,7 @@ export class AnnouncementsApi extends CustomContentApi {
 			// --- get the PD Announcement CT id for THIS library ---
 			const cts = await list.contentTypes.select("StringId", "Name")();
 			const pdCtId = cts.find(
-				(ct: any) => ct.Name === PD.contentType.Announcement,
+				(ct) => ct.Name === PD.contentType.Announcement,
 			)?.StringId;
 			// this.and(`ContentTypeId eq '${pdCtId}'`);
 			this.and(`startswith(ContentTypeId,'${pdCtId}')'`);
@@ -106,7 +106,7 @@ export class AnnouncementsApi extends CustomContentApi {
 					"Description",
 					`PD_x0020_Department`, // safe even if column missing
 				)
-				// .expand("FieldValuesAsText")
+				.expand("FieldValuesAsText")
 				.orderBy("FirstPublishedDate", false)
 				.top(limitPerSite)();
 			return (items as SitePageItem[]).map((i): Announcement => {
@@ -117,10 +117,10 @@ export class AnnouncementsApi extends CustomContentApi {
 					published: i.FirstPublishedDate
 						? new Date(i.FirstPublishedDate)
 						: undefined,
-					summary: (i["Description"] as string) ?? undefined,
+					summary: (i.Description as string) ?? undefined,
 					siteUrl: siteUrl || window.location.pathname,
 					PDDepartment:
-						(i["PD_x0020_Department"] as string) ?? undefined,
+						(i.PD_x0020_Department as string) ?? undefined,
 				};
 			});
 		});

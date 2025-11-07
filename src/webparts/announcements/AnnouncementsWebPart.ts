@@ -12,6 +12,7 @@ import { IReadonlyTheme } from "@microsoft/sp-component-base";
 import * as strings from "AnnouncementsWebPartStrings";
 import Announcements from "./components/Announcements";
 import { IAnnouncementsProps } from "./components/IAnnouncementsProps";
+// import { getGroups } from "@utils/graph/getGroups";
 
 export interface IAnnouncementsWebPartProps {
 	description: string;
@@ -31,7 +32,7 @@ export default class AnnouncementsWebPart extends BaseClientSideWebPart<IAnnounc
 				userDisplayName: this.context.pageContext.user.displayName,
 				context: this.context,
 			});
-
+		// console.log(`groups`, getGroups(this.context));
 		ReactDom.render(element, this.domElement);
 	}
 

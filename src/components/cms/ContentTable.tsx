@@ -74,7 +74,7 @@ export function ContentTable({
 								</div>
 							</td>
 							<td className="px-4 py-3 text-sm text-slate-700">
-								{kind}
+								{it.PDDeparment}
 							</td>
 							<td className="px-4 py-3 text-sm text-slate-700">
 								{it.site}

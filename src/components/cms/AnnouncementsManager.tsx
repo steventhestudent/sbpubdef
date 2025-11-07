@@ -15,6 +15,7 @@ function announcementContentRow(data: Announcement, i: number): ContentRow {
 		when: data.published?.toDateString() ?? "—",
 		owner: "<owner>",
 		status: data.published ? "published" : "draft",
+		PDDeparment: data.PDDepartment,
 	};
 }
 
