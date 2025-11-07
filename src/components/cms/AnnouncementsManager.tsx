@@ -36,7 +36,7 @@ export function AnnouncementsManager({
 	const [items, setItems] = React.useState(mockRows("ANN", 1));
 
 	async function load(): Promise<void> {
-		const data = await announcementsApi.getAnnouncements(12);
+		const data = await announcementsApi.get(12);
 		if (data) setItems(data.map((el, i) => announcementContentRow(el, i)));
 		console.log("announcements: ", data);
 	}

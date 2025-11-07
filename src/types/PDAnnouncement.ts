@@ -3,6 +3,7 @@ import type { ISearchResult } from "@pnp/sp/search";
 export type NewsSearchResult = ISearchResult & {
 	FirstPublishedDate?: string;
 	SPSiteUrl?: string;
+	PDDepartment: string;
 };
 export type SitePageItem = {
 	Title?: string;
@@ -18,14 +19,14 @@ export type Announcement = {
 	siteUrl?: string;
 };
 export type SearchOpts = {
-	enforcePdCt?: boolean;
+	contentType?: string;
 	department?: string; // filter value (e.g., "PD-Intranet")
 	departmentMp?: string; // mapped managed property alias, e.g., "Dept"
 };
 export type GetOpts = {
+	contentType?: string;
 	targetSites?: string[]; // e.g., ["/sites/Attorney"]
 	department?: string;
-	enforcePdCt?: boolean;
 	departmentMp?: string;
 };
 export type CreateAnnouncementInput = {

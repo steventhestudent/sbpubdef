@@ -53,7 +53,7 @@ export default class Announcements extends React.Component<
 	}
 
 	private load = async (): Promise<void> => {
-		const data = await this.announcementsApi.getAnnouncements(12);
+		const data = await this.announcementsApi.get(12);
 		if (!data) return;
 		const items: AnnouncementListItem[] = data.map((el: Announcement) => ({
 			title: el.title ?? "(untitled)",
