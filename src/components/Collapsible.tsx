@@ -99,7 +99,7 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 			aria-expanded={!collapsed}
 			aria-controls={`${instanceId}-content`}
 			onClick={toggle}
-			className="inline-flex items-center justify-center h-8 w-8 rounded-lg transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+			className="bg-white inline-flex items-center justify-center h-8 w-8 rounded-lg transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
 			title={collapsed ? "Expand" : "Collapse"}
 		>
 			{/* simple caret using border trick for crispness */}
@@ -122,10 +122,10 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 
 	return (
 		<section
-			className={`rounded-xl border border-slate-200 bg-white shadow-sm ${className}`}
+			className={`rounded-xl border border-slate-800 !bg-[white] shadow-sm ${className}`}
 		>
 			<header
-				className={`border-b border-slate-200 px-3 py-2 flex items-center justify-between select-none ${headerClassName}`}
+				className={`bg-[#e6e6e6] rounded-t-xl border-b border-slate-800 px-3 py-2 flex items-center justify-between select-none ${headerClassName}`}
 			>
 				<div className="flex items-center gap-2">
 					{headerClickable ? (

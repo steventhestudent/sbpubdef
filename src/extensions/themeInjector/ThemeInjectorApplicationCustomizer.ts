@@ -24,5 +24,17 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 
 	private onNavigate(): void {
 		DismissibleAnnouncementStrip();
+		(function () {
+			const headerTitleAnchor = document.querySelector(
+				"#SiteHeaderTitle a",
+			) as HTMLAnchorElement;
+			const isOnSiteHome =
+				location.href.startsWith(headerTitleAnchor?.href) &&
+				location.href.indexOf(".aspx") === -1;
+			if (headerTitleAnchor)
+				headerTitleAnchor.style.color = isOnSiteHome
+					? "#f5ffb1"
+					: "white";
+		})();
 	}
 }

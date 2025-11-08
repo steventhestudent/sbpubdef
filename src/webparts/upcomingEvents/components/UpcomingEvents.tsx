@@ -24,14 +24,14 @@ export default class UpcomingEvents extends React.Component<IUpcomingEventsProps
 			},
 		];
 		return (
-			<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-				<header className="border-b border-slate-200 px-4 py-3">
+			<section className="rounded-xl border border-slater-800 bg-white shadow-sm">
+				<header className="border-b border-slater-800 px-4 py-3 bg-[#e6e6e6] rounded-t-xl">
 					<h4 className="text-base font-semibold text-slate-800">
 						Upcoming Events
 					</h4>
 				</header>
 				<div className="overflow-x-auto">
-					<table className="min-w-full divide-y divide-slate-200">
+					<table className="min-w-full divide-y divide-slater-800">
 						<thead className="bg-slate-50">
 							<tr>
 								{["Date", "Time", "Event", "Location", ""].map(
@@ -46,7 +46,7 @@ export default class UpcomingEvents extends React.Component<IUpcomingEventsProps
 								)}
 							</tr>
 						</thead>
-						<tbody className="divide-y divide-slate-200">
+						<tbody className="divide-y divide-slater-800">
 							{events.map((e, i) => (
 								<tr key={i} className="hover:bg-slate-50">
 									<td className="px-4 py-3 text-sm text-slate-800">

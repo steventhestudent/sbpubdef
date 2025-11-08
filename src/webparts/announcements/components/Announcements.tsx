@@ -72,8 +72,8 @@ export default class Announcements extends React.Component<
 		const { items } = this.state;
 
 		return (
-			<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-				<header className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+			<section className="rounded-xl border border-slater-800 bg-white shadow-sm">
+				<header className="flex items-center justify-between border-b border-slater-800 px-4 py-3 bg-[#e6e6e6] rounded-t-xl">
 					<h4 className="text-base font-semibold text-slate-800">
 						Announcements
 					</h4>
@@ -85,7 +85,7 @@ export default class Announcements extends React.Component<
 					</a>
 				</header>
 
-				<ul className="divide-y divide-slate-200">
+				<ul className="divide-y divide-slater-800">
 					{items.map((a, idx) => (
 						<li key={idx} className="px-4 py-3 hover:bg-slate-50">
 							<a className="flex items-start gap-3" href="#">

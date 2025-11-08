@@ -10,8 +10,8 @@ export default class PortalCalendar extends React.Component<IPortalCalendarProps
 		);
 
 		return (
-			<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-				<header className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+			<section className="rounded-xl border border-slater-800 bg-white shadow-sm">
+				<header className="flex items-center justify-between border-b border-slater-800 px-4 py-3 bg-[#e6e6e6] rounded-t-xl">
 					<h4 className="text-base font-semibold text-slate-800">
 						Calendar / Events / Trainings
 					</h4>
@@ -46,7 +46,7 @@ export default class PortalCalendar extends React.Component<IPortalCalendarProps
 									{row.map((cell, j) => (
 										<td
 											key={j}
-											className="min-h-10 border border-slate-200 align-top p-1"
+											className="min-h-10 border border-slater-800 align-top p-1"
 											width="14%"
 										>
 											<ul className="scrollbar-thin overflow-x-auto list-disc list-inside">
