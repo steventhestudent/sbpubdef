@@ -34,7 +34,6 @@
 		"@pnp/graph": "^4.17.0",
 		"@pnp/logging": "^4.17.0",
 		"@pnp/sp": "^4.17.0",
-		"@tailwindcss/cli": "^4.1.15",
 		"@tailwindcss/postcss": "^4.1.14",
 		"gulp-cli": "^3.1.0",
 		"gulp-postcss": "^10.0.0",
@@ -44,6 +43,7 @@
 		"react-dom": "17.0.1",
 		"spfx-fast-serve": "^4.0.2",
 		"tailwindcss": "^4.1.15",
+		"tailwindcss-multi": "^0.4.6",
 		"tslib": "2.3.1",
 		"yo": "^5.1.0"
 	},
@@ -54,6 +54,7 @@
 		"@microsoft/sp-build-web": "1.21.1",
 		"@microsoft/sp-module-interfaces": "1.21.1",
 		"@rushstack/eslint-config": "4.0.1",
+		"@tailwindcss/cli": "^4.1.15",
 		"@types/react": "17.0.45",
 		"@types/react-dom": "17.0.17",
 		"@types/webpack-env": "~1.15.2",

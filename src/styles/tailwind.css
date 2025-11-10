@@ -1,4 +1,8 @@
 /*@import 'tailwindcss/preflight';*/ /* <--- overrides a lot of padding/margin so we don't use it (import order/timing?) */
+
+/*@plugin "../../node_modules/tailwindcss/dist/plugin.mjs";*/
+@plugin "tailwindcss-multi";
+
 @import "tailwindcss";
 @import 'tailwindcss/utilities';
 
