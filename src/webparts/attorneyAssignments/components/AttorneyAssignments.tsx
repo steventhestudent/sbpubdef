@@ -93,12 +93,16 @@ export default function AttorneyAssignments(
 												href={item.link}
 												target="_blank"
 												rel="noopener noreferrer"
-												data-status={item.status}
-												className="text-sm text-blue-700 hover:underline    bg-[#f1f5f9] text-[#334155] border-[#cbd5e1]
-													data-[status=awaiting]:(bg-[#dbeafe] text-[#1e40af] border-[#3b82f6])
-													data-[status=closed]:(bg-[#fee2e2] text-[#991b1b] border-[#ef4444])
-													data-[status=pending]:(bg-[#fef3c7] text-[#92400e] border-[#fbbf24])
-													data-[status=open]:(bg-[#dcfce7] text-[#14532d] border-[#22c55e])"
+												data-status={item.status.replace(
+													/* spaces do not work for data- matching (needs quotations & it's a mess with spfx gulp tailwind etc. */
+													/ /g,
+													"",
+												)}
+												className="text-sm text-blue-700 hover:underline  bg-[#f1f5f9] text-[#334155] border border-[#cbd5e1]
+													data-[status=AwaitingDocs]:multi-['bg-[#dbeafe];text-[#1e40af];border-[#3b82f6]']
+													data-[status=Closed]:multi-['bg-[#fee2e2];text-[#991b1b];border-[#ef4444]']
+													data-[status=Pending]:multi-['bg-[#fef3c7];text-[#92400e];border-[#fbbf24]']
+													data-[status=Open]:multi-['bg-[#dcfce7];text-[#14532d];border-[#22c55e]']"
 											>
 												Open
 											</a>
