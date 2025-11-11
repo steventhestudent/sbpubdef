@@ -122,10 +122,10 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 
 	return (
 		<section
-			className={`rounded-xl border border-slate-800 !bg-[white] shadow-sm ${className}`}
+			className={`rounded-xl border border-[var(--webpart-border-color)] !bg-[var(--webpart-bg-color)] shadow-sm ${className}`}
 		>
 			<header
-				className={`bg-[#e6e6e6] rounded-t-xl border-b border-slate-800 px-3 py-2 flex items-center justify-between select-none ${headerClassName}`}
+				className={`bg-[var(--webpart-header-bg-color)] rounded-t-xl border-b border-slate-800 px-3 py-2 flex items-center justify-between select-none ${headerClassName}`}
 			>
 				<div className="flex items-center gap-2">
 					{headerClickable ? (

@@ -24,8 +24,8 @@ export default class UpcomingEvents extends React.Component<IUpcomingEventsProps
 			},
 		];
 		return (
-			<section className="rounded-xl border border-slater-800 bg-white shadow-sm">
-				<header className="border-b border-slater-800 px-4 py-3 bg-[#e6e6e6] rounded-t-xl">
+			<section className="rounded-xl border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm">
+				<header className="border-b border-slater-800 px-4 py-3 bg-[var(--webpart-header-bg-color)] rounded-t-xl">
 					<h4 className="text-base font-semibold text-slate-800">
 						Upcoming Events
 					</h4>

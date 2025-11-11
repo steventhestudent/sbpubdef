@@ -44,3 +44,14 @@
 */
 /* teal -> blue */
 footer > div:first-of-type {background-color: #0d406d !important; border-radius: 10px 10px 0px 0px !important;}
+
+
+/*
+	theme
+*/
+:root {
+	--webpart-border-color: #A7C6D9;
+	--webpart-bg-color: white;
+	--webpart-header-bg-color: #e6e6e6;
+	--webpart-inner-border-color: #909090;
+}

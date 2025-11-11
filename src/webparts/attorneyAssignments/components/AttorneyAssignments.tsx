@@ -13,8 +13,8 @@ export default function AttorneyAssignments(
 	}, [assignments, filter]);
 
 	return (
-		<section className="rounded-xl border border-slater-800 bg-[#e6e6e6] shadow-sm">
-			<header className="flex items-center justify-between border-b border-slater-800 px-4 py-3">
+		<section className="rounded-xl border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm">
+			<header className="flex items-center justify-between border-b border-slater-800 px-4 py-3 bg-[var(--webpart-bg-color)]">
 				<h4 className="text-base font-semibold text-slate-800">
 					Attorney Assignments
 				</h4>

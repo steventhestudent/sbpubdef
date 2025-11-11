@@ -9,9 +9,9 @@ export default class WelcomeMessage extends React.Component<IWelcomeMessageProps
 		const { userDisplayName } = this.props;
 		return (
 			<section>
-				<div className="rounded-xl border border-slate-800 p-6 shadow-sm bg-[#f3f3f3]">
+				<div className="rounded-xl border border-[var(--webpart-border-color)] p-6 shadow-sm bg-[#f3f3f3]">
 					<h2 className="text-center text-xl font-semibold text-slate-800">
-						Welcome to the Public Defender Resource Center,{" "}
+						Welcome to the Public Defender Resource Center,
 						{escape(userDisplayName)}!
 					</h2>
 					<p className="text-center mt-1 text-sm text-slate-600">
