@@ -38,6 +38,7 @@ export default class AttorneyAssignmentsWebPart extends BaseClientSideWebPart<IA
 
 		const element = React.createElement(AttorneyAssignments, {
 			assignments,
+			context: this.context,
 		});
 
 		ReactDom.render(element, container);

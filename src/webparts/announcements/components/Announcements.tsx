@@ -1,11 +1,11 @@
 import * as React from "react";
+
 import type { IAnnouncementsProps } from "./IAnnouncementsProps";
+
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { AnnouncementsApi } from "@api/announcements";
 import { Announcement } from "@type/PDAnnouncement";
 import * as Utils from "@utils";
-// import { getGroups } from "@utils/graph/getGroups";
-// import { AadHttpClient, IHttpClientOptions } from "@microsoft/sp-http";
 
 type AnnouncementListItem = {
 	title: string;

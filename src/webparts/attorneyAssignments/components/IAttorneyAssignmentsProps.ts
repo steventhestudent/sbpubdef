@@ -1,6 +1,9 @@
+import { WebPartContext } from "@microsoft/sp-webpart-base";
+
 export interface IAttorneyAssignmentsProps {
 	assignments: IAssignment[];
 	visibleToGroups?: string[];
+	context: WebPartContext;
 }
 
 export interface IAttorneyAssignmentsWebPartProps {

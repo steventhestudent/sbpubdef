@@ -1,5 +1,11 @@
 import * as React from "react";
+
 import { IAttorneyAssignmentsProps } from "./IAttorneyAssignmentsProps";
+
+// import { PNPWrapper } from "@utils/PNPWrapper";
+// import { AssignmentsApi } from "@api/assignments";
+// import { Assignment } from "@type/PDAssignment";
+// import * as Utils from "@utils";
 
 export default function AttorneyAssignments(
 	props: IAttorneyAssignmentsProps,
@@ -14,7 +20,7 @@ export default function AttorneyAssignments(
 
 	return (
 		<section className="rounded-xl border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm">
-			<header className="flex items-center justify-between border-b border-slater-800 px-4 py-3 bg-[var(--webpart-bg-color)]">
+			<header className="flex items-center justify-between border-b border-slater-800 px-4 py-3 bg-[var(--webpart-header-bg-color)] rounded-t-xl">
 				<h4 className="text-base font-semibold text-slate-800">
 					Attorney Assignments
 				</h4>
