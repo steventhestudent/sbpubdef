@@ -42,7 +42,7 @@ export function AnnouncementsManager({
 		console.log("announcements: ", data);
 	}
 	React.useEffect(() => {
-		Utils.loadCachedThenRefresh(load); // pnpWrapper.cacheVal is "true" <--- not bool: true (subsequent req's are not cached)
+		Utils.loadCachedThenFresh(load); // pnpWrapper.cacheVal is "true" <--- not bool: true (subsequent req's are not cached)
 	}, []);
 
 	return (

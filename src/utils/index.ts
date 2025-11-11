@@ -1,4 +1,4 @@
-import { load, loadCachedThenRefresh } from "@utils/loadCachedThenRefresh";
+import { load, loadCachedThenFresh } from "@utils/loadCachedThenFresh";
 import { userGroupNames } from "@utils/graph/userGroupNames";
 
-export { load, loadCachedThenRefresh, userGroupNames };
+export { load, loadCachedThenFresh, userGroupNames };

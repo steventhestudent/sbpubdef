@@ -3,7 +3,7 @@ export function load(fn: () => Promise<void>): void {
 }
 
 const MAX_CACHE_LOAD_T = 100; // after 100ms considered a non-cached request
-export function loadCachedThenRefresh(fn: () => Promise<void>): void {
+export function loadCachedThenFresh(fn: () => Promise<void>): void {
 	setTimeout(async () => {
 		const t0 = new Date();
 		await fn(); // cacheVal: "true", loads instantly after loading it 1st time (per session (sessionStorage))
