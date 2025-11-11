@@ -49,8 +49,3 @@ export interface IAssignment {
 	attorneyName: string;
 	isMyCase: boolean;
 }
-
-export interface IGraphGroup {
-	id: string;
-	displayName: string;
-}

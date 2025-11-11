@@ -8,15 +8,15 @@ import {
 } from "@microsoft/sp-property-pane";
 import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
 import { SPHttpClient, SPHttpClientResponse } from "@microsoft/sp-http";
-import { MSGraphClientV3 } from "@microsoft/sp-http";
 
 import AttorneyAssignments from "./components/AttorneyAssignments";
 import {
 	IAssignment,
 	IAttorneyAssignmentsWebPartProps,
-	IGraphGroup,
 	ISharePointListResponse,
 } from "./components/IAttorneyAssignmentsProps";
+
+import * as Utils from "@utils";
 
 export default class AttorneyAssignmentsWebPart extends BaseClientSideWebPart<IAttorneyAssignmentsWebPartProps> {
 	public async render(): Promise<void> {
@@ -46,13 +46,8 @@ export default class AttorneyAssignmentsWebPart extends BaseClientSideWebPart<IA
 
 	private async _userInAllowedAADGroups(): Promise<boolean> {
 		const rawGroups = this.properties.visibleToGroups;
-		if (
-			!rawGroups ||
-			(Array.isArray(rawGroups) && rawGroups.length === 0)
-		) {
+		if (!rawGroups || (Array.isArray(rawGroups) && rawGroups.length === 0))
 			return true;
-		}
-
 		const groupNames: string[] = Array.isArray(rawGroups)
 			? rawGroups
 			: rawGroups
@@ -61,31 +56,10 @@ export default class AttorneyAssignmentsWebPart extends BaseClientSideWebPart<IA
 					.filter(Boolean);
 
 		if (groupNames.length === 0) return true;
-
-		try {
-			const client: MSGraphClientV3 =
-				await this.context.msGraphClientFactory.getClient("3");
-			const groupsResponse = await client
-				.api(`/me/memberOf?$select=displayName`)
-				.get();
-
-			const groups: IGraphGroup[] = Array.isArray(groupsResponse.value)
-				? (groupsResponse.value as IGraphGroup[])
-				: [];
-
-			const userGroupNames: string[] = groups
-				.filter((g) => typeof g.displayName === "string")
-				.map((g) => g.displayName.toLowerCase());
-
-			const isInGroup: boolean = groupNames.some(
-				(g: string) => userGroupNames.indexOf(g.toLowerCase()) !== -1,
-			);
-
-			return isInGroup;
-		} catch (error) {
-			console.error("Error checking Azure AD groups:", error);
-			return false;
-		}
+		const groups = await Utils.userGroupNames(this.context);
+		return groupNames.some(
+			(g: string) => groups.indexOf(g.toLowerCase()) !== -1,
+		);
 	}
 
 	private async _loadAssignments(): Promise<IAssignment[]> {
