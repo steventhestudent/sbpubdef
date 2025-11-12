@@ -3,10 +3,10 @@ import { mockRows } from "@components/cms/MockRows";
 import { ContentTable } from "@components/cms/ContentTable";
 import { AnnouncementsApi } from "@api/announcements";
 import { ContentRow } from "@type/cms/ContentRow";
-import { Announcement } from "@type/PDAnnouncement";
+import { PDAnnouncement } from "@type/PDAnnouncement";
 import * as Utils from "@utils";
 
-function announcementContentRow(data: Announcement, i: number): ContentRow {
+function announcementContentRow(data: PDAnnouncement, i: number): ContentRow {
 	return {
 		id: i + "",
 		title: data.title,

@@ -4,7 +4,7 @@ import type { IAnnouncementsProps } from "./IAnnouncementsProps";
 
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { AnnouncementsApi } from "@api/announcements";
-import { Announcement } from "@type/PDAnnouncement";
+import { PDAnnouncement } from "@type/PDAnnouncement";
 import * as Utils from "@utils";
 
 type AnnouncementListItem = {
@@ -57,10 +57,12 @@ export default class Announcements extends React.Component<
 	private load = async (): Promise<void> => {
 		const data = await this.announcementsApi.get(12);
 		if (!data) return;
-		const items: AnnouncementListItem[] = data.map((el: Announcement) => ({
-			title: el.title ?? "(untitled)",
-			date: el.published ? el.published.toDateString() : "",
-		}));
+		const items: AnnouncementListItem[] = data.map(
+			(el: PDAnnouncement) => ({
+				title: el.title ?? "(untitled)",
+				date: el.published ? el.published.toDateString() : "",
+			}),
+		);
 		this.setState({ items });
 	};
 

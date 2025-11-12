@@ -1,4 +1,4 @@
-// api/announcements/Announcements.ts
+// AnnouncementsApi.ts
 import "@pnp/sp/content-types";
 import type { IContentTypeInfo } from "@pnp/sp/content-types/types";
 import "@pnp/sp/clientside-pages";
@@ -6,143 +6,159 @@ import { ClientsideText } from "@pnp/sp/clientside-pages";
 import "@pnp/sp/fields";
 import "@pnp/sp/items";
 
-import { CustomContentApi } from "@api/CustomContentApi";
-// import { PNPWrapper } from "@utils/PNPWrapper";
+import { CustomContentApi, AnnGetOpts } from "@api/CustomContentApi";
 import { PD, SP } from "@api/config";
-import {
-	Announcement,
-	CreateAnnouncementInput,
-	// GetOpts,
+import type {
 	NewsSearchResult,
-	SearchOpts,
+	PDAnnouncement,
 	SitePageItem,
+	CreateAnnouncementInput,
 } from "@type/PDAnnouncement";
 
-/*
-	AnnouncementsApi
-*/
-export class AnnouncementsApi extends CustomContentApi {
-	/*
-		hub search
-	*/
-	async getSearch(
+export class AnnouncementsApi extends CustomContentApi<
+	PDAnnouncement,
+	CreateAnnouncementInput
+> {
+	/** HUB / multi-site (Search) */
+	protected async getSearch(
 		limit = 12,
-		opts: SearchOpts = {},
-	): Promise<Announcement[] | undefined> {
-		opts.contentType = PD.contentType.Announcement;
-		await super.getSearch(limit, opts);
-		this.and("PromotedState=2");
-		return this.pnpWrapper.exec<Announcement[]>(async () => {
-			const res = await this.pnpWrapper.sp.search({
-				Querytext: this.kql,
-				RowLimit: limit,
-				SelectProperties: [
-					"Title",
-					"Path",
-					"FirstPublishedDate",
-					"Description",
-					"SPSiteUrl",
-					"PDDepartment",
-				],
-				SortList: [{ Property: "FirstPublishedDate", Direction: 1 }],
-				TrimDuplicates: true,
-			});
-			return res.PrimarySearchResults.map((raw) => {
-				const r = raw as NewsSearchResult;
-				return {
-					title: r.Title ?? "(untitled)",
-					url: r.Path ?? "#",
-					published: r.FirstPublishedDate
-						? new Date(r.FirstPublishedDate)
-						: undefined,
-					summary: r.Description,
-					siteUrl: r.SPSiteUrl,
-					PDDepartment: r.PDDepartment,
-				} as Announcement;
-			});
+		opts?: AnnGetOpts,
+	): Promise<PDAnnouncement[]> {
+		this.preprocess({
+			...(opts ?? {}),
+			contentType: PD.contentType.Announcement,
+		});
+
+		const parts = this.buildSearchScopeParts();
+		parts.push("PromotedState=2");
+
+		const kql = parts.join(" AND ");
+
+		const selectProps = [
+			"Title",
+			"Path",
+			"FirstPublishedDate",
+			"Description",
+			"SPSiteUrl",
+		];
+		// // Include your managed property alias if you’ve mapped ows_PDDepartment -> alias (e.g., Dept)
+		// if (this.department || this.departmentMp || this.pnpWrapper.departmentMp) {
+		// 	const mp = this.departmentMp || this.pnpWrapper.departmentMp;
+		// 	if (mp) selectProps.push(mp);
+		// }
+
+		const res = await this.pnpWrapper.sp.search({
+			Querytext: kql,
+			RowLimit: limit,
+			SelectProperties: selectProps,
+			SortList: [{ Property: "FirstPublishedDate", Direction: 1 }],
+			TrimDuplicates: true,
+		});
+
+		// const mp = this.departmentMp || this.pnpWrapper.departmentMp; // e.g., "Dept"
+		return res.PrimarySearchResults.map((raw) => {
+			const r = raw as NewsSearchResult &
+				Record<string, string | undefined>;
+			return {
+				title: r.Title ?? "(untitled)",
+				url: r.Path ?? "#",
+				published: r.FirstPublishedDate
+					? new Date(r.FirstPublishedDate)
+					: undefined,
+				summary: r.Description,
+				siteUrl: r.SPSiteUrl,
+				// PDDepartment:
+			} as PDAnnouncement;
 		});
 	}
 
-	/*
-		rest
-	*/
-	async getRest(
-		limitPerSite = 8,
-		sites?: string[],
-		department?: string,
-	): Promise<Announcement[] | undefined> {
-		await super.getRest(limitPerSite, sites, department);
-		const targets = sites ?? this.pnpWrapper.siteUrls;
-		const siteList = targets.length ? targets : [""];
-		// map of pnpWrapper.web calls
-		const calls = siteList.map(async (siteUrl) => {
+	/** Current/multi-site (REST) */
+	protected async getRest(
+		limitPerSite = 12,
+		opts?: AnnGetOpts,
+	): Promise<PDAnnouncement[]> {
+		this.preprocess(opts);
+		const targets = this._sites.length ? this._sites : [""];
+
+		const calls = targets.map(async (siteUrl) => {
 			const w = this.pnpWrapper.web(siteUrl);
-			this.and("PromotedState eq 2");
 			const list = w.lists.getByTitle(SP.contentType.SitePages);
 
-			// --- get the PD Announcement CT id for THIS library ---
+			// 1) Get PD Announcement CT id for this library
 			const cts = await list.contentTypes.select("StringId", "Name")();
-			const pdCtId = cts.find(
+			const pdCt = (cts as IContentTypeInfo[]).find(
 				(ct) => ct.Name === PD.contentType.Announcement,
-			)?.StringId;
-			// this.and(`ContentTypeId eq '${pdCtId}'`);
-			this.and(`startswith(ContentTypeId,'${pdCtId}')'`);
+			);
+			if (!pdCt) return [] as PDAnnouncement[];
+			const pdCtId = pdCt.StringId;
 
-			const deptField = await list.fields
-				.getByInternalNameOrTitle(PD.siteColumn.PDDepartment) // "PDDepartment"
-				.select("InternalName")();
-			const deptInternal: string = deptField.InternalName;
+			// 2) Resolve OData prop name for PDDepartment on THIS library
+			let deptProp: string | undefined;
+			try {
+				const fld = await list.fields
+					.getByInternalNameOrTitle("PDDepartment")
+					.select("InternalName", "EntityPropertyName")();
+				deptProp = fld.EntityPropertyName || fld.InternalName;
+			} catch {
+				// If PDDepartment isn’t linked to this Site Pages, treat as no department filter
+				deptProp = undefined;
+			}
 
-			console.log(`aaa`, deptInternal);
-			const items = await list.items
-				.filter(this.odata)
+			// 3) Build strict server-side filters
+			const filters: string[] = [
+				"PromotedState eq 2",
+				`startswith(ContentTypeId,'${pdCtId}')`,
+			];
+			if (this.department && deptProp) {
+				filters.push(
+					`${deptProp} eq '${this.department.replace(/'/g, "''")}'`,
+				);
+			}
 
-				.select(
-					"Id",
-					"Title",
-					"FileRef",
-					"PromotedState",
-					"FirstPublishedDate",
-					"Description",
-					`PD_x0020_Department`, // safe even if column missing
-				)
-				.expand("FieldValuesAsText")
+			// 4) Safe $select (includes deptProp only if we have it)
+			const selects = [
+				"Id",
+				"Title",
+				"FileRef",
+				"FirstPublishedDate",
+				"Description",
+			];
+			if (deptProp) selects.push(deptProp);
+
+			const rows = await list.items
+				.select(...selects)
+				.filter(filters.join(" and "))
 				.orderBy("FirstPublishedDate", false)
 				.top(limitPerSite)();
-			return (items as SitePageItem[]).map((i): Announcement => {
-				console.log(i);
-				return {
+
+			return (rows as SitePageItem[]).map(
+				(i: SitePageItem): PDAnnouncement => ({
 					title: i.Title ?? "(untitled)",
 					url: i.FileRef ?? "#",
 					published: i.FirstPublishedDate
 						? new Date(i.FirstPublishedDate)
 						: undefined,
-					summary: (i.Description as string) ?? undefined,
+					// summary: i. ?? "",
 					siteUrl: siteUrl || window.location.pathname,
-					PDDepartment:
-						(i.PD_x0020_Department as string) ?? undefined,
-				};
-			});
-		});
-		// send requests + flatten/sort results
-		return this.pnpWrapper.exec<Announcement[]>(async () => {
-			const settled = await Promise.allSettled(calls);
-			const flat: Announcement[] = [];
-			for (const r of settled)
-				if (r.status === "fulfilled") flat.push(...r.value);
-			const map = new Map<string, Announcement>();
-			for (const a of flat) if (!map.has(a.url)) map.set(a.url, a);
-			return Array.from(map.values()).sort(
-				(a, b) =>
-					(b.published?.getTime() ?? 0) -
-					(a.published?.getTime() ?? 0),
+					PDDepartment: i.PD_x0020_Department ?? "Everyone",
+				}),
 			);
 		});
+
+		const settled = await Promise.allSettled(calls);
+		const flat: PDAnnouncement[] = [];
+		for (const r of settled)
+			if (r.status === "fulfilled") flat.push(...r.value);
+		// de-dupe + sort newest
+		const map = new Map<string, PDAnnouncement>();
+		for (const a of flat) if (!map.has(a.url)) map.set(a.url, a);
+		return Array.from(map.values()).sort(
+			(a, b) =>
+				(b.published?.getTime() ?? 0) - (a.published?.getTime() ?? 0),
+		);
 	}
 
-	/*
-		Create PD Announcement
-	*/
+	/** CREATE — REST only (unchanged, just nudged to your base) */
 	async create(input: CreateAnnouncementInput): Promise<{ url: string }> {
 		const { title, department, html, targetSite } = input;
 		const web = this.pnpWrapper.web(targetSite);
@@ -155,7 +171,7 @@ export class AnnouncementsApi extends CustomContentApi {
 		);
 		await page.save();
 
-		// 2) set PD Announcement CT (library copy)
+		// 2) switch to PD Announcement CT
 		let item = await page.getItem();
 		const cts = await web.lists
 			.getByTitle(SP.contentType.SitePages)
@@ -165,41 +181,33 @@ export class AnnouncementsApi extends CustomContentApi {
 		);
 		if (pdCt) {
 			await item.update({ ContentTypeId: pdCt.StringId });
-			// IMPORTANT: re-fetch the item so it picks up the new CT's fields
 			const { Id } = await item.select("Id")();
 			item = web.lists
 				.getByTitle(SP.contentType.SitePages)
 				.items.getById(Id);
 		}
 
-		// 3) set PD Department
+		// 3) PDDepartment (robust write immediately after CT switch)
 		if (department) {
-			// Resolve the list's internal name (handles PDDepartment vs PD_x0020_Department)
 			const deptField = await web.lists
 				.getByTitle(SP.contentType.SitePages)
 				.fields.getByInternalNameOrTitle("PDDepartment")
 				.select("InternalName")();
-
-			// Robust write (works right after CT switch)
 			await item.validateUpdateListItem(
 				[{ FieldName: deptField.InternalName, FieldValue: department }],
-				true, // newDocumentUpdate = true
+				true,
 			);
 		}
 
-		// 4) add text-only body from html
+		// 4) add summary text from HTML
 		if (html) {
-			const SUMMARY_LEN = 260;
 			const div = document.createElement("div");
 			div.innerHTML = html;
 			div.querySelectorAll(
 				"img,video,source,iframe,script,style",
 			).forEach((el) => el.remove());
 			const text = (div.textContent || "").replace(/\s+/g, " ").trim();
-			const summary =
-				text.length > SUMMARY_LEN
-					? text.slice(0, SUMMARY_LEN - 1) + "…"
-					: text;
+			const summary = text.length > 260 ? text.slice(0, 259) + "…" : text;
 
 			const sec = page.addSection();
 			const col = sec.addColumn(12);
@@ -209,11 +217,10 @@ export class AnnouncementsApi extends CustomContentApi {
 			await page.save(true);
 		}
 
-		// 5) promote & publish (and approve if required)
-		await page.promoteToNews(); // sets PromotedState = 2
-		// await page.schedulePublish(new Date()); // publish major version
+		// 5) promote & publish
+		await page.promoteToNews();
 
-		// 6) return absolute URL
+		// 6) return URL
 		const li = await item.select("FileRef")();
 		const absolute =
 			new URL(web.toUrl(), window.location.origin).origin + li.FileRef;

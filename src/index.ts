@@ -2,6 +2,6 @@
 export { CreateAnnouncementInput } from "@type/PDAnnouncement";
 export { GetOpts } from "@type/PDAnnouncement";
 export { SearchOpts } from "@type/PDAnnouncement";
-export { Announcement } from "@type/PDAnnouncement";
+export { PDAnnouncement } from "@type/PDAnnouncement";
 export { SitePageItem } from "@type/PDAnnouncement";
 export { NewsSearchResult } from "@type/PDAnnouncement";

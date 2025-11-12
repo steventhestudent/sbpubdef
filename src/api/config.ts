@@ -18,6 +18,9 @@ export const PD = {
 		// PinUntil: "PD_x0020_PinUntil",
 		// Urgency: "PD_x0020_Urgency",
 	},
+	internalSiteColumn: {
+		PDDepartment: "PD_x0020_Department",
+	},
 	department: {
 		// mapped properties (mp)
 		attorney: "Attorney",

@@ -9,8 +9,9 @@ export type SitePageItem = {
 	Title?: string;
 	FileRef?: string;
 	FirstPublishedDate?: string;
+	PD_x0020_Department?: string;
 } & Record<string, unknown>;
-export type Announcement = {
+export type PDAnnouncement = {
 	title: string;
 	url: string;
 	published?: Date;
