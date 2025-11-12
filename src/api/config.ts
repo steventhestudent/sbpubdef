@@ -28,6 +28,7 @@ export const PD = {
 	department: {
 		// mapped properties (mp)
 		everyone: "Everyone",
+		PDIntranet: "PD-Intranet",
 		attorney: "Attorney",
 		lop: "LOP",
 		hr: "HR",
@@ -36,6 +37,7 @@ export const PD = {
 	/* PDRoleBasedSelect.tsx */
 	role: {
 		Everyone: "Everyone",
+		PDIntranet: "PD-Intranet",
 		Attorney: "Attorney",
 		LOP: "LOP",
 		HR: "HR",

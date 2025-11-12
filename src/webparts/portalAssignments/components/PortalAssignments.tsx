@@ -10,39 +10,22 @@ import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 type AssignmentListItem = { title: string; date: string };
 
 function EveryoneView({
-	items,
 	userGroupNames,
+	pnpWrapper,
 }: {
-	items: AssignmentListItem[];
 	userGroupNames: string[];
+	pnpWrapper: PNPWrapper;
 }): JSX.Element {
-	console.log(userGroupNames);
-	return (
-		<div className="p-3">
-			{items.map((it, i) => (
-				<div key={i} className="py-1 text-sm">
-					<span className="font-medium">{it.title}</span>
-					<span className="text-slate-500"> — {it.date}</span>
-				</div>
-			))}
-		</div>
-	);
+	return <div>You are guest in this house. Stay seated!</div>;
 }
-
-const AttorneyView = EveryoneView;
-const LOPView = EveryoneView;
-const HRView = EveryoneView;
-const ITView = EveryoneView;
-
-export default function PortalAssignments(
-	props: IPortalAssignmentsProps,
-): JSX.Element {
-	const pnpWrapper = new PNPWrapper(props.context, {
-		siteUrls: ["/sites/PD-Intranet", "/sites/Tech-Team", "/sites/HR"],
-		cache: "true",
-	});
+function PDIntranetView({
+	userGroupNames,
+	pnpWrapper,
+}: {
+	userGroupNames: string[];
+	pnpWrapper: PNPWrapper;
+}): JSX.Element {
 	const assignmentsApi = new AssignmentsApi(pnpWrapper);
-
 	const [items, setItems] = React.useState<AssignmentListItem[]>([
 		{ title: "No Assignments", date: new Date().toDateString() },
 	]);
@@ -70,12 +53,32 @@ export default function PortalAssignments(
 	}, []);
 
 	return (
+		<div className="p-3">
+			{items.map((it, i) => (
+				<div key={i} className="py-1 text-sm">
+					<span className="font-medium">{it.title}</span>
+					<span className="text-slate-500"> — {it.date}</span>
+				</div>
+			))}
+		</div>
+	);
+}
+
+const AttorneyView = PDIntranetView;
+const LOPView = PDIntranetView;
+const HRView = PDIntranetView;
+const ITView = PDIntranetView;
+
+export default function PortalAssignments(
+	props: IPortalAssignmentsProps,
+): JSX.Element {
+	return (
 		<Collapsible instanceId={props.context.instanceId} title="Assignments">
-			<PDRoleBasedSelect<AssignmentListItem>
+			<PDRoleBasedSelect
 				ctx={props.context}
-				items={items}
 				views={{
 					Everyone: EveryoneView,
+					PDIntranet: PDIntranetView,
 					Attorney: AttorneyView,
 					LOP: LOPView,
 					HR: HRView,

@@ -2,25 +2,28 @@ import * as React from "react";
 import * as Utils from "@utils";
 import { PD } from "@api/config";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
+import { PNPWrapper } from "@utils/PNPWrapper";
 
 type RoleKey = string;
-type RoleView<TItem> = React.ComponentType<{
-	items: TItem[];
+type RoleView = React.ComponentType<{
 	userGroupNames: string[];
+	pnpWrapper: PNPWrapper;
 }>;
-type RoleViews<TItem> = Partial<Record<RoleKey, RoleView<TItem>>>;
+type RoleViews = Partial<Record<RoleKey, RoleView>>;
 
-export function PDRoleBasedSelect<TItem>({
+export function PDRoleBasedSelect({
 	ctx,
-	items,
 	views,
 }: {
 	ctx: WebPartContext;
-	items: TItem[];
-	views: RoleViews<TItem>;
+	views: RoleViews;
 }): JSX.Element {
 	const [role, setRole] = React.useState<RoleKey>(PD.role.Everyone);
 	const [userGroups, setUserGroups] = React.useState<string[]>([]);
+	const pnpWrapper = new PNPWrapper(ctx, {
+		siteUrls: ["/sites/PD-Intranet", "/sites/Tech-Team", "/sites/HR"],
+		cache: "true",
+	});
 
 	React.useEffect(() => {
 		setTimeout(async () => {
@@ -29,9 +32,19 @@ export function PDRoleBasedSelect<TItem>({
 		});
 	}, []);
 
-	const isRoleEnabledForUser = React.useCallback(
+	const isRoleEnabledForUser: (rk: string) => boolean = React.useCallback<
+		(rk: string) => boolean
+	>(
 		(rk: RoleKey) => {
 			switch (rk) {
+				case "PDIntranet":
+					return (
+						isRoleEnabledForUser("Attorney") ||
+						isRoleEnabledForUser("LOP") ||
+						isRoleEnabledForUser("HR") ||
+						isRoleEnabledForUser("IT") ||
+						userGroups.some((x) => x.includes("pd-intranet"))
+					);
 				case "Attorney":
 					return userGroups.some((x) => x.includes("attorney"));
 				case "LOP":
@@ -50,8 +63,7 @@ export function PDRoleBasedSelect<TItem>({
 		[userGroups],
 	);
 
-	const CurrentView: RoleView<TItem> | undefined =
-		views[role] ?? views.Everyone;
+	const CurrentView: RoleView | undefined = views[role] ?? views.Everyone;
 
 	return (
 		<section className="rounded-xl border border-[var(--webpart-border-color)] !bg-[var(--webpart-bg-color)] shadow-sm">
@@ -81,8 +93,8 @@ export function PDRoleBasedSelect<TItem>({
 				<div className="min-h-0">
 					{CurrentView ? (
 						<CurrentView
-							items={items}
 							userGroupNames={userGroups}
+							pnpWrapper={pnpWrapper}
 						/>
 					) : null}
 				</div>
