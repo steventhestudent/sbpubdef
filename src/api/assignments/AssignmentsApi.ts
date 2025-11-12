@@ -4,6 +4,7 @@ import "@pnp/sp/lists";
 import "@pnp/sp/fields";
 import { ListApi } from "@api/ListApi";
 import { ListResult, PDAssignment } from "@type/PDAssignment";
+import { PD } from "@api/config";
 
 type AssignGetOpts = { department?: string };
 
@@ -16,23 +17,19 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 	): Promise<PDAssignment[]> {
 		const { department } = opts || {};
 		console.log(`searching department '${department}' assignments...`);
-		const parts: string[] = [
-			"ContentClass:STS_ListItem",
-			`ListTitle:${LIST_TITLE}`,
-		];
+		this.and("ContentClass:STS_ListItem");
+		this.and(`ListTitle:${LIST_TITLE}`);
 		if (this.pnpWrapper.hubSiteId)
-			parts.push(`DepartmentId:${this.pnpWrapper.hubSiteId}`);
+			this.and(`DepartmentId:${this.pnpWrapper.hubSiteId}`);
 		else if (this._sites.length)
-			parts.push(
+			this.and(
 				"(" + this._sites.map((p) => `Path:${p}*`).join(" OR ") + ")",
 			);
 		// if (department && this.pnpWrapper.departmentMp)
 		// parts.push(`${this.pnpWrapper.departmentMp}="${department}"`);
 
-		const kql = parts.join(" AND ");
-
 		const res = await this.pnpWrapper.sp.search({
-			Querytext: kql,
+			Querytext: this.kql,
 			RowLimit: limit,
 			SelectProperties: [
 				"Title",
@@ -68,22 +65,18 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 			const w = this.pnpWrapper.web(siteUrl);
 			const list = w.lists.getByTitle(LIST_TITLE);
 
-			// Resolve OData name for PDDepartment
-			let deptProp = "PDDepartment";
-			try {
-				const fld = await list.fields
-					.getByInternalNameOrTitle("PDDepartment")
-					.select("InternalName", "EntityPropertyName")();
-				deptProp = fld.EntityPropertyName || fld.InternalName;
-			} catch {
-				return [] as PDAssignment[];
-			}
-
 			if (department)
-				this.and(`${deptProp} eq '${department.replace(/'/g, "''")}'`);
+				this.and(
+					`${PD.internalSiteColumn.PDDepartment} eq '${department.replace(/'/g, "''")}'`,
+				);
 
 			const rows = await list.items
-				.select("Id", "Title", "FileRef", deptProp)
+				.select(
+					"Id",
+					"Title",
+					"FileRef",
+					PD.internalSiteColumn.PDDepartment,
+				)
 				.filter(this.odata)
 				.orderBy("Id", false)
 				.top(limitPerSite)();

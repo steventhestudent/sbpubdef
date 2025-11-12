@@ -10,6 +10,10 @@ export const PD = {
 	contentType: {
 		Announcement: "PD Announcement",
 		Event: "PD Events",
+		Assignment: "List",
+	},
+	lists: {
+		PDAssignment: "AttorneyAssignments",
 	},
 	siteColumn: {
 		PDDepartment: "PDDepartment",
@@ -23,9 +27,18 @@ export const PD = {
 	},
 	department: {
 		// mapped properties (mp)
+		everyone: "Everyone",
 		attorney: "Attorney",
 		lop: "LOP",
 		hr: "HR",
 		it: "IT",
+	},
+	/* PDRoleBasedSelect.tsx */
+	role: {
+		Everyone: "Everyone",
+		Attorney: "Attorney",
+		LOP: "LOP",
+		HR: "HR",
+		IT: "IT",
 	},
 };

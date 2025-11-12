@@ -28,13 +28,13 @@ export abstract class BaseApi<
 		return this;
 	}
 
-	protected and(expr: string) {
+	protected and(expr: string): void {
 		this.parts.push(new QueryPart("and", expr));
 	}
-	protected or(expr: string) {
+	protected or(expr: string): void {
 		this.parts.push(new QueryPart("or", expr));
 	}
-	protected get kql() {
+	protected get kql(): string {
 		return this.parts.reduce(
 			(b, p) =>
 				b +
@@ -43,7 +43,7 @@ export abstract class BaseApi<
 			"",
 		);
 	}
-	protected get odata() {
+	protected get odata(): string {
 		return this.parts.reduce(
 			(b, p) =>
 				b +
@@ -53,7 +53,7 @@ export abstract class BaseApi<
 		);
 	}
 
-	protected preprocess(_opts?: TGetOpts) {
+	protected preprocess(_opts?: TGetOpts): void {
 		this.parts = [];
 	}
 
@@ -74,7 +74,7 @@ export abstract class BaseApi<
 
 	protected abstract getRest(limit: number, opts?: TGetOpts): Promise<TRow[]>;
 
-	async create(_input: TCreateInput): Promise<any> {
+	async create(_input: TCreateInput): Promise<{ url: string }> {
 		throw new Error("create() not implemented for this API");
 	}
 }
