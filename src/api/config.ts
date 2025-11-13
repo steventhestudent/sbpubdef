@@ -1,4 +1,6 @@
 // @api/config.ts
+export type RoleKey = string;
+
 export const SP = {
 	contentType: {
 		SitePages: "Site Pages",
@@ -13,7 +15,7 @@ export const PD = {
 		Assignment: "List",
 	},
 	lists: {
-		PDAssignment: "AttorneyAssignments",
+		PDAssignment: "Assignments",
 	},
 	siteColumn: {
 		PDDepartment: "PDDepartment",

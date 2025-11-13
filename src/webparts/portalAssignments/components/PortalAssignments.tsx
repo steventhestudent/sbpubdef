@@ -1,5 +1,8 @@
 import * as React from "react";
+
 import type { IPortalAssignmentsProps } from "./IPortalAssignmentsProps";
+
+import { RoleKey } from "@api/config";
 import * as Utils from "@utils";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { AssignmentsApi } from "@api/assignments";
@@ -7,7 +10,11 @@ import type { PDAssignment } from "@type/PDAssignment";
 import { Collapsible } from "@components/Collapsible";
 import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 
-type AssignmentListItem = { title: string; date: string };
+type AssignmentListItem = {
+	title: string;
+	date: string;
+	PDDepartment: RoleKey;
+};
 
 function EveryoneView({
 	userGroupNames,
@@ -16,8 +23,15 @@ function EveryoneView({
 	userGroupNames: string[];
 	pnpWrapper: PNPWrapper;
 }): JSX.Element {
-	return <div>You are guest in this house. Stay seated!</div>;
+	return (
+		<div className="p-5">
+			<div>Welcome, Guest:</div>
+			You must have some form of PDIntranet role (Attorney, IT, HR, etc.)
+			to have assignments.
+		</div>
+	);
 }
+
 function PDIntranetView({
 	userGroupNames,
 	pnpWrapper,
@@ -25,27 +39,27 @@ function PDIntranetView({
 	userGroupNames: string[];
 	pnpWrapper: PNPWrapper;
 }): JSX.Element {
+	const defaultItems: AssignmentListItem[] = [
+		{
+			title: "No Assignments",
+			date: new Date().toDateString(),
+			PDDepartment: "Everyone",
+		},
+	];
 	const assignmentsApi = new AssignmentsApi(pnpWrapper);
-	const [items, setItems] = React.useState<AssignmentListItem[]>([
-		{ title: "No Assignments", date: new Date().toDateString() },
-	]);
+	const [items, setItems] = React.useState(defaultItems);
 
 	const load: () => Promise<void> = async () => {
 		const rows = await assignmentsApi.get(12); // strategy auto
 		const mapped = (rows || []).map((el: PDAssignment) => ({
+			// id: ,
 			title: el.title ?? "(untitled)",
-			date: new Date().toDateString(), // replace with your real dueDate mapping
+			date: el.dueDate ? el.dueDate.toDateString() : "",
+			// url: el.url ?? "",
+			PDDepartment: el.PDDepartment,
+			// siteUrl: ,
 		}));
-		setItems(
-			mapped.length
-				? mapped
-				: [
-						{
-							title: "No Assignments",
-							date: new Date().toDateString(),
-						},
-					],
-		);
+		setItems(mapped.length ? mapped : defaultItems);
 	};
 
 	React.useEffect(() => {

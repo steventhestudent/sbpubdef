@@ -8,8 +8,6 @@ import { PD } from "@api/config";
 
 type AssignGetOpts = { department?: string };
 
-const LIST_TITLE = "AttorneyAssignments";
-
 export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 	protected async getSearch(
 		limit = 100,
@@ -18,7 +16,7 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 		const { department } = opts || {};
 		console.log(`searching department '${department}' assignments...`);
 		this.and("ContentClass:STS_ListItem");
-		this.and(`ListTitle:${LIST_TITLE}`);
+		this.and(`ListTitle:${PD.lists.PDAssignment}`);
 		if (this.pnpWrapper.hubSiteId)
 			this.and(`DepartmentId:${this.pnpWrapper.hubSiteId}`);
 		else if (this._sites.length)
@@ -63,7 +61,7 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 
 		const calls = targets.map(async (siteUrl) => {
 			const w = this.pnpWrapper.web(siteUrl);
-			const list = w.lists.getByTitle(LIST_TITLE);
+			const list = w.lists.getByTitle(PD.lists.PDAssignment);
 
 			if (department)
 				this.and(

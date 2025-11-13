@@ -1,10 +1,9 @@
 import * as React from "react";
 import * as Utils from "@utils";
-import { PD } from "@api/config";
+import { PD, RoleKey } from "@api/config";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 import { PNPWrapper } from "@utils/PNPWrapper";
 
-type RoleKey = string;
 type RoleView = React.ComponentType<{
 	userGroupNames: string[];
 	pnpWrapper: PNPWrapper;
@@ -18,50 +17,82 @@ export function PDRoleBasedSelect({
 	ctx: WebPartContext;
 	views: RoleViews;
 }): JSX.Element {
-	const [role, setRole] = React.useState<RoleKey>(PD.role.Everyone);
-	const [userGroups, setUserGroups] = React.useState<string[]>([]);
+	const cachedGroupNames: RoleKey[] =
+		JSON.parse(localStorage.getItem("userGroupNames") || '""') || [];
+	const [userGroups, setUserGroups] =
+		React.useState<string[]>(cachedGroupNames);
+
+	const [role, setRole] = React.useState<RoleKey>(
+		roleViewPriority(cachedGroupNames),
+	);
+
 	const pnpWrapper = new PNPWrapper(ctx, {
 		siteUrls: ["/sites/PD-Intranet", "/sites/Tech-Team", "/sites/HR"],
 		cache: "true",
 	});
 
+	const hasRole: (role: RoleKey) => boolean = (role: RoleKey) => {
+		const matchDict: { [key: RoleKey]: boolean } = {
+			Everyone: true,
+			Attorney: userGroups.some((x) => x.includes("attorney")),
+			LOP: userGroups.some((x) => x.includes("lop")),
+			HR: userGroups.some((x) => x.includes("hr")),
+			IT: userGroups.some(
+				(x) => x.includes("it") || x.includes("administrator"),
+			),
+			PDIntranet: userGroups.some((x) => x.includes("PD-Intranet")),
+		};
+		matchDict.PDIntranet =
+			matchDict.PDIntranet ||
+			matchDict.Attorney ||
+			matchDict.LOP ||
+			matchDict.HR ||
+			matchDict.IT;
+		return matchDict[role];
+	};
+
+	const isRoleEnabledForUser: (role: RoleKey) => boolean = React.useCallback<
+		(role: RoleKey) => boolean
+	>(hasRole, [userGroups]);
+
+	/* duplicate of hasRole... for some reason can't reuse hasRole in roleViewPriority (is it linked to the react component? (since it's used in <option disabled={...}>???)) */
+	function _hasRole(roles: RoleKey[], role: RoleKey): boolean {
+		const matchDict: { [key: RoleKey]: boolean } = {
+			Everyone: true,
+			Attorney: userGroups.some((x) => x.includes("attorney")),
+			LOP: userGroups.some((x) => x.includes("lop")),
+			HR: userGroups.some((x) => x.includes("hr")),
+			IT: userGroups.some(
+				(x) => x.includes("it") || x.includes("administrator"),
+			),
+			PDIntranet: userGroups.some((x) => x.includes("PD-Intranet")),
+		};
+		matchDict.PDIntranet =
+			matchDict.PDIntranet ||
+			matchDict.Attorney ||
+			matchDict.LOP ||
+			matchDict.HR ||
+			matchDict.IT;
+		return matchDict[role];
+	}
+
+	function roleViewPriority(roles: RoleKey[]): RoleKey {
+		if (_hasRole(roles, "IT")) return "IT";
+		if (_hasRole(roles, "HR")) return "HR";
+		if (_hasRole(roles, "Attorney")) return "PDIntranet";
+		if (_hasRole(roles, "LOP")) return "PDIntranet";
+		if (_hasRole(roles, "PDIntranet")) return "PDIntranet";
+		return "Everyone";
+	}
+
 	React.useEffect(() => {
 		setTimeout(async () => {
-			const groups = await Utils.userGroupNames(ctx);
-			setUserGroups(groups.map((g) => g.toLowerCase()));
+			const g = await Utils.userGroupNames(ctx);
+			localStorage.setItem("userGroupNames", JSON.stringify(g));
+			setRole(roleViewPriority(g));
+			setUserGroups(g.map((g) => g.toLowerCase()));
 		});
 	}, []);
-
-	const isRoleEnabledForUser: (rk: string) => boolean = React.useCallback<
-		(rk: string) => boolean
-	>(
-		(rk: RoleKey) => {
-			switch (rk) {
-				case "PDIntranet":
-					return (
-						isRoleEnabledForUser("Attorney") ||
-						isRoleEnabledForUser("LOP") ||
-						isRoleEnabledForUser("HR") ||
-						isRoleEnabledForUser("IT") ||
-						userGroups.some((x) => x.includes("pd-intranet"))
-					);
-				case "Attorney":
-					return userGroups.some((x) => x.includes("attorney"));
-				case "LOP":
-					return userGroups.some((x) => x.includes("lop"));
-				case "HR":
-					return userGroups.some((x) => x.includes("hr"));
-				case "IT":
-					return userGroups.some(
-						(x) => x.includes("it") || x.includes("administrator"),
-					);
-				case "Everyone":
-				default:
-					return true;
-			}
-		},
-		[userGroups],
-	);
 
 	const CurrentView: RoleView | undefined = views[role] ?? views.Everyone;
 
