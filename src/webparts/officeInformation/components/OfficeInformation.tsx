@@ -9,12 +9,13 @@ export default class OfficeInformation extends React.Component<IOfficeInformatio
 			<Collapsible
 				instanceId={this.props.instanceId}
 				title="Office Information"
+				className="!bg-[rgb(249,249,249)]"
 			>
 				<div className="grid gap-2 p-2 sm:grid-cols-2">
 					{offices.map((o, i) => (
 						<div
 							key={i}
-							className="rounded-lg border border-slate-200 p-2 overflow-x-auto scrollbar-thin"
+							className="rounded-lg border border-slate-200 p-2 overflow-x-auto scrollbar-thin bg-white"
 						>
 							<h5 className="text-2xs font-semibold text-slate-800 text-nowrap">
 								{o.name}

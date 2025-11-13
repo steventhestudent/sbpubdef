@@ -1,80 +1,129 @@
 import * as React from "react";
+
 import type { IUpcomingEventsProps } from "./IUpcomingEventsProps";
 
-export default class UpcomingEvents extends React.Component<IUpcomingEventsProps> {
-	public render(): React.ReactElement<IUpcomingEventsProps> {
-		const events = [
-			{
-				date: "Nov 5",
-				time: "12:00 PM",
-				title: "CLE: Recent Case Law",
-				where: "Teams",
-			},
-			{
-				date: "Nov 12",
-				time: "9:00 AM",
-				title: "Investigator Workshop",
-				where: "Santa Maria",
-			},
-			{
-				date: "Nov 20",
-				time: "3:00 PM",
-				title: "Office Hours: IT",
-				where: "SB Courthouse",
-			},
-		];
-		return (
-			<section className="rounded-xl border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm">
-				<header className="border-b border-slater-800 px-4 py-3 bg-[var(--webpart-header-bg-color)] rounded-t-xl">
-					<h4 className="text-base font-semibold text-slate-800">
-						Upcoming Events
-					</h4>
-				</header>
-				<div className="overflow-x-auto">
-					<table className="min-w-full divide-y divide-slater-800">
-						<thead className="bg-slate-50">
+import { Collapsible } from "@components/Collapsible";
+import { PNPWrapper } from "@utils/PNPWrapper";
+import { EventsApi } from "@api/events";
+import type { PDEvent } from "@type/PDEvent";
+import * as Utils from "@utils";
+
+type UpcomingEventsComponentItem = PDEvent;
+
+export const UpcomingEvents: React.FC<IUpcomingEventsProps> = (props) => {
+	const defaultItems: UpcomingEventsComponentItem[] = [
+		{
+			title: "No Events (0 results)",
+		},
+	];
+	const [items, setItems] = React.useState(defaultItems);
+
+	const pnpWrapper = new PNPWrapper(props.context, {
+		siteUrls: ["/sites/PD-Intranet", "/sites/Tech-Team", "/sites/HR"],
+		cache: "true",
+	});
+	const eventsApi = new EventsApi(pnpWrapper);
+
+	const load: () => Promise<void> = async () => {
+		const rows = await eventsApi.get(12); // strategy auto
+		const mapped = (rows || []).map((item: PDEvent) => ({
+			id: item.id,
+			title: item.title,
+			date: item.date,
+			location: item.location,
+			detailsUrl: item.detailsUrl,
+		}));
+		setItems(mapped.length ? mapped : defaultItems);
+	};
+
+	React.useEffect(() => {
+		Utils.loadCachedThenFresh(load);
+	}, []);
+
+	return (
+		<Collapsible
+			instanceId={props.context.instanceId}
+			title="Upcoming Events"
+		>
+			<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
+				<div className="overflow-y-auto max-h-96">
+					<table className="min-w-full divide-y divide-slate-200">
+						<thead className="bg-slate-50 sticky top-0">
 							<tr>
-								{["Date", "Time", "Event", "Location", ""].map(
-									(h) => (
-										<th
-											key={h}
-											className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
-										>
-											{h}
-										</th>
-									),
-								)}
+								<th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+									Date
+								</th>
+								<th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+									Time
+								</th>
+								<th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+									Event
+								</th>
+								<th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+									Location
+								</th>
+								<th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600" />
 							</tr>
 						</thead>
-						<tbody className="divide-y divide-slater-800">
-							{events.map((e, i) => (
-								<tr key={i} className="hover:bg-slate-50">
-									<td className="px-4 py-3 text-sm text-slate-800">
-										{e.date}
-									</td>
-									<td className="px-4 py-3 text-sm text-slate-700">
-										{e.time}
-									</td>
-									<td className="px-4 py-3 text-sm text-slate-800">
-										{e.title}
-									</td>
-									<td className="px-4 py-3 text-sm text-slate-700">
-										{e.where}
-									</td>
-									<td className="px-4 py-3 text-right">
-										<a
-											href="#"
-											className="text-sm text-blue-700 hover:underline"
-										>
-											Details
-										</a>
+						<tbody className="divide-y divide-slate-200">
+							{items.length === 0 && (
+								<tr>
+									<td
+										colSpan={5}
+										className="px-4 py-6 text-center text-sm text-slate-500"
+									>
+										No upcoming events found.
 									</td>
 								</tr>
-							))}
+							)}
+							{items.map((event) => {
+								const eventDateObj = new Date(event.date || "");
+								const eventDate =
+									eventDateObj.toLocaleDateString(undefined, {
+										month: "short",
+										day: "numeric",
+										year: "numeric",
+									});
+								const eventTime =
+									eventDateObj.toLocaleTimeString(undefined, {
+										hour: "numeric",
+										minute: "2-digit",
+									});
+
+								return (
+									<tr
+										key={event.id}
+										className="hover:bg-slate-50"
+									>
+										<td className="px-4 py-3 text-sm text-slate-800 whitespace-nowrap">
+											{eventDate}
+										</td>
+										<td className="px-4 py-3 text-sm text-slate-700 whitespace-nowrap">
+											{eventTime}
+										</td>
+										<td className="px-4 py-3 text-sm text-slate-800">
+											{event.title}
+										</td>
+										<td className="px-4 py-3 text-sm text-slate-700">
+											{event.location || "—"}
+										</td>
+										<td className="px-4 py-3 text-right">
+											<a
+												href={event.detailsUrl}
+												target="_blank"
+												rel="noopener noreferrer"
+												className="text-sm text-blue-700 hover:underline"
+											>
+												Details
+											</a>
+										</td>
+									</tr>
+								);
+							})}
 						</tbody>
 					</table>
 				</div>
 			</section>
-		);
-	}
-}
+		</Collapsible>
+	);
+};

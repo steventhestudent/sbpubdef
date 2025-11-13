@@ -26,8 +26,16 @@ function EveryoneView({
 	return (
 		<div className="p-5">
 			<div>Welcome, Guest:</div>
-			You must have some form of PDIntranet role (Attorney, IT, HR, etc.)
-			to have assignments.
+			<div className="mt-2">
+				You must have some form of PDIntranet role (Attorney, IT, HR,
+				etc.) to have assignments.
+			</div>
+			<ul>
+				<h5 className="font-bold">Groups:</h5>
+				{userGroupNames.map((name: string) => (
+					<li className="list-disc ml-5">{name}</li>
+				))}
+			</ul>
 		</div>
 	);
 }

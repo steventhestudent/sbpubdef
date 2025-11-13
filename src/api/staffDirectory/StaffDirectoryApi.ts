@@ -1,4 +1,4 @@
-// AssignmentsApi.ts
+// StaffDirectoryApi.ts
 import "@pnp/sp/items";
 import "@pnp/sp/lists";
 import "@pnp/sp/fields";
@@ -17,7 +17,7 @@ export class StaffDirectoryApi extends ListApi<
 		opts?: AssignGetOpts,
 	): Promise<PDStaffDirectoryItem[]> {
 		const { department } = opts || {};
-		console.log(`searching department '${department}' assignments...`);
+		console.log(`searching department '${department}' staff...`);
 		this.and("ContentClass:STS_ListItem");
 		this.and(`ListTitle:${PD.lists.StaffDirectory}`);
 		if (this.pnpWrapper.hubSiteId)

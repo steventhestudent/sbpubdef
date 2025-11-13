@@ -104,7 +104,11 @@ export function PDRoleBasedSelect({
 						PDRoleBasedSelect
 					</div>
 				</div>
-				<select value={role} onChange={(e) => setRole(e.target.value)}>
+				<select
+					value={role}
+					onChange={(e) => setRole(e.target.value)}
+					className="rounded-md border-slate-300 bg-white text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 px-2 py-1"
+				>
 					{(Object.keys(PD.role) as RoleKey[]).map((rk) => (
 						<option
 							key={rk}

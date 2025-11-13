@@ -26,7 +26,6 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 
 	const load: () => Promise<void> = async () => {
 		const rows = await staffDirectoryApi.get(12); // strategy auto
-		console.log(`rows: ${JSON.stringify(rows)}`);
 		const mapped = (rows || []).map((item: PDStaffDirectoryItem) => ({
 			name: item.name,
 			username: item.username,
