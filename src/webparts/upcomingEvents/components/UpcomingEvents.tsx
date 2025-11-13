@@ -51,7 +51,7 @@ export const UpcomingEvents: React.FC<IUpcomingEventsProps> = (props) => {
 						<thead className="bg-slate-50 sticky top-0">
 							<tr>
 								<th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-									Date
+									Dates
 								</th>
 								<th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
 									Time

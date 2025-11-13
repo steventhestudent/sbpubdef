@@ -4,7 +4,7 @@ import "@pnp/sp/fields";
 import "@pnp/sp/content-types";
 
 import { EventApi, EventGetOpts } from "@api/EventApi";
-import { PDEvent } from "@type/PDEvent";
+import { EventResult, PDEvent } from "@type/PDEvent";
 import { PD } from "@api/config";
 
 export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
@@ -41,16 +41,16 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 				.top(limitPerSite)();
 			const base = w.toUrl(); // absolute or server-relative depending on pnp setup
 			const siteOrigin = new URL(base, window.location.origin).origin;
-			return (rows as Array<Record<string, any>>).map(
-				(i): PDEvent => ({
-					id: i.Id,
+			return rows.map(
+				(i: EventResult): PDEvent => ({
+					id: Number(i.Id),
 					title: i.Title ?? "(untitled)",
 					date: i.EventDate, // ISO from list
 					endDate: i.EndDate,
 					location: i.Location,
 					detailsUrl: `${siteOrigin}/_layouts/15/Event.aspx?ListGuid=${listGuid}&ItemId=${i.Id}`,
 					siteUrl: siteUrl || window.location.pathname,
-					PDDepartment: deptProp ? i[deptProp] : undefined,
+					PDDepartment: i.PD_x0020_Department,
 				}),
 			);
 		});

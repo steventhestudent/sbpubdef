@@ -1,5 +1,6 @@
 import { ListApi } from "@api/ListApi";
 import { PD } from "@api/config";
+import { IList } from "@pnp/sp/lists";
 
 export type EventGetOpts = {
 	department?: string;
@@ -24,7 +25,7 @@ export abstract class EventApi<
 	}
 
 	/** Resolve PDDepartment OData prop name on THIS list */
-	protected async resolveDeptProp(list: any): Promise<string | undefined> {
+	protected async resolveDeptProp(list: IList): Promise<string | undefined> {
 		try {
 			const fld = await list.fields
 				.getByInternalNameOrTitle("PDDepartment")
@@ -37,7 +38,7 @@ export abstract class EventApi<
 
 	/** Resolve PD Events CT id on THIS list (if attached) */
 	protected async resolvePdEventsCtId(
-		list: any,
+		list: IList,
 	): Promise<string | undefined> {
 		try {
 			const cts = await list.contentTypes.select("StringId", "Name")();

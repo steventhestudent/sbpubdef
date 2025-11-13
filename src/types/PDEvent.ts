@@ -1,30 +1,12 @@
-export interface ISharePointEventItem {
-	Id: number;
-	Title: string;
-	EventDate: string;
-	Location?: string;
-}
-
-export interface IEventItem {
+export interface EventResult {
 	Id: string | number;
 	Title: string;
 	EventDate: string;
 	Location: string;
 	DetailsUrl: string;
-}
-
-export interface IGraphGroup {
-	displayName: string;
-	id: string;
-}
-
-export interface IGraphEvent {
-	id: string;
-	subject: string;
-	start: { dateTime: string; timeZone: string };
-	end: { dateTime: string; timeZone: string };
-	location?: { displayName?: string };
-	webLink?: string;
+	EndDate: string;
+	SiteUrl: string;
+	PD_x0020_Department?: string;
 }
 
 export type PDEvent = {

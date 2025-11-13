@@ -32,8 +32,10 @@ function EveryoneView({
 			</div>
 			<ul>
 				<h5 className="font-bold">Groups:</h5>
-				{userGroupNames.map((name: string) => (
-					<li className="list-disc ml-5">{name}</li>
+				{userGroupNames.map((name: string, i) => (
+					<li className="list-disc ml-5" key={i}>
+						{name}
+					</li>
 				))}
 			</ul>
 		</div>
