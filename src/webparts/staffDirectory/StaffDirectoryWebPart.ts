@@ -10,7 +10,7 @@ import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
 import { IReadonlyTheme } from "@microsoft/sp-component-base";
 
 import * as strings from "StaffDirectoryWebPartStrings";
-import StaffDirectory from "./components/StaffDirectory";
+import { StaffDirectory } from "./components/StaffDirectory";
 import { IStaffDirectoryProps } from "./components/IStaffDirectoryProps";
 
 export interface IStaffDirectoryWebPartProps {
@@ -29,7 +29,7 @@ export default class StaffDirectoryWebPart extends BaseClientSideWebPart<IStaffD
 				environmentMessage: this._environmentMessage,
 				hasTeamsContext: !!this.context.sdks.microsoftTeams,
 				userDisplayName: this.context.pageContext.user.displayName,
-				instanceId: this.context.instanceId,
+				context: this.context,
 			});
 
 		ReactDom.render(element, this.domElement);

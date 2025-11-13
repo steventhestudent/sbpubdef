@@ -16,6 +16,7 @@ export const PD = {
 	},
 	lists: {
 		PDAssignment: "Assignments",
+		StaffDirectory: "StaffDirectory",
 	},
 	siteColumn: {
 		PDDepartment: "PDDepartment",
