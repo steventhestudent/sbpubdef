@@ -14,11 +14,30 @@ import type {
 	SitePageItem,
 	CreateAnnouncementInput,
 } from "@type/PDAnnouncement";
+import { IList } from "@pnp/sp/lists";
 
 export class AnnouncementsApi extends CustomContentApi<
 	PDAnnouncement,
 	CreateAnnouncementInput
 > {
+	private async resolveEntityNames(
+		list: IList,
+		displayOrInternalNames: string[],
+	): Promise<Record<string, string | undefined>> {
+		const resolved: Record<string, string | undefined> = {};
+		for (const name of displayOrInternalNames) {
+			try {
+				const fld = await list.fields
+					.getByInternalNameOrTitle(name)
+					.select("InternalName", "EntityPropertyName")();
+				resolved[name] = fld.EntityPropertyName || fld.InternalName;
+			} catch {
+				resolved[name] = undefined;
+			}
+		}
+		return resolved;
+	}
+
 	/** HUB / multi-site (Search) */
 	protected async getSearch(
 		limit = 12,
@@ -28,27 +47,20 @@ export class AnnouncementsApi extends CustomContentApi<
 			...(opts ?? {}),
 			contentType: PD.contentType.Announcement,
 		});
-
-		const parts = this.buildSearchScopeParts();
-		parts.push("PromotedState=2");
-
-		const kql = parts.join(" AND ");
-
+		this.and("PromotedState=2");
 		const selectProps = [
 			"Title",
 			"Path",
 			"FirstPublishedDate",
-			"Description",
+			"Description", // summary
 			"SPSiteUrl",
+			"Author", // author display name
+			"PictureThumbnailURL",
+			"PDDepartment",
 		];
-		// // Include your managed property alias if you’ve mapped ows_PDDepartment -> alias (e.g., Dept)
-		// if (this.department || this.departmentMp || this.pnpWrapper.departmentMp) {
-		// 	const mp = this.departmentMp || this.pnpWrapper.departmentMp;
-		// 	if (mp) selectProps.push(mp);
-		// }
 
 		const res = await this.pnpWrapper.sp.search({
-			Querytext: kql,
+			Querytext: this.kql,
 			RowLimit: limit,
 			SelectProperties: selectProps,
 			SortList: [{ Property: "FirstPublishedDate", Direction: 1 }],
@@ -67,12 +79,14 @@ export class AnnouncementsApi extends CustomContentApi<
 					: undefined,
 				summary: r.Description,
 				siteUrl: r.SPSiteUrl,
-				// PDDepartment:
+				author: r.Author, // simple string from Search
+				thumbnailUrl: r.PictureThumbnailURL, // modern news thumb
+				PDDepartment:
+					r.PDDepartment || r.PD_x0020_Department || "Everyone", // e.g., "Dept"
 			} as PDAnnouncement;
 		});
 	}
 
-	/** Current/multi-site (REST) */
 	protected async getRest(
 		limitPerSite = 12,
 		opts?: AnnGetOpts,
@@ -84,7 +98,7 @@ export class AnnouncementsApi extends CustomContentApi<
 			const w = this.pnpWrapper.web(siteUrl);
 			const list = w.lists.getByTitle(SP.contentType.SitePages);
 
-			// 1) Get PD Announcement CT id for this library
+			// 1) PD Announcement CT on this library
 			const cts = await list.contentTypes.select("StringId", "Name")();
 			const pdCt = (cts as IContentTypeInfo[]).find(
 				(ct) => ct.Name === PD.contentType.Announcement,
@@ -92,19 +106,23 @@ export class AnnouncementsApi extends CustomContentApi<
 			if (!pdCt) return [] as PDAnnouncement[];
 			const pdCtId = pdCt.StringId;
 
-			// 2) Resolve OData prop name for PDDepartment on THIS library
-			let deptProp: string | undefined;
-			try {
-				const fld = await list.fields
-					.getByInternalNameOrTitle("PDDepartment")
-					.select("InternalName", "EntityPropertyName")();
-				deptProp = fld.EntityPropertyName || fld.InternalName;
-			} catch {
-				// If PDDepartment isn’t linked to this Site Pages, treat as no department filter
-				deptProp = undefined;
-			}
+			// 2) Resolve key optional fields on THIS library
+			const want = await this.resolveEntityNames(list, [
+				"PDDepartment", // your custom choice/taxonomy
+				"Description", // Site Pages “Description” field
+				"BannerImageUrl", // Modern page image column
+				"ExpireDate",
+				"ExpirationDate",
+				"PDExpireDate", // try a few candidates
+			]);
 
-			// 3) Build strict server-side filters
+			// Which expiry name did we find?
+			const expireProp =
+				want.ExpireDate || want.ExpirationDate || want.PDExpireDate;
+
+			const deptProp = want.PDDepartment; // may be undefined if not on this library
+
+			// 3) Filters
 			const filters: string[] = [
 				"PromotedState eq 2",
 				`startswith(ContentTypeId,'${pdCtId}')`,
@@ -115,41 +133,67 @@ export class AnnouncementsApi extends CustomContentApi<
 				);
 			}
 
-			// 4) Safe $select (includes deptProp only if we have it)
-			const selects = [
+			// 4) Select/Expand
+			const select = [
 				"Id",
 				"Title",
 				"FileRef",
 				"FirstPublishedDate",
-				"Description",
+				"Author/Title",
+				"Author/EMail",
+				"Author/Id",
 			];
-			if (deptProp) selects.push(deptProp);
+			if (want.Description) select.push(want.Description);
+			if (want.BannerImageUrl) select.push(want.BannerImageUrl);
+			if (deptProp) select.push(deptProp);
+			if (expireProp) select.push(expireProp);
 
 			const rows = await list.items
-				.select(...selects)
+				.select(...select)
+				.expand("Author")
 				.filter(filters.join(" and "))
 				.orderBy("FirstPublishedDate", false)
 				.top(limitPerSite)();
 
-			return (rows as SitePageItem[]).map(
-				(i: SitePageItem): PDAnnouncement => ({
+			return (rows as SitePageItem[]).map((i: any): PDAnnouncement => {
+				const summary = want.Description
+					? i[want.Description]
+					: undefined;
+
+				// BannerImageUrl can be string or JSON (modern Image column). Handle both.
+				let thumb: string | undefined;
+				const banner = want.BannerImageUrl
+					? i[want.BannerImageUrl]
+					: undefined;
+				if (banner) {
+					if (typeof banner === "string") thumb = banner;
+					else if (banner?.Url) thumb = banner.Url;
+				}
+
+				const expRaw = expireProp ? i[expireProp] : undefined;
+
+				return {
 					title: i.Title ?? "(untitled)",
 					url: i.FileRef ?? "#",
 					published: i.FirstPublishedDate
 						? new Date(i.FirstPublishedDate)
 						: undefined,
-					// summary: i. ?? "",
+					summary: summary,
+					thumbnailUrl: thumb,
+					author: i.Author?.Title,
+					PDDepartment: deptProp ? i[deptProp] : undefined,
+					expireDate: expRaw ? new Date(expRaw) : undefined,
 					siteUrl: siteUrl || window.location.pathname,
-					PDDepartment: i.PD_x0020_Department ?? "Everyone",
-				}),
-			);
+				};
+			});
 		});
 
 		const settled = await Promise.allSettled(calls);
 		const flat: PDAnnouncement[] = [];
 		for (const r of settled)
 			if (r.status === "fulfilled") flat.push(...r.value);
-		// de-dupe + sort newest
+
+		// de-dupe by url and sort newest
 		const map = new Map<string, PDAnnouncement>();
 		for (const a of flat) if (!map.has(a.url)) map.set(a.url, a);
 		return Array.from(map.values()).sort(
@@ -157,7 +201,6 @@ export class AnnouncementsApi extends CustomContentApi<
 				(b.published?.getTime() ?? 0) - (a.published?.getTime() ?? 0),
 		);
 	}
-
 	/** CREATE — REST only (unchanged, just nudged to your base) */
 	async create(input: CreateAnnouncementInput): Promise<{ url: string }> {
 		const { title, department, html, targetSite } = input;
