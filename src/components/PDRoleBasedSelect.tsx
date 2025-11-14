@@ -137,3 +137,29 @@ export function PDRoleBasedSelect({
 		</section>
 	);
 }
+
+export function BlankGuestView({
+	userGroupNames,
+	pnpWrapper,
+}: {
+	userGroupNames: string[];
+	pnpWrapper: PNPWrapper;
+}): JSX.Element {
+	return (
+		<div className="p-5">
+			<div>Welcome, Guest:</div>
+			<div className="mt-2">
+				You must have some form of PDIntranet role (Attorney, IT, HR,
+				etc.) to have assignments.
+			</div>
+			<ul>
+				<h5 className="font-bold">Groups:</h5>
+				{userGroupNames.map((name: string, i) => (
+					<li className="list-disc ml-5" key={i}>
+						{name}
+					</li>
+				))}
+			</ul>
+		</div>
+	);
+}

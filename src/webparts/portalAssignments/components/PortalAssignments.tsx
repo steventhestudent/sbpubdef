@@ -2,45 +2,22 @@ import * as React from "react";
 
 import type { IPortalAssignmentsProps } from "./IPortalAssignmentsProps";
 
+import type { PDAssignment } from "@type/PDAssignment";
 import { RoleKey } from "@api/config";
+import { AssignmentsApi } from "@api/assignments";
+import { Collapsible } from "@components/Collapsible";
+import {
+	PDRoleBasedSelect,
+	BlankGuestView,
+} from "@components/PDRoleBasedSelect";
 import * as Utils from "@utils";
 import { PNPWrapper } from "@utils/PNPWrapper";
-import { AssignmentsApi } from "@api/assignments";
-import type { PDAssignment } from "@type/PDAssignment";
-import { Collapsible } from "@components/Collapsible";
-import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 
 type AssignmentListItem = {
 	title: string;
 	date: string;
 	PDDepartment: RoleKey;
 };
-
-function EveryoneView({
-	userGroupNames,
-	pnpWrapper,
-}: {
-	userGroupNames: string[];
-	pnpWrapper: PNPWrapper;
-}): JSX.Element {
-	return (
-		<div className="p-5">
-			<div>Welcome, Guest:</div>
-			<div className="mt-2">
-				You must have some form of PDIntranet role (Attorney, IT, HR,
-				etc.) to have assignments.
-			</div>
-			<ul>
-				<h5 className="font-bold">Groups:</h5>
-				{userGroupNames.map((name: string, i) => (
-					<li className="list-disc ml-5" key={i}>
-						{name}
-					</li>
-				))}
-			</ul>
-		</div>
-	);
-}
 
 function PDIntranetView({
 	userGroupNames,
@@ -88,11 +65,6 @@ function PDIntranetView({
 	);
 }
 
-const AttorneyView = PDIntranetView;
-const LOPView = PDIntranetView;
-const HRView = PDIntranetView;
-const ITView = PDIntranetView;
-
 export default function PortalAssignments(
 	props: IPortalAssignmentsProps,
 ): JSX.Element {
@@ -101,12 +73,12 @@ export default function PortalAssignments(
 			<PDRoleBasedSelect
 				ctx={props.context}
 				views={{
-					Everyone: EveryoneView,
+					Everyone: BlankGuestView,
 					PDIntranet: PDIntranetView,
-					Attorney: AttorneyView,
-					LOP: LOPView,
-					HR: HRView,
-					IT: ITView,
+					Attorney: PDIntranetView,
+					LOP: PDIntranetView,
+					HR: PDIntranetView,
+					IT: PDIntranetView,
 				}}
 			/>
 		</Collapsible>
