@@ -3,19 +3,21 @@ import * as Utils from "@utils";
 import { PD, RoleKey } from "@api/config";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 import { PNPWrapper } from "@utils/PNPWrapper";
+import RoleBasedViewProps from "@type/RoleBasedViewProps";
 
-type RoleView = React.ComponentType<{
-	userGroupNames: string[];
-	pnpWrapper: PNPWrapper;
-}>;
+type RoleView = React.ComponentType<RoleBasedViewProps>;
 type RoleViews = Partial<Record<RoleKey, RoleView>>;
 
 export function PDRoleBasedSelect({
 	ctx,
 	views,
+	showSelect,
+	selectLabel = "<PDRoleBasedSelect>",
 }: {
 	ctx: WebPartContext;
 	views: RoleViews;
+	showSelect?: boolean;
+	selectLabel?: string;
 }): JSX.Element {
 	const cachedGroupNames: RoleKey[] =
 		JSON.parse(localStorage.getItem("userGroupNames") || '""') || [];
@@ -95,19 +97,24 @@ export function PDRoleBasedSelect({
 	}, []);
 
 	const CurrentView: RoleView | undefined = views[role] ?? views.Everyone;
+	const shouldShowSelect = showSelect || role === "IT";
 
 	return (
-		<section className="rounded-xl border border-[var(--webpart-border-color)] !bg-[var(--webpart-bg-color)] shadow-sm">
-			<header className="bg-[var(--webpart-header-bg-color)] rounded-t-xl border-b border-slate-800 px-3 py-2 flex items-center justify-between select-none">
+		<section className="border border-[var(--webpart-border-color)] !bg-[var(--webpart-bg-color)] shadow-sm">
+			<header
+				data-show-select={shouldShowSelect}
+				className="hidden data-[show-select=true]:multi-['flex']
+						bg-[#f2f2f2] border-b border-slate-800 px-3 py-2 items-center justify-between select-none"
+			>
 				<div className="flex items-center gap-2">
-					<div className="font-medium text-gray-800">
-						PDRoleBasedSelect
-					</div>
+					<div className="text-shadow-black">{selectLabel}</div>
 				</div>
 				<select
 					value={role}
 					onChange={(e) => setRole(e.target.value)}
-					className="rounded-md border-slate-300 bg-white text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 px-2 py-1"
+					data-show-select={shouldShowSelect}
+					className="hidden data-[show-select=true]:multi-['block']
+								rounded-md border-slate-300 bg-white text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 px-2 py-1"
 				>
 					{(Object.keys(PD.role) as RoleKey[]).map((rk) => (
 						<option
@@ -130,6 +137,7 @@ export function PDRoleBasedSelect({
 						<CurrentView
 							userGroupNames={userGroups}
 							pnpWrapper={pnpWrapper}
+							sourceRole={role ?? "Everyone"}
 						/>
 					) : null}
 				</div>
@@ -141,10 +149,7 @@ export function PDRoleBasedSelect({
 export function BlankGuestView({
 	userGroupNames,
 	pnpWrapper,
-}: {
-	userGroupNames: string[];
-	pnpWrapper: PNPWrapper;
-}): JSX.Element {
+}: RoleBasedViewProps): JSX.Element {
 	return (
 		<div className="p-5">
 			<div>Welcome, Guest:</div>

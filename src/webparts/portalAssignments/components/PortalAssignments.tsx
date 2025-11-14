@@ -13,7 +13,7 @@ import {
 import * as Utils from "@utils";
 import { PNPWrapper } from "@utils/PNPWrapper";
 
-type AssignmentListItem = {
+type AssignmentWebPartItem = {
 	title: string;
 	date: string;
 	PDDepartment: RoleKey;
@@ -26,7 +26,7 @@ function PDIntranetView({
 	userGroupNames: string[];
 	pnpWrapper: PNPWrapper;
 }): JSX.Element {
-	const defaultItems: AssignmentListItem[] = [
+	const defaultItems: AssignmentWebPartItem[] = [
 		{
 			title: "No Assignments",
 			date: new Date().toDateString(),

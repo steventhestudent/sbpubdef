@@ -15,7 +15,7 @@ export default class OfficeInformation extends React.Component<IOfficeInformatio
 					{offices.map((o, i) => (
 						<div
 							key={i}
-							className="rounded-lg border border-slate-200 p-2 overflow-x-auto scrollbar-thin bg-white"
+							className="rounded-lg border border-slate-500 p-2 overflow-x-auto scrollbar-thin bg-white"
 						>
 							<h5 className="text-2xs font-semibold text-slate-800 text-nowrap">
 								{o.name}

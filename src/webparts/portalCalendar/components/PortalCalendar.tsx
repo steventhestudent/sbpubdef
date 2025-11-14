@@ -16,11 +16,11 @@ export default class PortalCalendar extends React.Component<IPortalCalendarProps
 						Calendar / Events / Trainings
 					</h4>
 					<div className="flex items-center gap-2">
-						<button className="rounded-md border border-slate-300 px-2 py-1 text-sm">
+						<button className="rounded-md border border-slate-300 px-2 py-1 text-sm bg-[#c9cbcc]">
 							&larr;
 						</button>
 						<span className="text-sm text-slate-700">October</span>
-						<button className="rounded-md border border-slate-300 px-2 py-1 text-sm">
+						<button className="rounded-md border border-slate-300 px-2 py-1 text-sm bg-[#c9cbcc]">
 							&rarr;
 						</button>
 					</div>

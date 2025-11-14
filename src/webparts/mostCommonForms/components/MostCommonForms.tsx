@@ -21,7 +21,7 @@ export default class MostCommonForms extends React.Component<IMostCommonFormsPro
 							<a
 								key={i}
 								href={f.href}
-								className="group rounded-lg border border-slate-200 p-4 hover:border-blue-300 hover:bg-blue-50"
+								className="group rounded-lg border border-slate-500 p-4 hover:border-blue-300 hover:bg-blue-50"
 							>
 								<p className="text-sm font-medium text-slate-800 group-hover:text-blue-800">
 									{f.label}
