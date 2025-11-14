@@ -11,7 +11,7 @@ export default class WelcomeMessage extends React.Component<IWelcomeMessageProps
 			<section>
 				<div className="rounded-xl border border-[var(--webpart-border-color)] p-6 shadow-sm bg-[#f9f9f9]">
 					<h2 className="text-center text-xl font-semibold text-slate-800">
-						Welcome to the Public Defender Resource Center,
+						Welcome to the Public Defender Resource Center,&nbsp;
 						{escape(userDisplayName)}!
 					</h2>
 					<p className="text-center mt-1 text-sm text-slate-600">

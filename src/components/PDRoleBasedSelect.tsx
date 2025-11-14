@@ -81,8 +81,8 @@ export function PDRoleBasedSelect({
 	function roleViewPriority(roles: RoleKey[]): RoleKey {
 		if (_hasRole(roles, "IT")) return "IT";
 		if (_hasRole(roles, "HR")) return "HR";
-		if (_hasRole(roles, "Attorney")) return "PDIntranet";
-		if (_hasRole(roles, "LOP")) return "PDIntranet";
+		if (_hasRole(roles, "Attorney")) return "Attorney";
+		if (_hasRole(roles, "LOP")) return "LOP";
 		if (_hasRole(roles, "PDIntranet")) return "PDIntranet";
 		return "Everyone";
 	}
