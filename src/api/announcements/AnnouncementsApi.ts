@@ -11,15 +11,75 @@ import { PD, SP } from "@api/config";
 import type {
 	NewsSearchResult,
 	PDAnnouncement,
-	SitePageItem,
+	// SitePageItem,
 	CreateAnnouncementInput,
 } from "@type/PDAnnouncement";
-import { IList } from "@pnp/sp/lists";
+import type { IList } from "@pnp/sp/lists";
+
+// ------------ Local helper types (no `any`) ------------
+type SPAuthor = { Title?: string; EMail?: string; Id?: number };
+
+type RestRowBase = {
+	Title?: string;
+	FileRef?: string;
+	FirstPublishedDate?: string;
+	Author?: SPAuthor | string; // after expand("Author"), usually object
+};
+
+// Index signature uses unknown; callers must narrow.
+type RestRow = RestRowBase & { [key: string]: unknown };
+
+// ------------ Narrowing helpers (keep TS strict) ------------
+const getString = (row: RestRow, key?: string): string | undefined => {
+	if (!key) return undefined;
+	const v = row[key];
+	return typeof v === "string" ? v : undefined;
+};
+
+const getBannerUrl = (row: RestRow, key?: string): string | undefined => {
+	if (!key) return undefined;
+	const v = row[key];
+	if (typeof v === "string") return v;
+	if (v && typeof v === "object") {
+		const maybe = v as { Url?: unknown; url?: unknown };
+		if (typeof maybe.Url === "string") return maybe.Url;
+		if (typeof maybe.url === "string") return maybe.url;
+	}
+	return undefined;
+};
+
+// Works for:
+//  - Choice: string
+//  - Taxonomy (single): { Label?: string }
+//  - Taxonomy (multi): [{ Label?: string }, ...]
+const getLabelish = (row: RestRow, key?: string): string | undefined => {
+	if (!key) return undefined;
+	const v = row[key];
+
+	if (typeof v === "string") return v;
+
+	if (Array.isArray(v)) {
+		const first = v[0];
+		if (first && typeof first === "object" && "Label" in first) {
+			const lbl = (first as { Label?: unknown }).Label;
+			return typeof lbl === "string" ? lbl : undefined;
+		}
+		return undefined;
+	}
+
+	if (v && typeof v === "object" && "Label" in v) {
+		const lbl = (v as { Label?: unknown }).Label;
+		return typeof lbl === "string" ? lbl : undefined;
+	}
+
+	return undefined;
+};
 
 export class AnnouncementsApi extends CustomContentApi<
 	PDAnnouncement,
 	CreateAnnouncementInput
 > {
+	// Resolve field EntityPropertyName for the *current* Site Pages library
 	private async resolveEntityNames(
 		list: IList,
 		displayOrInternalNames: string[],
@@ -47,16 +107,18 @@ export class AnnouncementsApi extends CustomContentApi<
 			...(opts ?? {}),
 			contentType: PD.contentType.Announcement,
 		});
+		// News-only
 		this.and("PromotedState=2");
+
 		const selectProps = [
 			"Title",
 			"Path",
 			"FirstPublishedDate",
 			"Description", // summary
 			"SPSiteUrl",
-			"Author", // author display name
-			"PictureThumbnailURL",
-			"PDDepartment",
+			"Author", // author display name (string in search)
+			"PictureThumbnailURL", // modern news thumbnail
+			"PDDepartment", // if you crawled/mapped it to a managed prop with exactly this name
 		];
 
 		const res = await this.pnpWrapper.sp.search({
@@ -67,7 +129,6 @@ export class AnnouncementsApi extends CustomContentApi<
 			TrimDuplicates: true,
 		});
 
-		// const mp = this.departmentMp || this.pnpWrapper.departmentMp; // e.g., "Dept"
 		return res.PrimarySearchResults.map((raw) => {
 			const r = raw as NewsSearchResult &
 				Record<string, string | undefined>;
@@ -79,14 +140,15 @@ export class AnnouncementsApi extends CustomContentApi<
 					: undefined,
 				summary: r.Description,
 				siteUrl: r.SPSiteUrl,
-				author: r.Author, // simple string from Search
-				thumbnailUrl: r.PictureThumbnailURL, // modern news thumb
+				author: r.Author,
+				thumbnailUrl: r.PictureThumbnailURL,
 				PDDepartment:
-					r.PDDepartment || r.PD_x0020_Department || "Everyone", // e.g., "Dept"
+					r.PDDepartment || r.PD_x0020_Department || "Everyone",
 			} as PDAnnouncement;
 		});
 	}
 
+	/** Current/multi-site (REST) */
 	protected async getRest(
 		limitPerSite = 12,
 		opts?: AnnGetOpts,
@@ -98,7 +160,7 @@ export class AnnouncementsApi extends CustomContentApi<
 			const w = this.pnpWrapper.web(siteUrl);
 			const list = w.lists.getByTitle(SP.contentType.SitePages);
 
-			// 1) PD Announcement CT on this library
+			// 1) Ensure PD Announcement CT exists in this library
 			const cts = await list.contentTypes.select("StringId", "Name")();
 			const pdCt = (cts as IContentTypeInfo[]).find(
 				(ct) => ct.Name === PD.contentType.Announcement,
@@ -106,23 +168,21 @@ export class AnnouncementsApi extends CustomContentApi<
 			if (!pdCt) return [] as PDAnnouncement[];
 			const pdCtId = pdCt.StringId;
 
-			// 2) Resolve key optional fields on THIS library
+			// 2) Resolve optional fields for THIS library
 			const want = await this.resolveEntityNames(list, [
-				"PDDepartment", // your custom choice/taxonomy
-				"Description", // Site Pages “Description” field
-				"BannerImageUrl", // Modern page image column
+				"PDDepartment", // choice / taxonomy (label expected)
+				"Description", // Site Pages “Description”
+				"BannerImageUrl", // modern page image column
 				"ExpireDate",
 				"ExpirationDate",
-				"PDExpireDate", // try a few candidates
+				"PDExpireDate",
 			]);
 
-			// Which expiry name did we find?
 			const expireProp =
 				want.ExpireDate || want.ExpirationDate || want.PDExpireDate;
+			const deptProp = want.PDDepartment;
 
-			const deptProp = want.PDDepartment; // may be undefined if not on this library
-
-			// 3) Filters
+			// 3) Server-side filters
 			const filters: string[] = [
 				"PromotedState eq 2",
 				`startswith(ContentTypeId,'${pdCtId}')`,
@@ -134,7 +194,7 @@ export class AnnouncementsApi extends CustomContentApi<
 			}
 
 			// 4) Select/Expand
-			const select = [
+			const select: string[] = [
 				"Id",
 				"Title",
 				"FileRef",
@@ -155,22 +215,15 @@ export class AnnouncementsApi extends CustomContentApi<
 				.orderBy("FirstPublishedDate", false)
 				.top(limitPerSite)();
 
-			return (rows as SitePageItem[]).map((i: any): PDAnnouncement => {
-				const summary = want.Description
-					? i[want.Description]
-					: undefined;
+			// 5) Map rows -> PDAnnouncement with safe narrowing
+			return (rows as unknown as RestRow[]).map((i): PDAnnouncement => {
+				const summary = getString(i, want.Description);
+				const thumb = getBannerUrl(i, want.BannerImageUrl);
+				const expRaw = getString(i, expireProp);
+				const deptVal = getLabelish(i, deptProp);
 
-				// BannerImageUrl can be string or JSON (modern Image column). Handle both.
-				let thumb: string | undefined;
-				const banner = want.BannerImageUrl
-					? i[want.BannerImageUrl]
-					: undefined;
-				if (banner) {
-					if (typeof banner === "string") thumb = banner;
-					else if (banner?.Url) thumb = banner.Url;
-				}
-
-				const expRaw = expireProp ? i[expireProp] : undefined;
+				const a = i.Author;
+				const authorName = typeof a === "string" ? a : a?.Title;
 
 				return {
 					title: i.Title ?? "(untitled)",
@@ -178,10 +231,10 @@ export class AnnouncementsApi extends CustomContentApi<
 					published: i.FirstPublishedDate
 						? new Date(i.FirstPublishedDate)
 						: undefined,
-					summary: summary,
+					summary,
 					thumbnailUrl: thumb,
-					author: i.Author?.Title,
-					PDDepartment: deptProp ? i[deptProp] : undefined,
+					author: authorName,
+					PDDepartment: deptVal,
 					expireDate: expRaw ? new Date(expRaw) : undefined,
 					siteUrl: siteUrl || window.location.pathname,
 				};
@@ -193,15 +246,17 @@ export class AnnouncementsApi extends CustomContentApi<
 		for (const r of settled)
 			if (r.status === "fulfilled") flat.push(...r.value);
 
-		// de-dupe by url and sort newest
+		// de-dupe by URL + newest first
 		const map = new Map<string, PDAnnouncement>();
 		for (const a of flat) if (!map.has(a.url)) map.set(a.url, a);
+
 		return Array.from(map.values()).sort(
 			(a, b) =>
 				(b.published?.getTime() ?? 0) - (a.published?.getTime() ?? 0),
 		);
 	}
-	/** CREATE — REST only (unchanged, just nudged to your base) */
+
+	/** CREATE — REST only */
 	async create(input: CreateAnnouncementInput): Promise<{ url: string }> {
 		const { title, department, html, targetSite } = input;
 		const web = this.pnpWrapper.web(targetSite);
