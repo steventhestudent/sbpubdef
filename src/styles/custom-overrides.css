@@ -1,0 +1,133 @@
+:root {
+  --pd-bg: #f6f7f9;
+  --pd-card: #ffffff;
+  --pd-border: #e5e7eb;   /* light gray */
+  --pd-muted: #6b7280;    /* slate-500 */
+  --pd-text:  #111827;    /* gray-900 */
+  --pd-accent: #2563eb;   /* blue-600 (for normal SharePoint buttons) */
+  --pd-surface-shadow: 0 1px 2px rgba(16,24,40,.06);
+}
+
+/* Page canvas background */
+#workbenchPageContent,
+#spPageCanvasContent,
+div[data-automation-id="CanvasZone"] {
+  background: var(--pd-bg) !important;
+}
+
+/* Card look for webparts – this is the “nice but not extra” part */
+div[data-automation-id="webPart"],
+div[data-automation-id="CanvasControl"],
+section[role="region"] {
+  background: var(--pd-card) !important;
+  border: 1px solid var(--pd-border) !important;
+  border-radius: 8px !important;
+  box-shadow: var(--pd-surface-shadow) !important;
+}
+
+/* Slightly tighter padding inside webparts */
+div[data-automation-id="webPart"] .controlZone,
+div[data-automation-id="CanvasControl"] .controlZone {
+  padding: 14px 16px !important;
+}
+
+/* Section headings – NO pills, just a simple underline */
+div[role="heading"][aria-level="2"] {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--pd-border) !important;
+}
+div[role="heading"][aria-level="2"] * {
+  color: var(--pd-text) !important;
+  font-weight: 600;
+}
+
+/* Text inputs / search boxes – simple, not blobby */
+.ms-TextField-fieldGroup {
+  border: 1px solid var(--pd-border) !important;
+  border-radius: 6px !important;
+  background: #fff !important;
+}
+.ms-TextField-fieldGroup:focus-within {
+  box-shadow: 0 0 0 2px rgba(37,99,235,.20) !important;
+  border-color: #c7d2fe !important;
+}
+/* --- Fix SharePoint Workbench Blue Theme --- */
+
+/* Top command bar background */
+#SuiteNavWrapper,
+#SuiteNavPlaceHolder,
+div[class*="ms-CommandBar"],
+.ms-CommandBar,
+.ms-CommandBarItem-link,
+.ms-Button,
+button.ms-Button {
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+}
+
+/* Pills / headers inside workbench */
+div[role="heading"][aria-level="2"] {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border: none !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  border-radius: 0 !important;
+}
+
+/* Blue heavy icon buttons */
+.ms-Button--icon,
+.ms-Button--icon .ms-Button {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: #111827 !important;
+}
+
+/* Blue heavy icon buttons */
+.ms-Button--icon,
+.ms-Button--icon .ms-Button {
+  background: transparent !important;
+  border: 1px solid transparent !important;
+  color: #111827 !important;
+}
+
+/* Big action buttons (Edit, Republish, Share) – flat, neutral */
+.ms-Button--primary,
+button.ms-Button.ms-Button--primary {
+  background: #ffffff !important;
+  border-color: #e5e7eb !important;
+  color: #111827 !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+
+.ms-Button--primary:hover,
+button.ms-Button.ms-Button--primary:hover {
+  background: #f3f4f6 !important;
+  border-color: #d1d5db !important;
+}
+
+/* Kill excessive radii in workbench */
+.ms-Button,
+.ms-CommandBarItem-link {
+  border-radius: 6px !important;
+}
+/* flatten dark-blue pill buttons inside the page canvas */
+#spPageCanvasContent button,
+#spPageCanvasContent .ms-Button,
+#spPageCanvasContent .ms-CommandBarItem-link,
+#spPageCanvasContent [role="button"] {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border-radius: 6px !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: none !important;
+}
+
+/* pill radius, square it off */
+#spPageCanvasContent .rounded-full {
+  border-radius: 6px !important;
+}
+
+
