@@ -1,59 +1,81 @@
 import * as React from "react";
 import type { IExpertWitnessDirectoryProps } from "./IExpertWitnessDirectoryProps";
 import { Collapsible } from "@components/Collapsible";
-import ExpertWitnessService, {
-  IExpert,
+import {
+  ExpertWitnessService,
+  IExpert
 } from "../../../services/ExpertWitnessService";
 
 const MAX_VISIBLE = 4;
 
-const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
-  props,
+export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
+  props
 ) => {
   const [experts, setExperts] = React.useState<IExpert[]>([]);
   const [search, setSearch] = React.useState("");
-  const [loading, setLoading] = React.useState(true);
+  const [isLoading, setIsLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let active = true;
 
-    const load = async (): Promise<void> => {
+    const load = async () => {
       try {
+        setIsLoading(true);
+        setError(null);
+
         const data = await ExpertWitnessService.getExperts(
-          props.context,
+          props.siteUrl,
+          props.spHttpClient
         );
+
         if (!active) return;
-        setExperts(data);
-      } catch (e: unknown) {
+
+        // alphabetical by name A → Z
+        const sorted = [...data].sort((a, b) =>
+          (a.name ?? "").localeCompare(b.name ?? "")
+        );
+
+        console.log("ExpertWitnessDirectory: experts state", sorted);
+        setExperts(sorted);
+      } catch (err) {
+        console.error("ExpertWitnessDirectory: failed to load experts", err);
         if (!active) return;
-        console.error("Failed to load experts", e);
+        setExperts([]);
         setError("Could not load Expert Directory.");
       } finally {
         if (active) {
-          setLoading(false);
+          setIsLoading(false);
         }
       }
     };
 
-    void load();
+    // satisfy no-floating-promises
+    load().catch((e) => {
+      if (!active) return;
+      console.error("ExpertWitnessDirectory: unhandled load error", e);
+      setExperts([]);
+      setError("Could not load Expert Directory.");
+      setIsLoading(false);
+    });
+
     return () => {
       active = false;
     };
-  }, [props.context]);
+  }, [props.siteUrl, props.spHttpClient]);
 
   const filtered = React.useMemo(() => {
     const term = search.trim().toLowerCase();
     if (!term) return experts;
 
-    return experts.filter((expert) => {
+    return experts.filter((exp) => {
       const haystack = [
-        expert.name,
-        expert.phone ?? "",
-        expert.email ?? "",
-        expert.department ?? "",
-        ...(expert.expertise || []),
+        exp.name,
+        exp.expertise,
+        exp.email,
+        exp.phone
       ]
+        .filter(Boolean)
         .join(" ")
         .toLowerCase();
 
@@ -61,132 +83,101 @@ const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
     });
   }, [search, experts]);
 
-  // Only ever show up to MAX_VISIBLE
-  const visibleExperts = React.useMemo(
-    () => filtered.slice(0, MAX_VISIBLE),
-    [filtered],
-  );
+  const visible = filtered.slice(0, MAX_VISIBLE);
+  const directoryUrl = `${props.siteUrl}/Lists/Expert%20Directory/AllItems.aspx`;
 
   return (
-    <Collapsible
-      instanceId={props.instanceId}
-      title="Expert Witness Directory"
-    >
-      <div className="p-4">
-        {/* Search form */}
-        <form
-          role="search"
-          className="mx-auto max-w-lg"
-          onSubmit={(e) => e.preventDefault()}
+    <Collapsible instanceId={props.instanceId} title="Expert Witness Directory">
+      <div className="p-4 text-sm">
+        {/* search */}
+        <label
+          className="block text-xs font-medium text-slate-700"
+          htmlFor="expert-search"
         >
-          <label
-            className="block text-sm font-medium text-slate-700"
-            htmlFor="expert-search"
+          Search experts
+        </label>
+        <div className="mt-1 flex gap-2">
+          <input
+            id="expert-search"
+            type="search"
+            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Name, field, location…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button
+            type="button"
+            className="rounded-md border border-slate-300 px-3 text-sm"
+            onClick={() => setSearch((s) => s.trim())}
           >
-            Search experts
-          </label>
-          <div className="mt-1 flex">
-            <input
-              id="expert-search"
-              type="search"
-              placeholder="Name, field, location…"
-              className="w-full rounded-l-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <button
-              type="submit"
-              className="rounded-r-md border border-l-0 border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Search
-            </button>
-          </div>
-          <p className="mt-1 text-xs text-slate-500">
-            Showing up to {MAX_VISIBLE} matches. Refine search to narrow
-            results.
-          </p>
-        </form>
+            Search
+          </button>
+        </div>
 
-        {/* Status messages */}
-        {loading && (
-          <p className="mt-4 text-sm text-slate-500">
-            Loading Expert Directory…
-          </p>
-        )}
+        {/* status text */}
+        <p className="mt-2 text-xs text-slate-500">
+          {isLoading
+            ? "Loading directory…"
+            : error
+            ? error
+            : `Showing ${filtered.length} of ${experts.length} matches.`}
+        </p>
 
-        {error && !loading && (
-          <p className="mt-4 text-sm text-red-600">{error}</p>
-        )}
+        {/* list */}
+        {!isLoading && !error && (
+          <>
+            {filtered.length === 0 ? (
+              <div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                No experts match this search.
+              </div>
+            ) : (
+              <ul className="mt-3 divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+                {visible.map((e) => (
+                  <li key={e.id} className="px-3 py-2">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {e.name}
+                        </p>
+                        {e.expertise && (
+                          <p className="mt-0.5 text-xs text-slate-600">
+                            {e.expertise}
+                          </p>
+                        )}
+                        {(e.email || e.phone) && (
+                          <p className="mt-1 text-xs text-slate-500">
+                            {e.email && <span>{e.email}</span>}
+                            {e.email && e.phone && " • "}
+                            {e.phone && <span>{e.phone}</span>}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
 
-        {!loading && !error && filtered.length === 0 && (
-          <p className="mt-4 text-sm text-slate-500">
-            No experts match that search.
-          </p>
-        )}
+            {experts.length > MAX_VISIBLE && (
+              <div className="mt-3 text-right">
+                <span className="text-xs text-slate-500">
+                  Showing top {MAX_VISIBLE}. Use search to narrow further.
+                </span>
+              </div>
+            )}
 
-        {/* Expert cards */}
-        {!loading && !error && visibleExperts.length > 0 && (
-          <ul className="mt-3 grid gap-3 sm:grid-cols-2">
-            {visibleExperts.map((expert) => (
-              <li
-                key={expert.id}
-                className="rounded-lg border border-slate-200 p-3 hover:bg-slate-50"
+            <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+              <span>Data source: Expert Directory list.</span>
+              <a
+                href={directoryUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-700 hover:underline"
               >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-800">
-                      {expert.name}
-                    </p>
-                    <p className="text-xs text-slate-600">
-                      {expert.expertise && expert.expertise.length > 0
-                        ? expert.expertise.join(" • ")
-                        : "Expert"}
-                      {expert.department
-                        ? ` • ${expert.department}`
-                        : ""}
-                    </p>
-                  </div>
-                  {/* status badge */}
-                  <span className="rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-700">
-                    Available
-                  </span>
-                </div>
-
-                {expert.phone && (
-                  <p className="mt-1 text-xs text-slate-600">
-                    Phone: {expert.phone}
-                  </p>
-                )}
-                {expert.email && (
-                  <p className="text-xs text-slate-600">
-                    Email:{" "}
-                    <a
-                      href={`mailto:${expert.email}`}
-                      className="text-blue-700 hover:underline"
-                    >
-                      {expert.email}
-                    </a>
-                  </p>
-                )}
-
-                <div className="mt-2 flex gap-3 text-sm">
-                  {/* TODO: wire these to real profile if available */}
-                  <button
-                    type="button"
-                    className="text-blue-700 hover:underline"
-                  >
-                    Profile
-                  </button>
-                  <button
-                    type="button"
-                    className="text-blue-700 hover:underline"
-                  >
-                    Request CV
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+                View full directory
+              </a>
+            </div>
+          </>
         )}
       </div>
     </Collapsible>

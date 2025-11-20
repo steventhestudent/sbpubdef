@@ -1,15 +1,12 @@
-import { WebPartContext } from "@microsoft/sp-webpart-base";
+import type { SPHttpClient } from "@microsoft/sp-http";
 
 export interface IExpertWitnessDirectoryProps {
-  description: string;
-  isDarkTheme: boolean;
-  environmentMessage: string;
-  hasTeamsContext: boolean;
-  userDisplayName: string;
-
-  /** SPFx context calling the expert directory list */
-  context: WebPartContext;
-
-  /** collapsible */
+  /** Needed by Collapsible */
   instanceId: string;
+
+  /** Site URL to call REST on (PD-Intranet) */
+  siteUrl: string;
+
+  /** SPFx client for REST calls */
+  spHttpClient: SPHttpClient;
 }
