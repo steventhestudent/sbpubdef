@@ -10,8 +10,8 @@ export const WelcomeSearch: () => JSX.Element = () => {
 		const query = input.value.trim();
 
 		if (!query) return;
-		window.location.href = `/sites/PD-Intranet/search/pages/results.aspx?k=${encodeURIComponent(query)}`;
-		// window.location.href = `/sites/PD-Intranet/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(query)}`;
+		// window.location.href = `/sites/PD-Intranet/search/pages/results.aspx?k=${encodeURIComponent(query)}`;
+		window.location.href = `/sites/PD-Intranet/_layouts/15/search.aspx/siteall?q=${encodeURIComponent(query)}`;
 	};
 
 	return (
@@ -34,7 +34,7 @@ export const WelcomeSearch: () => JSX.Element = () => {
 					data-tab="true"
 					maxLength={500}
 					placeholder="Search…"
-					className="w-full rounded-l-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+					className="w-full rounded-l-md border border-slate-500 hover:border-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
 					aria-expanded="false"
 					name="WelcomeSearch"
 				/>
