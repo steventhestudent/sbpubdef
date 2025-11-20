@@ -38,14 +38,6 @@
 	padding-bottom: 4px;
 }
 
-.ControlZone a {
-	color: #005a9e;
-	text-decoration: none;
-}
-.ControlZone a:hover {
-	text-decoration: underline;
-}
-
 /* Button modern look */
 #spCommandBar button,
 #spCommandBar .ms-Button,

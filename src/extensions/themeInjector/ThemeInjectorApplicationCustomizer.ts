@@ -4,7 +4,6 @@ import "@styles/SharePointStyleOverride.css";
 import "@styles/scrollbar-thin.css";
 import "@styles/pd.css";
 import "@styles/custom-overrides.css";
-// import "@styles/SuiteHeaderFixes.css";
 
 import { Log } from "@microsoft/sp-core-library";
 import { BaseApplicationCustomizer } from "@microsoft/sp-application-base";

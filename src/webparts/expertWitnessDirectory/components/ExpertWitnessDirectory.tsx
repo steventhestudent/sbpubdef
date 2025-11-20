@@ -1,10 +1,8 @@
 import * as React from "react";
 import type { IExpertWitnessDirectoryProps } from "./IExpertWitnessDirectoryProps";
 import { Collapsible } from "@components/Collapsible";
-import {
-	ExpertWitnessService,
-	IExpert,
-} from "../../../services/ExpertWitnessService";
+import { IExpert } from "@type/PDExpertWitness";
+import { ExpertWitnessApi } from "@api/expertWitness";
 
 const MAX_VISIBLE = 4;
 
@@ -19,12 +17,12 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 	React.useEffect(() => {
 		let active = true;
 
-		const load = async () => {
+		const load = async (): Promise<void> => {
 			try {
 				setIsLoading(true);
 				setError(null);
 
-				const data = await ExpertWitnessService.getExperts(
+				const data = await ExpertWitnessApi.getExperts(
 					props.siteUrl,
 					props.spHttpClient
 				);
