@@ -9,7 +9,7 @@ export function CompactMode(): void {
 					.CanvasSection .ControlZone {margin: 0 !important; padding: 0 !important;}
 					
 					#DismissibleAnnouncementStrip.collapsed {margin-top: 4px; margin-bottom: 4px;}
-				`),
+				`)
 		);
 		document.head.appendChild(stylesheet);
 	}
@@ -17,7 +17,7 @@ export function CompactMode(): void {
 	function toggleCompactModeStylesheet(e: MouseEvent): void {
 		document
 			.querySelectorAll(
-				".CanvasZone, .CanvasZoneSectionContainer .CanvasSection, .CanvasSection .ControlZone",
+				".CanvasZone, .CanvasZoneSectionContainer .CanvasSection, .CanvasSection .ControlZone"
 			)
 			.forEach((el: HTMLElement) => {
 				el.style.transition =
@@ -47,7 +47,7 @@ export function CompactMode(): void {
 	function CompactModeBtn(): HTMLButtonElement {
 		const btn = document.createElement("button");
 		btn.innerText = document.querySelector(
-			"#themeInjector\\.CompactModeStylesheet",
+			"#themeInjector\\.CompactModeStylesheet"
 		)
 			? "◼️"
 			: "🔳";
@@ -55,6 +55,8 @@ export function CompactMode(): void {
 		btn.style.cursor = "pointer";
 		btn.style.textShadow = "0 0 4px #03787c";
 		btn.style.opacity = "0.75";
+		btn.style.setProperty("background-color", "white", "important");
+		btn.style.setProperty("margin-left", "0.4em", "important");
 		updateTooltip(btn);
 		btn.addEventListener("click", toggleCompactModeStylesheet);
 		return btn;
@@ -62,7 +64,7 @@ export function CompactMode(): void {
 
 	const getToolbar: () => HTMLElement | null = () =>
 		document.querySelector(
-			".fui-Toolbar .ms-OverflowSet:last-of-type, .fui-FluentProvider .ms-OverflowSet:last-of-type",
+			".fui-Toolbar .ms-OverflowSet:last-of-type, .fui-FluentProvider .ms-OverflowSet:last-of-type"
 		); // add after ↙↗ 'Expand Content' btn. fui-FluentProvider = Site Contents view
 	const toolbarInsertion: () => void = () =>
 		getToolbar()?.appendChild(CompactModeBtn());
