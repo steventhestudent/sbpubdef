@@ -10,7 +10,7 @@ export interface EventResult {
 }
 
 export type PDEvent = {
-	id?: number;
+	id: string | number;
 	title: string;
 	date?: string; // ISO string; you can change to Date if you prefer
 	endDate?: string; // optional

@@ -2,8 +2,8 @@
 import { ISearchResult } from "@pnp/sp/search";
 
 export type PDAssignment = {
-	id?: number;
-	title?: string;
+	id: number | string;
+	title: string;
 	// url?: string;
 	// dueDate?: Date;
 	PDDepartment?: string;

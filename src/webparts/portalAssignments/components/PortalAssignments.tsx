@@ -23,6 +23,7 @@ function PDIntranetView({
 }): JSX.Element {
 	const defaultItems: AssignmentWebPartItem[] = [
 		{
+			id: "",
 			title: "No Assignments",
 			PDDepartment: "Everyone",
 		},

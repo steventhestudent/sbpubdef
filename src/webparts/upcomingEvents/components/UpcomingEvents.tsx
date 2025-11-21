@@ -15,6 +15,7 @@ function PDIntranetView({
 
 	const defaultItems: PDEvent[] = [
 		{
+			id: "",
 			title: "No Events (0 results)",
 		},
 	];

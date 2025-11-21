@@ -29,6 +29,7 @@ export default class PortalCalendarWebPart extends BaseClientSideWebPart<IPortal
 				environmentMessage: this._environmentMessage,
 				hasTeamsContext: !!this.context.sdks.microsoftTeams,
 				userDisplayName: this.context.pageContext.user.displayName,
+				context: this.context,
 			});
 
 		ReactDom.render(element, this.domElement);
