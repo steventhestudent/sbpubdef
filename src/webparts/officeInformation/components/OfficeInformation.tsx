@@ -46,8 +46,8 @@ export default class OfficeInformation extends React.Component<IOfficeInformatio
 					))}
 				</div>
 
-				<div className="border-t border-slate-200 px-4 py-3">
-					<ul className="flex flex-wrap gap-4 text-sm">
+				<div className="border-t border-slate-200 px-2 py-1">
+					<ul className="flex flex-wrap gap-2 text-sm">
 						<li>
 							<a
 								className="text-blue-700 hover:underline"
@@ -56,6 +56,7 @@ export default class OfficeInformation extends React.Component<IOfficeInformatio
 								Contact List
 							</a>
 						</li>
+						|
 						<li>
 							<a
 								className="text-blue-700 hover:underline"
@@ -83,7 +84,7 @@ export default class OfficeInformation extends React.Component<IOfficeInformatio
 					</ul>
 				</div>
 
-				<div className="border-t border-slate-200 px-4 py-3">
+				<div className="border-t border-slate-200 px-2 py-2">
 					<h5 className="mb-1 text-sm font-semibold text-slate-800">
 						Other County Agencies
 					</h5>

@@ -21,6 +21,7 @@ export type SpClientOptions = {
 };
 
 export class PNPWrapper {
+	public ctx: WebPartContext;
 	private _spfi: SPFI;
 	private _spfi_use_cache: SPFI;
 	public readonly hubSiteId?: string;
@@ -31,6 +32,7 @@ export class PNPWrapper {
 	private initialCachedRequestFlag: boolean; //todo: flagDict (initialCachedRequestFlag for each unique set of query options), accessing .sp triggers this... shouldn't it be when accessing .web() or .sp.web()???
 
 	constructor(ctx: WebPartContext, opts?: SpClientOptions) {
+		this.ctx = ctx;
 		this._spfi = spfi().using(SPFx(ctx));
 		this._spfi_use_cache = spfi()
 			.using(SPFx(ctx))

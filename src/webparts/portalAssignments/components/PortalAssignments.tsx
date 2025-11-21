@@ -65,14 +65,14 @@ function PDIntranetView({
 								<th
 									key={i}
 									scope="col"
-									data-status={i + ""}
+									data-i={i + ""}
 									className="relative p-1 text-xs font-semibold uppercase tracking-wide text-slate-600 text-center
-									data-[i=0]:multi-['w-[2.666em];top-[-0.15em];left-[-0.15em]']
+									data-[i=0]:multi-['w-[2em];top-[-0.15em];left-[-0.233em]']
 								"
 								>
 									{i === 0 ? "Case" : header}
 									{i === 0 ? (
-										<div className="absolute ml-2 mt-[-0.2em] w-0">
+										<div className="absolute ml-2 mt-[-0.2em] w-0 font-semibold">
 											#
 										</div>
 									) : null}
@@ -84,7 +84,18 @@ function PDIntranetView({
 						{items.map((item) => (
 							<tr key={item.id} className="hover:bg-slate-50">
 								<td className="p-1 text-sm text-slate-800 text-center">
-									{item.caseNumber}
+									{item.link ? (
+										<a
+											href={item.link}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="text-blue-600 hover:decoration-orange-400 font-semibold text-shadow-black underline"
+										>
+											{item.caseNumber}
+										</a>
+									) : (
+										<span>{item.caseNumber}</span>
+									)}
 								</td>
 								<td className="p-1 text-sm text-slate-700">
 									{item.client}
@@ -100,35 +111,24 @@ function PDIntranetView({
 										: "—"}
 								</td>
 								<td className="p-1 text-center">
-									{item.link ? (
-										<a
-											href={item.link}
-											target="_blank"
-											rel="noopener noreferrer"
-											data-status={(
-												item.status ?? ""
-											).replace(
-												/* spaces do not work for data- matching (needs quotations & it's a mess with spfx gulp tailwind etc. */
-												/ /g,
-												"",
-											)}
-											className="rounded-2xl text-sm text-blue-700 hover:underline  bg-[#f1f5f9] text-[#334155] border border-[#cbd5e1]
+									<span
+										data-status={(
+											item.status ?? ""
+										).replace(
+											/* spaces do not work for data- matching (needs quotations & it's a mess with spfx gulp tailwind etc. */
+											/ /g,
+											"",
+										)}
+										className="rounded-2xl text-xs text-blue-700 hover:underline  bg-[#f1f5f9] text-[#334155] border border-[#cbd5e1]
 													data-[status=AwaitingDocs]:multi-['bg-[#dbeafe];text-[#1e40af];border-[#3b82f6]']
 													data-[status=Closed]:multi-['bg-[#fee2e2];text-[#991b1b];border-[#ef4444]']
 													data-[status=Pending]:multi-['bg-[#fef3c7];text-[#92400e];border-[#fbbf24]']
-													data-[status=Open]:multi-['bg-[#dcfce7];text-[#14532d];border-[#22c55e]']"
-										>
-											<span className="border border-black border-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
-												{item.status || "Pending"}
-											</span>
-										</a>
-									) : (
-										<span className="text-sm text-gray-400">
-											<span className="border border-black border-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium">
-												{item.status || "Pending"}
-											</span>
-										</span>
-									)}
+													data-[status=Open]:multi-['bg-[#dcfce7];text-[#14532d];border-[#22c55e]']
+
+												border border-black border-1 inline-flex items-center rounded-full px-1 py-0.25 text-xs font-medium"
+									>
+										{item.status || "Pending"}
+									</span>
 								</td>
 							</tr>
 						))}
