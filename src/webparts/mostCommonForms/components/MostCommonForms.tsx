@@ -136,7 +136,7 @@ export default class MostCommonForms extends React.Component<
 								key={form.id}
 								type="button"
 								onClick={() => this.handleFormClick(form)}
-								className="flex w-full flex-col items-start rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+								className="flex w-full flex-col items-start rounded-md border border-slate-500 bg-white px-3 py-2 text-left text-sm hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
 							>
 								<span className="font-medium text-slate-900">
 									{form.title}

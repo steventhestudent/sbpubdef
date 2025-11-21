@@ -99,7 +99,7 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 					<input
 						id="expert-search"
 						type="search"
-						className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-[var(--pd-muted)]"
+						className="w-full rounded-md border border-slate-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-[var(--pd-muted)]"
 						placeholder="Name, field, location…"
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
@@ -127,16 +127,16 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 				{!isLoading && !error && (
 					<>
 						{filtered.length === 0 ? (
-							<div className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+							<div className="mt-3 rounded-md border border-slate-400 bg-slate-50 px-3 py-2 text-sm text-slate-600">
 								No experts match this search.
 							</div>
 						) : (
-							<ul className="mt-3 divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
+							<ul className="mt-3 divide-y divide-slate-400 rounded-md border border-slate-400 text-slate-900 bg-white">
 								{visible.map((e) => (
 									<li key={e.id} className="px-3 py-2">
 										<div className="flex items-center justify-between gap-4">
 											<div>
-												<p className="text-sm text-slate-900">
+												<p className="text-sm text-slate-750 font-semibold">
 													{e.name}
 												</p>
 												{e.expertise && (

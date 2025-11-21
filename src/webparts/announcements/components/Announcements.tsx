@@ -71,7 +71,7 @@ function PDIntranetView({
 	}, [sourceRole]);
 
 	return (
-		<section className="rounded-xl border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm">
+		<section className="border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm">
 			<ul className="divide-y divide-slate-200">
 				{items.map((a, idx) => (
 					<li key={idx} className="px-4 py-3 hover:bg-slate-50">

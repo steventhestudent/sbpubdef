@@ -74,7 +74,7 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 			instanceId={props.context.instanceId}
 			title="Staff Directory"
 		>
-			<div className="p-4">
+			<div className="p-2">
 				{/* Search Input */}
 				<form role="search" className="mx-auto max-w-lg">
 					<label
@@ -89,13 +89,13 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 						placeholder="Search any field…"
 						value={searchTerm}
 						onChange={handleSearchChange}
-						className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-[var(--pd-muted)]"
+						className="mt-1 w-full rounded-md border border-slate-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-[var(--pd-muted)]"
 					/>
 				</form>
 
 				{/* Staff List */}
-				<div className="mt-4 max-h-[300px] overflow-y-auto rounded-md border border-slate-200">
-					<ul className="divide-y divide-slate-200">
+				<div className="mt-2 max-h-[300px] overflow-y-auto rounded-md border border-slate-400">
+					<ul className="divide-y divide-slate-300">
 						{filteredStaff.length === 0 ? (
 							<li className="py-3 text-sm text-slate-600 text-center">
 								No matching staff found.
@@ -116,7 +116,7 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 										key={member.username}
 										className="flex items-center px-1 py-3"
 									>
-										<div className="flex items-center gap-3">
+										<div className="flex items-center gap-2">
 											<span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-700">
 												{initials}
 											</span>

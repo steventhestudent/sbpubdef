@@ -12,12 +12,19 @@ export function PDRoleBasedSelect({
 	ctx,
 	views,
 	showSelect,
-	selectLabel = "<PDRoleBasedSelect>",
+	selectLabel = (
+		<div className="relative mt-[-0.5em]">
+			&lt;PDRoleBasedSelect&gt;
+			<span className="absolute font-thin text-xs w-full left-0 text-center top-[1.23em]">
+				(hidden by default)
+			</span>
+		</div>
+	),
 }: {
 	ctx: WebPartContext;
 	views: RoleViews;
 	showSelect?: boolean;
-	selectLabel?: string;
+	selectLabel?: string | JSX.Element;
 }): JSX.Element {
 	const cachedGroupNames: RoleKey[] =
 		JSON.parse(localStorage.getItem("userGroupNames") || '""') || [];
@@ -164,6 +171,7 @@ export function BlankGuestView({
 						{name}
 					</li>
 				))}
+				{!userGroupNames.length ? <div>N/A</div> : null}
 			</ul>
 		</div>
 	);

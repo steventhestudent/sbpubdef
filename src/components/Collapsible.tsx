@@ -99,7 +99,7 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 			aria-expanded={!collapsed}
 			aria-controls={`${instanceId}-content`}
 			onClick={toggle}
-			className="bg-[#c9cbcc] inline-flex items-center justify-center h-8 w-8 rounded-lg transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+			className="bg-[#c9cbcc] hover:bg-slate-400 active:bg-slate-600 inline-flex items-center justify-center h-8 w-8 rounded-lg transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0078D4]"
 			title={collapsed ? "Expand" : "Collapse"}
 		>
 			{/* simple caret using border trick for crispness */}

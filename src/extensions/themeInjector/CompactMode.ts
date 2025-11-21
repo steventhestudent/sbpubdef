@@ -1,53 +1,79 @@
-export function CompactMode(): void {
-	function addCompactModeStylesheet(): void {
-		const stylesheet = document.createElement("style");
-		stylesheet.id = "themeInjector.CompactModeStylesheet";
-		stylesheet.appendChild(
-			document.createTextNode(`
+function addCompactModeStylesheet(): void {
+	const stylesheet = document.createElement("style");
+	stylesheet.id = "themeInjector.CompactModeStylesheet";
+	stylesheet.appendChild(
+		document.createTextNode(`
 					.CanvasZone {padding: 0 !important;}
 					.CanvasZoneSectionContainer .CanvasSection {padding: 0 !important;}
 					.CanvasSection .ControlZone {margin: 0 !important; padding: 0 !important;}
 					
 					#DismissibleAnnouncementStrip.collapsed {margin-top: 4px; margin-bottom: 4px;}
-				`)
-		);
-		document.head.appendChild(stylesheet);
-	}
+					footer {margin-top: 5px !important;}
+				`),
+	);
+	document.head.appendChild(stylesheet);
+}
 
+function addHalfCompactModeStylesheet(): void {
+	const stylesheet = document.createElement("style");
+	stylesheet.id = "themeInjector.HalfCompactModeStylesheet";
+	stylesheet.appendChild(
+		document.createTextNode(`
+					.CanvasZone {padding: 4px !important;}
+					.CanvasZoneSectionContainer .CanvasSection {padding: 4px !important;}
+					.CanvasSection .ControlZone {margin: 4px !important; padding: 4px !important;}
+					
+					#DismissibleAnnouncementStrip.collapsed {margin-top: 4px; margin-bottom: 4px;}
+				`),
+	);
+	document.head.appendChild(stylesheet);
+}
+
+export function CompactMode(): void {
 	function toggleCompactModeStylesheet(e: MouseEvent): void {
 		document
 			.querySelectorAll(
-				".CanvasZone, .CanvasZoneSectionContainer .CanvasSection, .CanvasSection .ControlZone"
+				".CanvasZone, .CanvasZoneSectionContainer .CanvasSection, .CanvasSection .ControlZone",
 			)
 			.forEach((el: HTMLElement) => {
 				el.style.transition =
 					"margin 200ms ease-in-out, padding 200ms ease-in-out";
 			});
 		setTimeout(() => updateTooltip(e.target as HTMLButtonElement));
+		if (
+			document.querySelector("#themeInjector\\.HalfCompactModeStylesheet")
+		) {
+			(e.target as HTMLButtonElement).innerText = "◼️️";
+			localStorage.setItem("ThemeInjector.MarginModeFlag", "0");
+			addCompactModeStylesheet();
+			return document
+				.querySelector("#themeInjector\\.HalfCompactModeStylesheet")
+				?.remove();
+		}
 		if (document.querySelector("#themeInjector\\.CompactModeStylesheet")) {
 			(e.target as HTMLButtonElement).innerText = "🔳";
-			localStorage.setItem("ThemeInjector.MarginModeFlag", "true");
+			localStorage.setItem("ThemeInjector.MarginModeFlag", "2");
 			return document
 				.querySelector("#themeInjector\\.CompactModeStylesheet")
 				?.remove();
 		}
-		localStorage.removeItem("ThemeInjector.MarginModeFlag");
-		(e.target as HTMLButtonElement).innerText = "◼️️";
-		addCompactModeStylesheet();
+		localStorage.setItem("ThemeInjector.MarginModeFlag", "1");
+		(e.target as HTMLButtonElement).innerText = "🔳";
+		addHalfCompactModeStylesheet();
 	}
 
 	function updateTooltip(btn: HTMLButtonElement): void {
 		btn.title =
 			(document.querySelector("#themeInjector\\.CompactModeStylesheet")
 				? "Compact Mode"
-				: "SharePoint Mode") +
+				: "SharePoint Mode (1 or 2)") +
 			" —  Toggle Webpart Margin / Padding (ThemeInjector.CompactModeStylesheet)";
 	}
 
 	function CompactModeBtn(): HTMLButtonElement {
 		const btn = document.createElement("button");
 		btn.innerText = document.querySelector(
-			"#themeInjector\\.CompactModeStylesheet"
+			"#themeInjector\\.CompactModeStylesheet",
 		)
 			? "◼️"
 			: "🔳";
@@ -64,7 +90,7 @@ export function CompactMode(): void {
 
 	const getToolbar: () => HTMLElement | null = () =>
 		document.querySelector(
-			".fui-Toolbar .ms-OverflowSet:last-of-type, .fui-FluentProvider .ms-OverflowSet:last-of-type"
+			".fui-Toolbar .ms-OverflowSet:last-of-type, .fui-FluentProvider .ms-OverflowSet:last-of-type",
 		); // add after ↙↗ 'Expand Content' btn. fui-FluentProvider = Site Contents view
 	const toolbarInsertion: () => void = () =>
 		getToolbar()?.appendChild(CompactModeBtn());
@@ -72,6 +98,10 @@ export function CompactMode(): void {
 		if (!getToolbar()) setTimeout(pollInsert, 333);
 		else setTimeout(toolbarInsertion, 666);
 	})();
-	if (!localStorage.getItem("ThemeInjector.MarginModeFlag"))
-		addCompactModeStylesheet();
+	const marginFlag =
+		localStorage.getItem("ThemeInjector.MarginModeFlag") === null
+			? 1
+			: Number(localStorage.getItem("ThemeInjector.MarginModeFlag"));
+	if (marginFlag === 1) addHalfCompactModeStylesheet();
+	else if (marginFlag === 0) addCompactModeStylesheet();
 }
