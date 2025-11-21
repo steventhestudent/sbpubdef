@@ -6,6 +6,8 @@ import "@pnp/sp/content-types";
 import { EventApi, EventGetOpts } from "@api/EventApi";
 import { EventResult, PDEvent } from "@type/PDEvent";
 import { PD } from "@api/config";
+import { GraphClient, MSGraphClientV3 } from "@utils/graph/GraphClient";
+import { WebPartContext } from "@microsoft/sp-webpart-base";
 
 export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 	/** Prefer REST for Events (dates are reliable here). */
@@ -100,4 +102,113 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 	//     detailsUrl: e.webLink,
 	//   }));
 	// }
+
+	public async getOutlookEvents(
+		ctx: WebPartContext,
+		limit: number = 10,
+	): Promise<PDEvent[]> {
+		const client: MSGraphClientV3 = await GraphClient(ctx);
+		const response: {
+			value: Array<{
+				id: string;
+				subject?: string;
+				start?: { dateTime?: string };
+				end?: { dateTime?: string };
+				location?: { displayName?: string };
+				webLink?: string;
+			}>;
+		} = await client
+			.api("/me/events")
+			.select("id,subject,start,end,location,webLink")
+			.orderby("start/dateTime ASC")
+			.top(limit)
+			.get();
+
+		const events: PDEvent[] = response.value.map((e) => ({
+			id: Number(e.id.replace(/\D/g, "")),
+			title: e.subject ?? "(untitled)",
+			date: e.start?.dateTime ?? "",
+			endDate: e.end?.dateTime ?? "",
+			location: e.location?.displayName ?? "",
+			detailsUrl: e.webLink ?? "",
+			siteUrl: "outlook://me",
+		}));
+
+		return events;
+	}
+
+	public async getGroupCalendarEvents(
+		ctx: WebPartContext,
+		limitPerGroup: number = 10,
+	): Promise<PDEvent[]> {
+		const client: MSGraphClientV3 = await GraphClient(ctx);
+
+		const groupsResponse: {
+			value: Array<{ id: string; displayName?: string }>;
+		} = await client.api("/me/memberOf?$select=id,displayName").get();
+
+		const groupEvents: PDEvent[] = [];
+		for (const group of groupsResponse.value) {
+			try {
+				const groupEventsResponse: {
+					value: Array<{
+						id: string;
+						subject?: string;
+						start?: { dateTime?: string };
+						end?: { dateTime?: string };
+						location?: { displayName?: string };
+						webLink?: string;
+					}>;
+				} = await client
+					.api(`/groups/${group.id}/events`)
+					.select("id,subject,start,end,location,webLink")
+					.orderby("start/dateTime ASC")
+					.top(limitPerGroup)
+					.get();
+
+				const mapped = groupEventsResponse.value.map((event) => ({
+					id: Number(`${group.id}${event.id}`.replace(/\D/g, "")),
+					title: event.subject ?? "(untitled)",
+					date: event.start?.dateTime ?? "",
+					endDate: event.end?.dateTime ?? "",
+					location: event.location?.displayName ?? "",
+					detailsUrl: event.webLink ?? "",
+					siteUrl: `https://outlook.office.com/group/${group.id}`,
+					PDDepartment: group.displayName ?? "",
+				}));
+
+				groupEvents.push(...mapped);
+			} catch (err) {
+				console.warn(
+					`Could not fetch Outlook group events for ${group.displayName}:`,
+					err,
+				);
+			}
+		}
+
+		return groupEvents;
+	}
+
+	public async getCombinedEvents(
+		ctx: WebPartContext,
+		opts?: EventGetOpts & { includeOutlook?: boolean },
+	): Promise<PDEvent[]> {
+		const sharePointEvents = await this.getRest(50, opts);
+		if (!opts?.includeOutlook) return sharePointEvents;
+
+		const [personal, group] = await Promise.all([
+			this.getOutlookEvents(ctx, 10),
+			this.getGroupCalendarEvents(ctx, 10),
+		]);
+
+		const combined: PDEvent[] = [...sharePointEvents, ...personal, ...group]
+			.filter((e) => e.date && new Date(e.date).getTime() >= Date.now())
+			.sort(
+				(a, b) =>
+					new Date(a.date || 0).getTime() -
+					new Date(b.date || 0).getTime(),
+			);
+
+		return combined;
+	}
 }
