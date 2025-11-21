@@ -7,7 +7,7 @@ import { ExpertWitnessApi } from "@api/expertWitness";
 const MAX_VISIBLE = 4;
 
 export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
-	props
+	props,
 ) => {
 	const [experts, setExperts] = React.useState<IExpert[]>([]);
 	const [search, setSearch] = React.useState("");
@@ -24,14 +24,14 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 
 				const data = await ExpertWitnessApi.getExperts(
 					props.siteUrl,
-					props.spHttpClient
+					props.spHttpClient,
 				);
 
 				if (!active) return;
 
 				// alphabetical by name A → Z
 				const sorted = [...data].sort((a, b) =>
-					(a.name ?? "").localeCompare(b.name ?? "")
+					(a.name ?? "").localeCompare(b.name ?? ""),
 				);
 
 				console.log("ExpertWitnessDirectory: experts state", sorted);
@@ -39,7 +39,7 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 			} catch (err) {
 				console.error(
 					"ExpertWitnessDirectory: failed to load experts",
-					err
+					err,
 				);
 				if (!active) return;
 				setExperts([]);
@@ -99,17 +99,18 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 					<input
 						id="expert-search"
 						type="search"
-						className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+						className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-[var(--pd-muted)]"
 						placeholder="Name, field, location…"
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 					/>
 					<button
 						type="button"
-						className="rounded-md border border-slate-300 px-3 text-sm"
+						className="rounded-md border border-slate-300 px-3 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold"
 						onClick={() => setSearch((s) => s.trim())}
+						aria-label="Run search"
 					>
-						Search
+						↠
 					</button>
 				</div>
 
@@ -118,8 +119,8 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 					{isLoading
 						? "Loading directory…"
 						: error
-						? error
-						: `Showing ${filtered.length} of ${experts.length} matches.`}
+							? error
+							: `Showing ${filtered.length} of ${experts.length} matches.`}
 				</p>
 
 				{/* list */}
@@ -135,7 +136,7 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 									<li key={e.id} className="px-3 py-2">
 										<div className="flex items-center justify-between gap-4">
 											<div>
-												<p className="text-sm font-semibold text-slate-900">
+												<p className="text-sm text-slate-900">
 													{e.name}
 												</p>
 												{e.expertise && (
@@ -161,24 +162,37 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 													</p>
 												)}
 											</div>
+											<span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 border border-green-200">
+												Available
+											</span>
 										</div>
 									</li>
 								))}
 							</ul>
 						)}
 
-						{experts.length > MAX_VISIBLE && (
-							<div className="mt-3 text-right">
-								<span className="text-xs text-slate-500">
-									Showing top {MAX_VISIBLE}. Use search to
-									narrow further.
-								</span>
-							</div>
-						)}
-
 						<div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-							<span className="opacity-50">
-								Use any search bar on the page 🔎
+							<span>
+								{experts.length > MAX_VISIBLE && (
+									<div className="mt-3 text-right">
+										<span className="text-xs text-slate-500">
+											Show{" "}
+											<select value={MAX_VISIBLE}>
+												{(function () {
+													const els = [];
+													for (let i = 0; i < 10; i++)
+														els.push(
+															<option>
+																{i}
+															</option>,
+														);
+													return els;
+												})()}
+											</select>
+											results.
+										</span>
+									</div>
+								)}
 							</span>
 							<a
 								href={directoryUrl}

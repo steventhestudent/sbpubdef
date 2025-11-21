@@ -49,6 +49,10 @@
 	text-shadow: 1px 1px 0 darkblue !important;
 	font-weight: bold;
 }
+#spSiteHeader #showOverlayText button {
+	background-color: transparent !important;
+	border: none !important;
+}
 #spSiteHeader .ms-Icon,
 .od-TopBar-header .ms-Icon {
 	color: #03787c !important;

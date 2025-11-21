@@ -40,7 +40,7 @@ export const WelcomeSearch: () => JSX.Element = () => {
 				/>
 				<button
 					type="submit"
-					className="rounded-r-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700"
+					className="rounded-r-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 font-bold"
 					aria-label="Run search"
 				>
 					↠
