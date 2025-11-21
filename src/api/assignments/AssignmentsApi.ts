@@ -30,25 +30,50 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 			Querytext: this.kql,
 			RowLimit: limit,
 			SelectProperties: [
+				"Id",
 				"Title",
-				"Path",
-				"ListItemId",
-				"SPWebUrl",
-				"PDDepartment",
+				"Client",
+				"Court",
+				"NextHearing",
+				"Status",
+				"Link",
+				// "FileRef",
+				PD.internalSiteColumn.PDDepartment,
+				PD.internalSiteColumn.AssignedAttorneyTeam,
 			],
 			SortList: [{ Property: "LastModifiedTime", Direction: 1 }],
 			TrimDuplicates: false,
 		});
 
 		return res.PrimarySearchResults.map(
-			(r: ListResult): PDAssignment => ({
-				id: Number(r.Id),
-				title: r.Title ?? "(untitled)",
-				url: r.Path,
-				siteUrl: r.SPWebUrl,
-				PDDepartment:
-					r.PD_x0020_Department || r.PDDepartment || "Everyone",
-			}),
+			(item: ListResult): PDAssignment => {
+				const assigned = item.AssignedAttorney_x002f_Team;
+				const assignedPerson = Array.isArray(assigned)
+					? assigned[0]
+					: assigned;
+
+				return {
+					id: item.Id,
+					title: item.Title ?? "(untitled)",
+					PDDepartment:
+						item.PD_x0020_Department ||
+						item.PDDepartment ||
+						"Everyone",
+					caseNumber: item.Title, ///
+					client: item.Client,
+					court: item.Court,
+					nextHearing: item.NextHearing,
+					status: item.Status,
+					link:
+						typeof item.Link === "object" && item.Link?.Url
+							? item.Link.Url
+							: typeof item.Link === "string"
+								? item.Link
+								: undefined,
+					attorneyEmail: assignedPerson?.EMail || "",
+					attorneyName: assignedPerson?.Title || "",
+				};
+			},
 		);
 	}
 
@@ -72,23 +97,47 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 				.select(
 					"Id",
 					"Title",
-					"FileRef",
+					"Client",
+					"Court",
+					"NextHearing",
+					"Status",
+					"Link",
+					// "FileRef",
 					PD.internalSiteColumn.PDDepartment,
+					// PD.internalSiteColumn.AssignedAttorneyTeam,
 				)
 				.filter(this.odata)
 				.orderBy("Id", false)
 				.top(limitPerSite)();
 
-			return rows.map(
-				(i: ListResult): PDAssignment => ({
-					id: i.Id,
-					title: i.Title ?? "(untitled)",
-					url: i.FileRef,
+			return rows.map((item: ListResult): PDAssignment => {
+				const assigned = item.AssignedAttorney_x002f_Team;
+				const assignedPerson = Array.isArray(assigned)
+					? assigned[0]
+					: assigned;
+
+				return {
+					id: item.Id,
+					title: item.Title ?? "(untitled)",
 					PDDepartment:
-						i.PD_x0020_Department || i.PDDepartment || "Everyone",
-					siteUrl: siteUrl || window.location.pathname,
-				}),
-			);
+						item.PD_x0020_Department ||
+						item.PDDepartment ||
+						"Everyone",
+					caseNumber: item.Title, ///
+					client: item.Client,
+					court: item.Court,
+					nextHearing: item.NextHearing,
+					status: item.Status,
+					link:
+						typeof item.Link === "object" && item.Link?.Url
+							? item.Link.Url
+							: typeof item.Link === "string"
+								? item.Link
+								: undefined,
+					attorneyEmail: assignedPerson?.EMail || "",
+					attorneyName: assignedPerson?.Title || "",
+				};
+			});
 		});
 
 		const settled = await Promise.allSettled(calls);

@@ -1,0 +1,17 @@
+/*
+	theme.css — css variables
+*/
+:root {
+	--webpart-border-color: #a7c6d9;
+	--webpart-bg-color: white;
+	--webpart-header-bg-color: #e6e6e6;
+	--webpart-inner-border-color: #909090;
+
+	--pd-bg: #f6f7f9;
+	--pd-card: #ffffff;
+	--pd-border: #e5e7eb; /* light gray */
+	--pd-muted: #6b7280; /* slate-500 */
+	--pd-text: #111827; /* gray-900 */
+	--pd-accent: #2563eb; /* blue-600 (for normal SharePoint buttons) */
+	--pd-surface-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+}

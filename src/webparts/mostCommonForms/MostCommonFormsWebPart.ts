@@ -30,6 +30,7 @@ export default class MostCommonFormsWebPart extends BaseClientSideWebPart<IMostC
 				hasTeamsContext: !!this.context.sdks.microsoftTeams,
 				userDisplayName: this.context.pageContext.user.displayName,
 				instanceId: this.context.instanceId,
+				context: this.context,
 			});
 
 		ReactDom.render(element, this.domElement);
@@ -79,7 +80,7 @@ export default class MostCommonFormsWebPart extends BaseClientSideWebPart<IMostC
 		return Promise.resolve(
 			this.context.isServedFromLocalhost
 				? strings.AppLocalEnvironmentSharePoint
-				: strings.AppSharePointEnvironment,
+				: strings.AppSharePointEnvironment
 		);
 	}
 
@@ -94,15 +95,15 @@ export default class MostCommonFormsWebPart extends BaseClientSideWebPart<IMostC
 		if (semanticColors) {
 			this.domElement.style.setProperty(
 				"--bodyText",
-				semanticColors.bodyText || null,
+				semanticColors.bodyText || null
 			);
 			this.domElement.style.setProperty(
 				"--link",
-				semanticColors.link || null,
+				semanticColors.link || null
 			);
 			this.domElement.style.setProperty(
 				"--linkHovered",
-				semanticColors.linkHovered || null,
+				semanticColors.linkHovered || null
 			);
 		}
 	}

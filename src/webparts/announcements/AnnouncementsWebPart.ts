@@ -10,7 +10,7 @@ import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
 import { IReadonlyTheme } from "@microsoft/sp-component-base";
 
 import * as strings from "AnnouncementsWebPartStrings";
-import Announcements from "./components/Announcements";
+import { Announcements } from "./components/Announcements";
 import { IAnnouncementsProps } from "./components/IAnnouncementsProps";
 // import { getGroups } from "@utils/graph/getGroups";
 

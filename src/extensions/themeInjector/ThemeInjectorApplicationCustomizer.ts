@@ -1,6 +1,9 @@
+import "@dist/tailwind.css"; // to do: comment out in production? (do webparts all include a copy of it!?)
+import "@styles/theme.css";
 import "@styles/SharePointStyleOverride.css";
 import "@styles/scrollbar-thin.css";
-import "@dist/tailwind.css"; // to do: comment out in production? (do webparts all include a copy of it!?)
+import "@styles/pd.css";
+import "@styles/custom-overrides.css";
 
 import { Log } from "@microsoft/sp-core-library";
 import { BaseApplicationCustomizer } from "@microsoft/sp-application-base";
@@ -12,7 +15,7 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 	public async onInit(): Promise<void> {
 		Log.info(
 			"ThemeInjectorApplicationCustomizer",
-			`Initialized ${strings.Title}`,
+			`Initialized ${strings.Title}`
 		);
 		this.context.application.navigatedEvent.add(this, this.onNavigate);
 		console.log(`themeInjector.properties:`, this.properties);
@@ -24,9 +27,10 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 
 	private onNavigate(): void {
 		DismissibleAnnouncementStrip();
+
 		(function () {
 			const headerTitleAnchor = document.querySelector(
-				"#SiteHeaderTitle a",
+				"#SiteHeaderTitle a"
 			) as HTMLAnchorElement;
 			const isOnSiteHome =
 				location.href.startsWith(headerTitleAnchor?.href) &&

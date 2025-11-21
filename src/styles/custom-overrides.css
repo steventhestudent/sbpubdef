@@ -1,0 +1,99 @@
+/* Page canvas background */
+#workbenchPageContent,
+#spPageCanvasContent,
+div[data-automation-id="CanvasZone"] {
+	background: var(--pd-bg) !important;
+}
+
+/* Card look for webparts – this is the “nice but not extra” part */
+div[data-automation-id="webPart"],
+div[data-automation-id="CanvasControl"],
+section[role="region"] {
+	background: var(--pd-card) !important;
+	border: 1px solid var(--pd-border) !important;
+	border-radius: 8px !important;
+	box-shadow: var(--pd-surface-shadow) !important;
+}
+
+/* Slightly tighter padding inside webparts */
+div[data-automation-id="webPart"] .controlZone,
+div[data-automation-id="CanvasControl"] .controlZone {
+	padding: 14px 16px !important;
+}
+
+div[role="heading"][aria-level="2"] * {
+	color: var(--pd-text) !important;
+	font-weight: 600;
+}
+
+/* Text inputs / search boxes – simple, not blobby */
+.ms-TextField-fieldGroup {
+	border: 1px solid var(--pd-border) !important;
+	border-radius: 6px !important;
+	background: #fff !important;
+}
+.ms-TextField-fieldGroup:focus-within {
+	box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+	border-color: #c7d2fe !important;
+}
+/* --- Fix SharePoint Workbench Blue Theme --- */
+
+/* Top command bar background */
+#SuiteNavWrapper,
+#SuiteNavPlaceHolder,
+div[class*="ms-CommandBar"],
+.ms-CommandBar,
+.ms-CommandBarItem-link,
+.ms-Button,
+button.ms-Button {
+	background: #ffffff !important;
+	border-color: #e5e7eb !important;
+	color: #111827 !important;
+}
+
+/* Pills / headers inside workbench */
+div[role="heading"][aria-level="2"] {
+	background: #ffffff !important;
+	color: #111827 !important;
+	border: none !important;
+	border-bottom: 1px solid #e5e7eb !important;
+	border-radius: 0 !important;
+}
+
+/* Blue heavy icon buttons */
+.ms-Button--icon,
+.ms-Button--icon .ms-Button {
+	background: transparent !important;
+	border: 1px solid transparent !important;
+	color: #111827 !important;
+}
+
+/* Blue heavy icon buttons */
+.ms-Button--icon,
+.ms-Button--icon .ms-Button {
+	background: transparent !important;
+	border: 1px solid transparent !important;
+	color: #111827 !important;
+}
+
+/* Big action buttons (Edit, Republish, Share) – flat, neutral */
+.ms-Button--primary,
+button.ms-Button.ms-Button--primary {
+	background: #ffffff !important;
+	border-color: #e5e7eb !important;
+	color: #111827 !important;
+	border-radius: 6px !important;
+	box-shadow: none !important;
+}
+
+.ms-Button--primary:hover,
+button.ms-Button.ms-Button--primary:hover {
+	background: #f3f4f6 !important;
+	border-color: #d1d5db !important;
+}
+
+/* Kill excessive radii in workbench */
+.ms-Button,
+.ms-CommandBarItem-link {
+	border-radius: 6px !important;
+}

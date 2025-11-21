@@ -27,6 +27,7 @@ export const PD = {
 	},
 	internalSiteColumn: {
 		PDDepartment: "PD_x0020_Department",
+		AssignedAttorneyTeam: "AssignedAttorney_x002f_Team",
 	},
 	// mapped properties (mp) //todo: create mp's?
 	department: {

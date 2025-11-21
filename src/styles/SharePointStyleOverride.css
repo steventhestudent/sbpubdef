@@ -3,11 +3,13 @@
 /*
     max-width
 */
-.CanvasComponent > div:first-of-type, .CanvasZoneSectionContainer {max-width: 100% !important;}
+.CanvasComponent > div:first-of-type,
+.CanvasZoneSectionContainer {
+	max-width: 100% !important;
+}
 /*.CanvasZone {padding: 0 !important;}*/
 /*.CanvasZoneSectionContainer .CanvasSection {padding: 0 !important;}*/
 /*.CanvasSection .ControlZone {margin: 0 !important; padding: 0 !important;}*/
-
 
 /*
     site navbar
@@ -16,42 +18,76 @@
 #spSiteHeader .ms-FocusZone:last-of-type, /* site header nav */
 #spSiteHeader #showOverlayText, /*  * Following & Site Access btn's */
 .od-TopBar-header .ms-FocusZone:last-of-type, /* site header nav (site contents) */
-.od-TopBar-header #showOverlayText /*  * Following & Site Access btn's (site contents) */
-{background-color: rgba(86, 103, 168, 0.5) !important; border-radius: 10px 10px 0px 0px !important;}
+.od-TopBar-header #showOverlayText /*  * Following & Site Access btn's (site contents) */ {
+	background-color: rgba(86, 103, 168, 0.5) !important;
+	border-radius: 10px 10px 0px 0px !important;
+}
 /* links text */
-#spSiteHeader .ms-HorizontalNavItem-linkText, .od-TopBar-header .ms-HorizontalNavItem-linkText {color: white !important; font-weight: bold !important; text-shadow: 1px 1px 0px black !important;}
-#spSiteHeader .ms-HorizontalNavItem-linkText:hover, .od-TopBar-header .ms-HorizontalNavItem-linkText:hover {text-decoration: underline !important;}
+#spSiteHeader .ms-HorizontalNavItem-linkText,
+.od-TopBar-header .ms-HorizontalNavItem-linkText {
+	color: white !important;
+	font-weight: bold !important;
+	text-shadow: 1px 1px 0px black !important;
+}
+#spSiteHeader .ms-HorizontalNavItem-linkText:hover,
+.od-TopBar-header .ms-HorizontalNavItem-linkText:hover {
+	text-decoration: underline !important;
+}
 /* links text (is-selected) */
-#spSiteHeader .ms-HorizontalNavItem-linkText.is-selected, .od-TopBar-header .ms-HorizontalNavItem-linkText.is-selected {color: #f5ffb1 !important;}
+#spSiteHeader .ms-HorizontalNavItem-linkText.is-selected,
+.od-TopBar-header .ms-HorizontalNavItem-linkText.is-selected {
+	color: #f5ffb1 !important;
+}
 /* SharePoint buttons */
-#spSiteHeader #showOverlayText button:first-of-type, .od-TopBar-header #showOverlayText button:first-of-type {margin-left: 1em !important;} /*  * 1st btn margin */
+#spSiteHeader #showOverlayText button:first-of-type,
+.od-TopBar-header #showOverlayText button:first-of-type {
+	margin-left: 1em !important;
+} /*  * 1st btn margin */
 #spSiteHeader #showOverlayText button .ms-ButtonSpan, .od-TopBar-header #showOverlayText button .ms-ButtonSpan, /*  * Following & Site Access btn's (text) */
-#spSiteHeader .ms-Button-label, .od-TopBar-header .ms-Button-label
-{ color: white !important; text-shadow: 1px 1px 0 darkblue !important; font-weight: bold; }
-#spSiteHeader .ms-Icon, .od-TopBar-header .ms-Icon { color: #03787c !important; text-shadow: 1px 1px 1px #ffdfdf !important; font-weight: bold;}
-#spSiteHeader i[data-icon-name="FavoriteStar"], .od-TopBar-header i[data-icon-name="FavoriteStar"] { color: yellow !important;}
-#spSiteHeader i[data-icon-name="FavoriteStarFill"], .od-TopBar-header i[data-icon-name="FavoriteStarFill"] { color: yellow !important;}
+#spSiteHeader .ms-Button-label, .od-TopBar-header .ms-Button-label {
+	color: white !important;
+	text-shadow: 1px 1px 0 darkblue !important;
+	font-weight: bold;
+}
+#spSiteHeader #showOverlayText button {
+	background-color: transparent !important;
+	border: none !important;
+}
+#spSiteHeader .ms-Icon,
+.od-TopBar-header .ms-Icon {
+	color: #03787c !important;
+	text-shadow: 1px 1px 1px #ffdfdf !important;
+	font-weight: bold;
+}
+#spSiteHeader i[data-icon-name="FavoriteStar"],
+.od-TopBar-header i[data-icon-name="FavoriteStar"] {
+	color: yellow !important;
+}
+#spSiteHeader i[data-icon-name="FavoriteStarFill"],
+.od-TopBar-header i[data-icon-name="FavoriteStarFill"] {
+	color: yellow !important;
+}
 
 /* shyHeader */
-#SiteHeaderTitleMinimal {text-shadow: 0 0 10px black;}
-#SiteHeaderTitleMinimal:hover {text-decoration: underline !important;}
+#SiteHeaderTitleMinimal {
+	text-shadow: 0 0 10px black;
+}
+#SiteHeaderTitleMinimal:hover {
+	text-decoration: underline !important;
+}
 
 /* comments like views save for later */
-#CommentsWrapper {opacity: 0.5;pointer-events: none;display: none;}
+#CommentsWrapper {
+	opacity: 0.5;
+	pointer-events: none;
+	display: none;
+}
 
 /*
     footer
 */
 /* teal -> blue */
-footer > div:first-of-type {background-color: #0d406d !important; border-radius: 10px 10px 0px 0px !important;}
-
-
-/*
-	theme
-*/
-:root {
-	--webpart-border-color: #A7C6D9;
-	--webpart-bg-color: white;
-	--webpart-header-bg-color: #e6e6e6;
-	--webpart-inner-border-color: #909090;
+footer > div:first-of-type {
+	background-color: #0d406d !important;
+	border-radius: 10px 10px 0px 0px !important;
 }

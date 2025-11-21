@@ -84,21 +84,15 @@ export const UpcomingEvents: React.FC<IUpcomingEventsProps> = (props) => {
 							)}
 							{items.map((event) => {
 								const eventDateObj = new Date(event.date || "");
-								const eventDate = eventDateObj.toLocaleDateString(
-									undefined,
-									{
-										month: "short",
-										day: "numeric",
-										year: "numeric",
-									},
-								);
-								const eventTime = eventDateObj.toLocaleTimeString(
-									undefined,
-									{
-										hour: "numeric",
-										minute: "2-digit",
-									},
-								);
+								const eventDate = eventDateObj.toLocaleDateString(undefined, {
+									month: "short",
+									day: "numeric",
+									year: "numeric",
+								});
+								const eventTime = eventDateObj.toLocaleTimeString(undefined, {
+									hour: "numeric",
+									minute: "2-digit",
+								});
 
 								return (
 									<tr key={event.id} className="hover:bg-slate-50">

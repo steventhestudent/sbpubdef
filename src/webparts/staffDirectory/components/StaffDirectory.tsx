@@ -89,7 +89,7 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 						placeholder="Search any field…"
 						value={searchTerm}
 						onChange={handleSearchChange}
-						className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+						className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-[var(--pd-muted)]"
 					/>
 				</form>
 

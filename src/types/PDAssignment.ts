@@ -2,20 +2,34 @@
 import { ISearchResult } from "@pnp/sp/search";
 
 export type PDAssignment = {
-	id: number;
-	title: string;
-	url?: string;
-	dueDate?: Date;
-	PDDepartment: string;
-	siteUrl?: string;
+	id?: number;
+	title?: string;
+	// url?: string;
+	// dueDate?: Date;
+	PDDepartment?: string;
+	// siteUrl?: string;
 	status?: string;
-	assignedTo?: string;
+	// assignedTo?: string;
+
+	caseNumber?: string;
+	client?: string;
+	court?: string;
+	nextHearing?: string | undefined;
+	link?: string | undefined;
+	attorneyEmail?: string;
+	attorneyName?: string;
 };
 
 export type ListResult = ISearchResult & {
+	// FileRef?: string;
 	Id: number;
-	Title?: string;
-	FileRef?: string;
+	Title: string;
+	Client: string;
+	Court: string;
+	NextHearing?: string;
+	Status: string;
+	Link?: ISharePointLink | string;
+	AssignedAttorney_x002f_Team?: ISharePointPerson | ISharePointPerson[];
 	PD_x0020_Department?: string;
 	PDDepartment?: string;
 };
