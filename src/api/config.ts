@@ -44,6 +44,7 @@ export const PD = {
 		PDIntranet: "PD-Intranet",
 		Attorney: "Attorney",
 		LOP: "LOP",
+		TrialSupervisor: "TrialSupervisor",
 		HR: "HR",
 		IT: "IT",
 	},

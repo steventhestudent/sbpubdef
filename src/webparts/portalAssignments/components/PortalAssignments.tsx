@@ -152,6 +152,7 @@ export default function PortalAssignments(
 					PDIntranet: PDIntranetView,
 					Attorney: PDIntranetView,
 					LOP: PDIntranetView,
+					TrialSupervisor: PDIntranetView,
 					HR: PDIntranetView,
 					IT: PDIntranetView,
 				}}

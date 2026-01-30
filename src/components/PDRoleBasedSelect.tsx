@@ -45,6 +45,7 @@ export function PDRoleBasedSelect({
 			Everyone: true,
 			Attorney: userGroups.some((x) => x.includes("attorney")),
 			LOP: userGroups.some((x) => x.includes("lop")),
+			TrialSupervisor: userGroups.some((x) => x.includes("supervisor")),
 			HR: userGroups.some((x) => x.includes("hr")),
 			IT: userGroups.some(
 				(x) => x.includes("it") || x.includes("administrator"),
@@ -55,6 +56,7 @@ export function PDRoleBasedSelect({
 			matchDict.PDIntranet ||
 			matchDict.Attorney ||
 			matchDict.LOP ||
+			matchDict.TrialSupervisor ||
 			matchDict.HR ||
 			matchDict.IT;
 		return matchDict[role];
@@ -70,6 +72,7 @@ export function PDRoleBasedSelect({
 			Everyone: true,
 			Attorney: userGroups.some((x) => x.includes("attorney")),
 			LOP: userGroups.some((x) => x.includes("lop")),
+			TrialSupervisor: userGroups.some((x) => x.includes("supervisor")),
 			HR: userGroups.some((x) => x.includes("hr")),
 			IT: userGroups.some(
 				(x) => x.includes("it") || x.includes("administrator"),
@@ -80,6 +83,7 @@ export function PDRoleBasedSelect({
 			matchDict.PDIntranet ||
 			matchDict.Attorney ||
 			matchDict.LOP ||
+			matchDict.TrialSupervisor ||
 			matchDict.HR ||
 			matchDict.IT;
 		return matchDict[role];
@@ -90,6 +94,7 @@ export function PDRoleBasedSelect({
 		if (_hasRole(roles, "HR")) return "HR";
 		if (_hasRole(roles, "Attorney")) return "Attorney";
 		if (_hasRole(roles, "LOP")) return "LOP";
+		if (_hasRole(roles, "TrialSupervisor")) return "TrialSupervisor";
 		if (_hasRole(roles, "PDIntranet")) return "PDIntranet";
 		return "Everyone";
 	}
@@ -127,7 +132,9 @@ export function PDRoleBasedSelect({
 						<option
 							key={rk}
 							value={rk}
-							disabled={!isRoleEnabledForUser(rk)}
+							disabled={
+								isRoleEnabledForUser(rk) == true ? false : false
+							}
 						>
 							{rk}
 						</option>
