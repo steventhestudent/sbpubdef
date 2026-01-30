@@ -28,6 +28,7 @@ function ResourceGuides({
 		</ul>
 	);
 }
+
 function ProcedureChecklist({
 	userGroupNames,
 	pnpWrapper,
@@ -39,6 +40,7 @@ function ProcedureChecklist({
 		</ul>
 	);
 }
+
 function AttorneyWorkload({
 	userGroupNames,
 	pnpWrapper,
@@ -50,6 +52,7 @@ function AttorneyWorkload({
 		</ul>
 	);
 }
+
 export function PortalResources(props: IPortalResourcesProps): JSX.Element {
 	return (
 		<Collapsible

@@ -12,6 +12,7 @@ export function PDRoleBasedSelect({
 	ctx,
 	views,
 	showSelect,
+	alwaysHideSelect,
 	selectLabel = (
 		<div className="relative mt-[-0.5em]">
 			&lt;PDRoleBasedSelect&gt;
@@ -24,6 +25,7 @@ export function PDRoleBasedSelect({
 	ctx: WebPartContext;
 	views: RoleViews;
 	showSelect?: boolean;
+	alwaysHideSelect?: boolean;
 	selectLabel?: string | JSX.Element;
 }): JSX.Element {
 	const cachedGroupNames: RoleKey[] =
@@ -44,8 +46,11 @@ export function PDRoleBasedSelect({
 		const matchDict: { [key: RoleKey]: boolean } = {
 			Everyone: true,
 			Attorney: userGroups.some((x) => x.includes("attorney")),
+			CDD: userGroups.some((x) => x.includes("cdd")),
 			LOP: userGroups.some((x) => x.includes("lop")),
-			TrialSupervisor: userGroups.some((x) => x.includes("supervisor")),
+			TrialSupervisor: userGroups.some((x) =>
+				x.includes("trialsupervisor"),
+			),
 			HR: userGroups.some((x) => x.includes("hr")),
 			IT: userGroups.some(
 				(x) => x.includes("it") || x.includes("administrator"),
@@ -55,6 +60,7 @@ export function PDRoleBasedSelect({
 		matchDict.PDIntranet =
 			matchDict.PDIntranet ||
 			matchDict.Attorney ||
+			matchDict.CDD ||
 			matchDict.LOP ||
 			matchDict.TrialSupervisor ||
 			matchDict.HR ||
@@ -71,8 +77,11 @@ export function PDRoleBasedSelect({
 		const matchDict: { [key: RoleKey]: boolean } = {
 			Everyone: true,
 			Attorney: userGroups.some((x) => x.includes("attorney")),
+			CDD: userGroups.some((x) => x.includes("cdd")),
 			LOP: userGroups.some((x) => x.includes("lop")),
-			TrialSupervisor: userGroups.some((x) => x.includes("supervisor")),
+			TrialSupervisor: userGroups.some((x) =>
+				x.includes("trialsupervisor"),
+			),
 			HR: userGroups.some((x) => x.includes("hr")),
 			IT: userGroups.some(
 				(x) => x.includes("it") || x.includes("administrator"),
@@ -82,6 +91,7 @@ export function PDRoleBasedSelect({
 		matchDict.PDIntranet =
 			matchDict.PDIntranet ||
 			matchDict.Attorney ||
+			matchDict.CDD ||
 			matchDict.LOP ||
 			matchDict.TrialSupervisor ||
 			matchDict.HR ||
@@ -93,6 +103,7 @@ export function PDRoleBasedSelect({
 		if (_hasRole(roles, "IT")) return "IT";
 		if (_hasRole(roles, "HR")) return "HR";
 		if (_hasRole(roles, "Attorney")) return "Attorney";
+		if (_hasRole(roles, "CDD")) return "CDD";
 		if (_hasRole(roles, "LOP")) return "LOP";
 		if (_hasRole(roles, "TrialSupervisor")) return "TrialSupervisor";
 		if (_hasRole(roles, "PDIntranet")) return "PDIntranet";
@@ -109,7 +120,9 @@ export function PDRoleBasedSelect({
 	}, []);
 
 	const CurrentView: RoleView | undefined = views[role] ?? views.Everyone;
-	const shouldShowSelect = showSelect || role === "IT";
+	const shouldShowSelect = alwaysHideSelect
+		? false
+		: showSelect || role === "IT";
 
 	return (
 		<section className="border border-[var(--webpart-border-color)] !bg-[var(--webpart-bg-color)] shadow-sm">
@@ -133,7 +146,9 @@ export function PDRoleBasedSelect({
 							key={rk}
 							value={rk}
 							disabled={
-								isRoleEnabledForUser(rk) == true ? false : false
+								isRoleEnabledForUser(rk) === true
+									? false
+									: false
 							}
 						>
 							{rk}
