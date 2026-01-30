@@ -34,11 +34,11 @@ export function toDateSafe(val?: string): Date | undefined {
 	return isNaN(d.getTime()) ? undefined : d;
 }
 
-export function pad2(n: number) {
+export function pad2(n: number): string {
 	return n < 10 ? `0${n}` : String(n);
 }
 
-export function sameDay(a: Date, b: Date) {
+export function sameDay(a: Date, b: Date): boolean {
 	return (
 		a.getFullYear() === b.getFullYear() &&
 		a.getMonth() === b.getMonth() &&
@@ -55,7 +55,7 @@ export function buildMonthMatrix(year: number, month: number): Date[][] {
 	start.setDate(start.getDate() - weekday);
 
 	const weeks: Date[][] = [];
-	let cur = new Date(start);
+	const cur = new Date(start);
 	for (let w = 0; w < 6; w++) {
 		const row: Date[] = [];
 		for (let d = 0; d < 7; d++) {
@@ -67,7 +67,7 @@ export function buildMonthMatrix(year: number, month: number): Date[][] {
 	return weeks;
 }
 
-export function formatTime(d?: Date) {
+export function formatTime(d?: Date): string {
 	return d
 		? d.toLocaleTimeString(undefined, {
 				hour: "numeric",
@@ -76,6 +76,6 @@ export function formatTime(d?: Date) {
 		: "";
 }
 
-export function formatMonthYear(d: Date) {
+export function formatMonthYear(d: Date): string {
 	return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 }

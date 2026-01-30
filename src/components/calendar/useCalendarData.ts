@@ -11,8 +11,7 @@ import {
 	formatTime,
 } from "./utils";
 
-// If you already have a current user email util, use that.
-// Otherwise, derive from ctx:
+// If you already have a current user email util, use that. // Otherwise, derive from ctx:
 function currentUserEmail(ctx: WebPartContext): string | undefined {
 	return ctx.pageContext.user.email?.toLowerCase();
 }
@@ -60,12 +59,22 @@ function mapEventsToCal(events: PDEvent[]): CalendarItem[] {
 		.filter(Boolean) as CalendarItem[];
 }
 
-export function useCalendarData(ctx: WebPartContext, sites: string[]) {
+type CalCallback = (opts?: { includeOutlook?: boolean }) => Promise<void>;
+type CalOutput = {
+	items: CalendarItem[];
+	loading: boolean;
+	load: CalCallback;
+};
+
+export function useCalendarData(
+	ctx: WebPartContext,
+	sites: string[],
+): CalOutput {
 	const [items, setItems] = React.useState<CalendarItem[]>([]);
 	const [loading, setLoading] = React.useState(false);
 	const me = currentUserEmail(ctx);
 
-	const load = React.useCallback(
+	const load: CalCallback = React.useCallback(
 		async (opts?: { includeOutlook?: boolean }) => {
 			setLoading(true);
 			try {

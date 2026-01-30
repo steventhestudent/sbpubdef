@@ -21,25 +21,29 @@ export default function PortalCalendar(
 	});
 
 	React.useEffect(() => {
-		void load({ includeOutlook: true });
-	}, [load]);
+		if (!loading && !items.length) {
+			console.log(`loading calendar`);
+			setTimeout(async () => await load({ includeOutlook: true }));
+		}
+	}, []); // load as dep causes infinite re-runs. just load onmount, since: //todo: scope useCalendarData within ±1 month (currently loading ALL calendar data ever) —— then reloads become necessary
 
 	const weeks = React.useMemo(
 		() => buildMonthMatrix(cursor.getFullYear(), cursor.getMonth()),
 		[cursor],
 	);
 
-	const gotoPrev = () => {
+	const gotoPrev: () => void = () => {
 		const d = new Date(cursor);
 		d.setMonth(cursor.getMonth() - 1);
 		setCursor(d);
 	};
-	const gotoNext = () => {
+	const gotoNext: () => void = () => {
 		const d = new Date(cursor);
 		d.setMonth(cursor.getMonth() + 1);
 		setCursor(d);
 	};
-	const inThisMonth = (d: Date) => d.getMonth() === cursor.getMonth();
+	const inThisMonth: (d: Date) => boolean = (d: Date) =>
+		d.getMonth() === cursor.getMonth();
 
 	// group items by yyyy-mm-dd
 	const byKey = React.useMemo(() => {
@@ -52,7 +56,7 @@ export default function PortalCalendar(
 		return map;
 	}, [items]);
 
-	const dayKey = (d: Date) =>
+	const dayKey: (d: Date) => string = (d: Date) =>
 		`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
 	return (
