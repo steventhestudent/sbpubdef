@@ -6,6 +6,7 @@ import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
 
 import { PD } from "@api/config";
+import { OfficeHoteling } from "@components/officehoteling/OfficeHoteling";
 
 // a wrapper to pass other things we want from props (userDisplayName)
 function PDIntranetViewWrapper(
@@ -63,7 +64,7 @@ function PDIntranetViewWrapper(
 												title="View Page As"
 												className="text-xl cursor-pointer absolute top-[-0.2em] right-[0em] text-gray-500 hover:text-black"
 												onClick={() => {
-													let res = parseInt(
+													const res = parseInt(
 														prompt(
 															`View Page As:\n${Object.keys(
 																PD.role,
@@ -116,8 +117,9 @@ function PDIntranetViewWrapper(
 					<p className="text-center mt-1 text-sm text-slate-600">
 						Find forms, manuals, events, and more.
 					</p>
-					<div className="mt-4">
+					<div className="mt-4 mb-1">
 						<WelcomeSearch />
+						<OfficeHoteling />
 					</div>
 				</div>
 			</section>
