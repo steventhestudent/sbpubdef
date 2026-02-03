@@ -53,7 +53,10 @@ export function PDRoleBasedSelect({
 			),
 			HR: userGroups.some((x) => x.includes("hr")),
 			IT: userGroups.some(
-				(x) => x.includes("it") || x.includes("administrator"),
+				(x) =>
+					x.includes("it") ||
+					x.includes("administrator") ||
+					x.includes("csla dev project"),
 			),
 			PDIntranet: userGroups.some((x) => x.includes("PD-Intranet")),
 		};
@@ -84,7 +87,10 @@ export function PDRoleBasedSelect({
 			),
 			HR: userGroups.some((x) => x.includes("hr")),
 			IT: userGroups.some(
-				(x) => x.includes("it") || x.includes("administrator"),
+				(x) =>
+					x.includes("it") ||
+					x.includes("administrator") ||
+					x.includes("csla dev project"),
 			),
 			PDIntranet: userGroups.some((x) => x.includes("PD-Intranet")),
 		};

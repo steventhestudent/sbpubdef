@@ -5,6 +5,8 @@ import { WelcomeSearch } from "./WelcomeSearch";
 import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
 
+import { PD } from "@api/config";
+
 // a wrapper to pass other things we want from props (userDisplayName)
 function PDIntranetViewWrapper(
 	userDisplayName: string,
@@ -48,16 +50,51 @@ function PDIntranetViewWrapper(
 									className="p-0.5 absolute left-[48px] w-[calc(100%-48px)] overflow-auto max-h-full scrollbar-thin"
 								>
 									Groups ({userGroupNames.length}):
-									{userGroupNames.includes(
-										"sharepoint administrator",
-									) || userGroupNames.includes("it") ? (
-										<span
-											title="View Page As"
-											className="text-xl cursor-pointer absolute top-[-0.2em] right-[0em] text-gray-500 hover:text-black"
-										>
-											⏿
-										</span>
-									) : null}
+									{
+										/* // todo: check if privileged (w/o hardcode) */
+										userGroupNames.includes(
+											"sharepoint administrator",
+										) ||
+										userGroupNames.includes("it") ||
+										userGroupNames.includes(
+											"csla dev project",
+										) ? (
+											<span
+												title="View Page As"
+												className="text-xl cursor-pointer absolute top-[-0.2em] right-[0em] text-gray-500 hover:text-black"
+												onClick={() => {
+													let res = parseInt(
+														prompt(
+															`View Page As:\n${Object.keys(
+																PD.role,
+															)
+																.map(
+																	($0, i) =>
+																		`\t${i + 1}. ${$0}`,
+																)
+																.join("\n")}`,
+														) || "",
+													);
+													if (isNaN(res)) return;
+													if (
+														res === 0 ||
+														res >
+															Object.keys(PD.role)
+																.length
+													)
+														return;
+													alert(
+														"redirect adding hash: " +
+															Object.keys(
+																PD.role,
+															)[res - 1],
+													);
+												}}
+											>
+												⏿
+											</span>
+										) : null
+									}
 									{userGroupNames.map((userGroupName) => (
 										<li
 											className="list-decimal ml-3"

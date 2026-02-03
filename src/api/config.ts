@@ -42,8 +42,8 @@ export const PD = {
 	},
 	/* PDRoleBasedSelect.tsx */
 	role: {
-		Everyone: "Everyone",
-		PDIntranet: "PD-Intranet",
+		Everyone: "Everyone", // guest/invitation fallback group // i.e.: guest only sees things associated w/ 'Everyone'
+		PDIntranet: "PD-Intranet", // umbrella group (Attorney, CDD, LOP, TrialSupervisor, HR, IT) ... so all org. departments
 		Attorney: "Attorney",
 		CDD: "CDD",
 		LOP: "LOP",
