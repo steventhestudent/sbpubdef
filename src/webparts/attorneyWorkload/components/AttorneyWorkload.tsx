@@ -26,6 +26,11 @@ export default function AttorneyWorkload(props: IAttorneyWorkloadProps): JSX.Ele
 
   return (
     <section style={{ maxWidth: '500px', border: '1px solid #ccc', borderRadius: '4px' }}>
+      {/* Title */}
+      <div style={{ padding: '8px', borderBottom: '1px solid #eee', backgroundColor: '#f9f9f9' }}>
+        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Attorney Workload</h2>
+      </div>
+
       {/* Search */}
       <div style={{ padding: '8px', borderBottom: '1px solid #eee' }}>
         <input
