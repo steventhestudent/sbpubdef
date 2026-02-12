@@ -1,19 +1,19 @@
 {
-	"@microsoft/generator-sharepoint": {
-		"plusBeta": false,
-		"isCreatingSolution": false,
-		"nodeVersion": "22.21.1",
-		"sdksVersions": {},
-		"version": "1.21.1",
-		"libraryName": "sbpubdef-sol",
-		"libraryId": "83f74721-7ec5-417d-8255-f7d2fdc95d65",
-		"environment": "spo",
-		"packageManager": "npm",
-		"solutionName": "sbpubdef-sol",
-		"solutionShortDescription": "sbpubdef-sol description",
-		"skipFeatureDeployment": true,
-		"isDomainIsolated": false,
-		"componentType": "extension",
-		"extensionType": "ApplicationCustomizer"
-	}
+  "@microsoft/generator-sharepoint": {
+    "plusBeta": false,
+    "isCreatingSolution": false,
+    "nodeVersion": "22.14.0",
+    "sdksVersions": {},
+    "version": "1.21.1",
+    "libraryName": "sbpubdef-sol",
+    "libraryId": "83f74721-7ec5-417d-8255-f7d2fdc95d65",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "sbpubdef-sol",
+    "solutionShortDescription": "sbpubdef-sol description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "useGulp": false,
+    "componentType": "webpart"
+  }
 }
