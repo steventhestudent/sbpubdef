@@ -1,34 +1,71 @@
-@import '~@fluentui/react/dist/sass/References.scss';
-
 .attorneyWorkload {
+  max-width: 500px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
   overflow: hidden;
-  padding: 1em;
-  color: "[theme:bodyText, default: #323130]";
-  color: var(--bodyText);
-  &.teams {
-    font-family: $ms-font-family-fallbacks;
+  padding: 0;
+  color: var(--bodyText, #000);
+  font-family: var(--bodyFont, Arial, sans-serif);
+}
+
+.titleBar {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  background-color: #f9f9f9;
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: bold;
   }
 }
 
-.welcome {
-  text-align: center;
+.searchBar {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+
+  input {
+    width: 100%;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+  }
 }
 
-.welcomeImage {
+.countyItem,
+.caseTypeItem,
+.attorneyItem {
+  margin-left: 16px;
+}
+
+.expandButton {
+  cursor: pointer;
+  font-weight: bold;
+  background: none;
+  border: none;
+  text-align: left;
   width: 100%;
-  max-width: 420px;
+  padding: 4px 8px;
+
+  &:hover {
+    background-color: #f0f0f0;
+  }
 }
 
-.links {
-  a {
-    text-decoration: none;
-    color: "[theme:link, default:#03787c]";
-    color: var(--link); // note: CSS Custom Properties support is limited to modern browsers only
+.casesContainer {
+  margin-left: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-bottom: 8px;
+}
 
-    &:hover {
-      text-decoration: underline;
-      color: "[theme:linkHovered, default: #014446]";
-      color: var(--linkHovered); // note: CSS Custom Properties support is limited to modern browsers only
-    }
-  }
+.caseNumber {
+  padding: 2px 6px;
+  background-color: #e0e0e0;
+  color: #333;
+  border-radius: 4px;
+  font-size: 11px;
+  display: inline-block;
 }

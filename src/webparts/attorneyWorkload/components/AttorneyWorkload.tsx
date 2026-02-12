@@ -1,10 +1,17 @@
 import * as React from 'react';
 import type { IAttorneyWorkloadProps } from './IAttorneyWorkloadProps';
+import styles from './AttorneyWorkload.module.scss';
 
 export default function AttorneyWorkload(props: IAttorneyWorkloadProps): JSX.Element {
   const { counties } = props;
   const [searchText, setSearchText] = React.useState('');
   const [expandedItems, setExpandedItems] = React.useState<Set<string>>(new Set());
+
+  // --- Collapse all dropdowns whenever a new search is entered ---
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchText(e.target.value);
+    setExpandedItems(new Set()); // collapse all
+  };
 
   const toggleExpand = (id: string) => {
     const newExpanded = new Set(expandedItems);
@@ -13,31 +20,58 @@ export default function AttorneyWorkload(props: IAttorneyWorkloadProps): JSX.Ele
     setExpandedItems(newExpanded);
   };
 
-  const filteredCounties = counties.filter(county =>
-    county.name.toLowerCase().includes(searchText.toLowerCase()) ||
-    county.caseTypes.some(ct =>
-      ct.type.toLowerCase().includes(searchText.toLowerCase()) ||
-      ct.attorneys.some(att =>
-        att.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        att.cases.some(c => c.number.toLowerCase().includes(searchText.toLowerCase()))
-      )
-    )
-  );
+  // --- Filter logic ---
+  const filteredCounties = React.useMemo(() => {
+    if (!searchText) return counties; 
+
+    const lowerSearch = searchText.toLowerCase();
+
+    return counties
+      .map(county => {
+        if (county.name.toLowerCase().includes(lowerSearch)) {
+          
+          return county;
+        }
+
+        
+        const caseTypes = county.caseTypes
+          .map(ct => {
+            if (ct.type.toLowerCase().includes(lowerSearch)) return ct;
+
+            const attorneys = ct.attorneys
+              .map(att => {
+                if (att.name.toLowerCase().includes(lowerSearch)) return att;
+
+                const cases = att.cases.filter(c =>
+                  c.number.toLowerCase().includes(lowerSearch)
+                );
+                return { ...att, cases };
+              })
+              .filter(att => att.cases.length > 0);
+
+            return { ...ct, attorneys };
+          })
+          .filter(ct => ct.attorneys.length > 0);
+
+        return { ...county, caseTypes };
+      })
+      .filter(county => county.caseTypes.length > 0);
+  }, [counties, searchText]);
 
   return (
-    <section style={{ maxWidth: '500px', border: '1px solid #ccc', borderRadius: '4px' }}>
+    <section className={styles.attorneyWorkload} style={{ maxWidth: '500px', border: '1px solid #ccc', borderRadius: '4px' }}>
       {/* Title */}
       <div style={{ padding: '8px', borderBottom: '1px solid #eee', backgroundColor: '#f9f9f9' }}>
-        <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Attorney Workload</h2>
+        <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 'bold' }}>Attorney Workload</h2>
       </div>
 
       {/* Search */}
       <div style={{ padding: '8px', borderBottom: '1px solid #eee' }}>
         <input
           type="text"
-          placeholder="Search by county, attorney, or case..."
+          placeholder="Search by county, case type, attorney, or case number..."
           value={searchText}
-          onChange={e => setSearchText(e.target.value)}
+          onChange={handleSearchChange}
           style={{ width: '100%', padding: '6px', boxSizing: 'border-box' }}
         />
       </div>
@@ -84,7 +118,7 @@ export default function AttorneyWorkload(props: IAttorneyWorkloadProps): JSX.Ele
                           </button>
 
                           {isAttOpen && (
-                            <div style={{ marginLeft: '16px', display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            <div style={{ marginLeft: '16px', display: 'flex', gap: '4px', flexWrap: 'wrap', paddingBottom: '8px' }}>
                               {att.cases.map(c => (
                                 <div
                                   key={c.number}
@@ -110,7 +144,7 @@ export default function AttorneyWorkload(props: IAttorneyWorkloadProps): JSX.Ele
             </div>
           );
         }) : (
-          <div style={{ padding: '12px'}}>No results found for "{searchText}"</div>
+          <div style={{ padding: '12px' }}>No results found for "{searchText}"</div>
         )}
       </div>
     </section>

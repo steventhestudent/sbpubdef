@@ -14,29 +14,29 @@ export default class AttorneyWorkloadWebPart extends BaseClientSideWebPart<IAtto
     // Example static data
     const counties: ICountyData[] = [
       {
-        name: "Los Angeles County",
+        name: "North County",
         caseTypes: [
           {
             type: "Criminal Defense",
             attorneys: [
-              { name: "Michael Henderson", cases: [{ number: "LA-CR-2024-0412" }, { number: "LA-CR-2024-0892" }] }
+              { name: "Michael Henderson", cases: [{ number: "NOR-CR-2024-0412" }, { number: "NOR-CR-2024-0892" }] }
             ]
           },
           {
             type: "Family Law",
             attorneys: [
-              { name: "Sarah Jenkins", cases: [{ number: "LA-FAM-2024-0012" }] }
+              { name: "Sarah Jenkins", cases: [{ number: "NOR-FAM-2024-0012" }] }
             ]
           }
         ]
       },
       {
-        name: "Orange County",
+        name: "South County",
         caseTypes: [
           {
             type: "Civil Litigation",
             attorneys: [
-              { name: "Rebecca Thorne", cases: [{ number: "OC-CIV-2024-9912" }] }
+              { name: "Rebecca Thorne", cases: [{ number: "SOU-CIV-2024-9912" }] }
             ]
           }
         ]
