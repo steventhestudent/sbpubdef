@@ -7,6 +7,13 @@ import {
 } from "./IUrgencyPortalProps";
 import { Collapsible } from "@components/Collapsible";
 
+type PBIEventResponseType =
+	| {
+			message?: string;
+			error?: { message?: string }; // eslint-disable-next-line no-mixed-spaces-and-tabs
+	  }
+	| undefined;
+
 const powerbiService = new pbi.service.Service(
 	pbi.factories.hpmFactory,
 	pbi.factories.wpmpFactory,
@@ -232,12 +239,7 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 					report.on(
 						"error",
 						(event: pbi.service.ICustomEvent<unknown>) => {
-							const detail = event.detail as
-								| {
-										message?: string;
-										error?: { message?: string };
-								  }
-								| undefined;
+							const detail = event.detail as PBIEventResponseType;
 							const message =
 								detail?.message ??
 								detail?.error?.message ??
@@ -291,9 +293,7 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 				visual.on(
 					"error",
 					(event: pbi.service.ICustomEvent<unknown>) => {
-						const detail = event.detail as
-							| { message?: string; error?: { message?: string } }
-							| undefined;
+						const detail = event.detail as PBIEventResponseType;
 						const message =
 							detail?.message ??
 							detail?.error?.message ??
