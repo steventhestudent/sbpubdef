@@ -16,7 +16,7 @@
     -   `pnpm env use --global lts`
 
 1. `git clone https://github.com/steventhestudent/sbpubdef.git`
-2. `cd sbpudef`
+2. `cd sbpubdef`
 3. `pnpm install`
 4. `pnpm npx gulp trust-dev-cert`
 5. **optionally:** scraped forms / resource folder (private repo, so that this one can stay public): `git clone git@github.com:steventhestudent/sbpubdef-resources.git resource` ask for an invite
@@ -53,6 +53,9 @@ see [README](https://github.com/steventhestudent/sbpubdef-legacy.git) (sbpubdef-
 **Note:** you will have to change Package.json scripts to use npm-style (i.e.: drop the '```pnpm npx```')
 
 then ```npm run dev``` works.
+
+# Ask for environment file (config/.env.dev) —currently only `scripts/py/sharepoint_upload_to_doc_lib.py` depends on it
+
 &nbsp;
 
 &nbsp;

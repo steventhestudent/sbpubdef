@@ -1,3 +1,8 @@
+*/.env.*
+# except don't ignore example .env:
+!.env.example
+
+copilot-instructions.md
 # nested repo(s)
 resource/
 

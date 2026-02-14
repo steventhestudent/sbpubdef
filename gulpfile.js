@@ -24,6 +24,7 @@ build.configureWebpack.mergeConfig({
 			...(generatedConfig.resolve.alias || {}),
 			"@api": path.resolve(__dirname, "lib/api"),
 			"@components": path.resolve(__dirname, "lib/components"),
+			"@data": path.resolve(__dirname, "lib/data"),
 			"@dist": path.resolve(__dirname, "dist"),
 			"@extensions": path.resolve(__dirname, "lib/extensions"),
 			"@styles": path.resolve(__dirname, "lib/styles"),
