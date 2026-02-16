@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { IOfficeHotelingProps } from "./IOfficeHotelingProps";
 import { offices } from "../../../webparts/officeInformation/components/Offices";
+import { HotelingService } from "../../../services/HotelingService";
 
 interface Reservation {
 	id: string;
@@ -67,6 +68,40 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 	});
 	const [bookedSlots, setBookedSlots] = React.useState<Set<string>>(new Set());
 	
+	const hotelingService = React.useMemo(() => new HotelingService(props.context), [props.context]);
+	
+	React.useEffect(() => {
+		loadReservations();
+	}, []);
+	
+	const loadReservations = async (): Promise<void> => {
+		try {
+			const myReservations = await hotelingService.getMyReservations(props.context.pageContext.user.email);
+			const allReservations = await hotelingService.getAllReservations();
+			
+			// Convert to local format
+			const formattedReservations: Reservation[] = myReservations.map(r => ({
+				id: r.Id?.toString() || '',
+				location: r.Location,
+				date: r.ReservationDate.toISOString().split('T')[0],
+				time: r.TimeBlock as "Morning" | "Afternoon",
+			}));
+			
+			setReservations(formattedReservations);
+			
+			// Build booked slots set from all reservations
+			const newBookedSlots = new Set<string>();
+			allReservations.forEach(r => {
+				const dateStr = r.ReservationDate.toISOString().split('T')[0];
+				const slotKey = `${dateStr}-${r.TimeBlock.toLowerCase()}`;
+				newBookedSlots.add(slotKey);
+			});
+			setBookedSlots(newBookedSlots);
+		} catch (error) {
+			console.error("Error loading reservations:", error);
+		}
+	};
+	
 	const timeSlots = generateTimeSlots(weekStartDate, bookedSlots).slice(0, 5); // Show 5 business days (Monday-Friday)
 
 	const handleEdit = (reservationId: string): void => {
@@ -74,24 +109,21 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		setShowCalendar(true);
 	};
 
-	const handleDelete = (reservationId: string): void => {
+	const handleDelete = async (reservationId: string): Promise<void> => {
 		if (
 			window.confirm(
 				"Are you sure you want to delete this reservation?",
 			)
 		) {
-			const reservationToDelete = reservations.find(r => r.id === reservationId);
-			if (reservationToDelete) {
-				const slotKey = `${reservationToDelete.date}-${reservationToDelete.time.toLowerCase()}`;
-				const newBookedSlots = new Set(bookedSlots);
-				newBookedSlots.delete(slotKey);
-				setBookedSlots(newBookedSlots);
-				
-				const newReservations = reservations.filter(r => r.id !== reservationId);
-				setReservations(newReservations);
+			try {
+				await hotelingService.deleteReservation(parseInt(reservationId));
+				await loadReservations();
+				setEditingReservationId(null);
+				setShowCalendar(false);
+			} catch (error) {
+				console.error("Error deleting reservation:", error);
+				alert("Failed to delete reservation");
 			}
-			setEditingReservationId(null);
-			setShowCalendar(false);
 		}
 	};
 
@@ -99,43 +131,29 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		alert("Reminder sent to your email");
 	};
 
-	const handleSelectTimeSlot = (slot: TimeSlot, timeOfDay: "Morning" | "Afternoon"): void => {
-		const slotKey = `${slot.date}-${timeOfDay.toLowerCase()}`;
-		
-		if (editingReservationId) {
-			// Update existing reservation
-			const oldReservation = reservations.find(r => r.id === editingReservationId);
-			if (oldReservation) {
-				const oldSlotKey = `${oldReservation.date}-${oldReservation.time.toLowerCase()}`;
-				const newBookedSlots = new Set(bookedSlots);
-				newBookedSlots.delete(oldSlotKey);
-				newBookedSlots.add(slotKey);
-				setBookedSlots(newBookedSlots);
-				
-				const newReservations = reservations.map(r => 
-					r.id === editingReservationId 
-						? { ...r, location: selectedLocation, date: slot.date, time: timeOfDay }
-						: r
-				);
-				setReservations(newReservations);
+	const handleSelectTimeSlot = async (slot: TimeSlot, timeOfDay: "Morning" | "Afternoon"): Promise<void> => {
+		try {
+			if (editingReservationId) {
+				// Delete old reservation and create new one
+				await hotelingService.deleteReservation(parseInt(editingReservationId));
 			}
-		} else {
-			// Create new reservation
-			const newReservation: Reservation = {
-				id: `res-${Date.now()}`,
-				location: selectedLocation,
-				date: slot.date,
-				time: timeOfDay,
-			};
-			const newBookedSlots = new Set(bookedSlots);
-			newBookedSlots.add(slotKey);
-			setBookedSlots(newBookedSlots);
 			
-			setReservations([...reservations, newReservation]);
+			// Create new reservation
+			await hotelingService.createReservation({
+				Location: selectedLocation,
+				Desk: "Desk 1", // TODO: Add desk selection
+				ReservationDate: new Date(slot.date),
+				TimeBlock: timeOfDay,
+				UserEmail: props.context.pageContext.user.email,
+			});
+			
+			await loadReservations();
+			setEditingReservationId(null);
+			setShowCalendar(false);
+		} catch (error) {
+			console.error("Error saving reservation:", error);
+			alert("Failed to save reservation");
 		}
-		
-		setEditingReservationId(null);
-		setShowCalendar(false);
 	};
 
 	const handlePreviousWeek = (): void => {
