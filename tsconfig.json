@@ -22,6 +22,7 @@
 		"paths": {
 			"@api/*": ["src/api/*"],
 			"@components/*": ["src/components/*"],
+			"@data/*": ["src/data/*"],
 			"@dist/*": ["dist/*"],
 			"@extensions/*": ["src/extensions/*"],
 			"@styles": ["src/styles"],
