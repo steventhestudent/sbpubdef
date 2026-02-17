@@ -3,7 +3,7 @@ import json
 import pymupdf # import fitz
 
 from .ProcedurePage import *
-from .upload_file import *
+from .upload import *
 
 class ProcedureChecklist:
     def __init__(self, pdf_path, category, out_dir):
@@ -17,7 +17,6 @@ class ProcedureChecklist:
         self.version_history = [] # find in process (Version History: table(version, date, edits, approved_by))
         self.pages = []           # ProcedurePage[]
         self.slides = []          # come up with a clever way of splitting information for display in slideshow view (given that some lists too big for page. this should equal sharepoint list item json.)
-        self.pageCount = 0
         self.document_URL = upload_file(self.resource_path)
         self.json_URL = ""
         self.process_resource()
@@ -28,7 +27,7 @@ class ProcedureChecklist:
         file_path = os.path.join(self.out_dir, self.filename + '.json')
         with open(file_path, 'w') as file: json.dump(self.serialize(), file, indent=2)
         self.json_URL = upload_file(file_path)
-        #todo: add sharepoint list item
+        add_list_item(self) # new sharepoint list
 
     def serialize(self):
         return {

@@ -1,5 +1,5 @@
 import os
-from .upload_file import *
+from .upload import *
 
 class ProcedurePageRootBlock:
     def __init__(self, doc_filename, page_index, image_counter_ref, block, out_dir): # example self.obj["blocks"][0]: 612.0 792.0 {'type': 0, 'number': 0, 'flags': 0, 'bbox': [156.4799041748047, 46.36137390136719, 572.9722900390625, 118.07557678222656], 'lines': [{'spans': [{'size': 32.299373626708984, 'flags': 16, 'bidi': 0, 'char_flags': 24, 'font': 'ArialNarrow-Bold', 'color': 600918, 'alpha': 255, 'ascender': 0.9319999814033508, 'descender': -0.20999999344348907, 'text': 'County of Santa Barbara', 'origin': [217.19000244140625, 72.969970703125], 'bbox': [217.19000244140625, 46.36137390136719, 572.9546508789062, 78.96546936035156]}], 'wmode': 0, 'dir': [1.0, 0.0], 'bbox': [217.19000244140625, 46.36137390136719, 572.9546508789062, 78.96546936035156]}, {'spans': [{'size': 32.299373626708984, 'flags': 16, 'bidi': 0, 'char_flags': 24, 'font': 'ArialNarrow-Bold', 'color': 600918, 'alpha': 255, 'ascender': 0.9319999814033508, 'descender': -0.20999999344348907, 'text': 'Office of the Public Defender', 'origin': [156.4799041748047, 112.080078125], 'bbox': [156.4799041748047, 85.47148132324219, 572.9722900390625, 118.07557678222656]}], 'wmode': 0, 'dir': [1.0, 0.0], 'bbox': [156.4799041748047, 85.47148132324219, 572.9722900390625, 118.07557678222656]}]}
