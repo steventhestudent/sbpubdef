@@ -16,12 +16,10 @@ class ProcedureChecklist:
         self.purpose = ''         # find in process (Purpose: ... stop at 1st image/list/block)
         self.version_history = [] # find in process (Version History: table(version, date, edits, approved_by))
         self.pages = []           # ProcedurePage[]
-        self.slides = []          # come up with a clever way of splitting information for display in slideshow view (given that some lists too big for page. this should equal sharepoint list item json.)
+        self.lists = []          # list sections w/ associated_images
         self.document_URL = upload_file(self.resource_path)
         self.json_URL = ""
         self.process_resource()
-
-    def __repr__(self): return f"{self.category} (Procedure) filename: {self.filename} Title: {self.title or '_'}"
 
     def write(self):
         file_path = os.path.join(self.out_dir, self.filename + '.json')
@@ -39,20 +37,21 @@ class ProcedureChecklist:
             "versionHistory": self.version_history,
             "pageCount": len(self.pages),
             "documentURL": self.document_URL,
-            "lists": [
-                { "slideBlocks": [block.obj for block in page.blocks] } for page in self.pages
-            ]
+            "lists": self.lists # [{ "slideBlocks": [block.obj for block in page.blocks] } for page in self.pages]
         }
 
     def process_resource(self):
-        for i, page in enumerate(pymupdf.open(self.resource_path)):
-            self.pages.append(ProcedurePage(self.filename, i, page, self.out_dir)) # fetch json (img, positions of img, text blocks (jsonraw is specific to the char))
+        for i, page in enumerate(pymupdf.open(self.resource_path)): # first we create ProcedurePage & process text
+            procedure_page = ProcedurePage(self.filename, i, page)
+            self.pages.append(procedure_page)
             if i == 0:
-                (title, effective_date, purpose, version_history) = self.pages[len(self.pages) - 1].text_extraction() # ProcedureChecklist pdf's struct consistently has structure metadata page 1 -> procedure lists -> version control
+                (title, effective_date, purpose) = procedure_page.pg1_metadata() # ProcedureChecklist pdf's struct consistently has structure metadata page 1 -> procedure lists -> version control
                 self.title = title
                 self.effective_date = effective_date
                 self.purpose = purpose
-                self.version_history = version_history
-                print(title, effective_date, purpose, version_history)
+                print(title, effective_date, purpose)
+            self.version_history = procedure_page.best_effort_version_history(self.version_history) # could start on any page and (if long enough) end on another page
             # break # debug 1 page
+        for page in self.pages: # now we process blocks for images, etc.
+            page.process_blocks(self.out_dir) # associate images with lists
         self.write()
