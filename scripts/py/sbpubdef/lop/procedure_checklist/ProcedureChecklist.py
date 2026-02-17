@@ -27,7 +27,7 @@ class ProcedureChecklist:
         file_path = os.path.join(self.out_dir, self.filename + '.json')
         with open(file_path, 'w') as file: json.dump(self.serialize(), file, indent=2)
         self.json_URL = upload_file(file_path)
-        add_list_item(self) # new sharepoint list
+        print(add_list_item(self)) # new sharepoint list item url
 
     def serialize(self):
         return {
@@ -39,13 +39,10 @@ class ProcedureChecklist:
             "versionHistory": self.version_history,
             "pageCount": len(self.pages),
             "documentURL": self.document_URL,
-            "slides": [
+            "lists": [
                 { "slideBlocks": [block.obj for block in page.blocks] } for page in self.pages
             ]
         }
-
-    def create_procedure_slides(self): # create sensible json output that lives in sharepoint list, consumed by slideshow webpart (this will involve re-imagining positions for blocks)
-        pass
 
     def process_resource(self):
         for i, page in enumerate(pymupdf.open(self.resource_path)):
@@ -58,5 +55,4 @@ class ProcedureChecklist:
                 self.version_history = version_history
                 print(title, effective_date, purpose, version_history)
             # break # debug 1 page
-        self.create_procedure_slides()
         self.write()

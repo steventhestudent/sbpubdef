@@ -72,10 +72,7 @@ def add_list_item(site_id, list_id, field_data: dict):
         headers={**session_headers, "Content-Type": "application/json"},
         json={"fields": field_data}
     )
-    print(field_data, resp.json())
-    print(resp.status_code)
-    print(resp.text)
-    return resp.json()
+    return resp.json().get("webUrl")
 
 """
 CRUD: Read
