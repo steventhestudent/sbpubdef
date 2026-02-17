@@ -88,7 +88,6 @@ export function ProcedureChecklist({
 	};
 	return (
 		<section className="p-4 text-sm">
-			LOPS - Legal Office Procedural System
 			<label
 				className="block text-xs font-medium text-slate-700"
 				htmlFor="lops-search"

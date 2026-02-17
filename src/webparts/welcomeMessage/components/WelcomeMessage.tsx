@@ -83,12 +83,11 @@ function PDIntranetViewWrapper(
 																.length
 													)
 														return;
-													alert(
-														"redirect adding hash: " +
-															Object.keys(
-																PD.role,
-															)[res - 1],
-													);
+													location.hash = `View-As-${
+														Object.keys(PD.role)[
+															res - 1
+														]
+													}`;
 												}}
 											>
 												⏿

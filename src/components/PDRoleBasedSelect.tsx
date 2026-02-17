@@ -116,19 +116,32 @@ export function PDRoleBasedSelect({
 		return "Everyone";
 	}
 
+	function forceRole(role: string) {
+		setRole(role);
+		setUserGroups([role]);
+		setTimeout(() => (location.hash = ""));
+	}
 	React.useEffect(() => {
 		setTimeout(async () => {
+			if (location.hash.startsWith("#View-As-")) {
+				forceRole(location.hash.substring(9));
+				return;
+			}
 			const g = await Utils.userGroupNames(ctx);
 			localStorage.setItem("userGroupNames", JSON.stringify(g));
 			setRole(roleViewPriority(g));
 			setUserGroups(g.map((g) => g.toLowerCase()));
 		});
+		window.addEventListener("hashchange", function () {
+			if (!location.hash.startsWith("#View-As-")) return;
+			forceRole(location.hash.substring(9));
+		});
 	}, []);
 
 	const CurrentView: RoleView | undefined = views[role] ?? views.Everyone;
-	const shouldShowSelect = alwaysHideSelect
-		? false
-		: showSelect || role === "IT";
+	let shouldShowSelect = false;
+	if (showSelect !== undefined) shouldShowSelect = showSelect;
+	if (alwaysHideSelect !== undefined) shouldShowSelect = !alwaysHideSelect;
 
 	return (
 		<section className="border border-[var(--webpart-border-color)] !bg-[var(--webpart-bg-color)] shadow-sm">
