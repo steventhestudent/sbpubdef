@@ -1,7 +1,7 @@
 import * as React from "react";
 import type { IOfficeHotelingProps } from "./IOfficeHotelingProps";
-import { offices } from "../../../webparts/officeInformation/components/Offices";
-import { HotelingService } from "../../../services/HotelingService";
+import { offices } from "@webparts/officeInformation/components/Offices";
+import { HotelingService } from "@services/HotelingService";
 
 interface Reservation {
 	id: string;
@@ -17,25 +17,28 @@ interface TimeSlot {
 	afternoon: boolean;
 }
 
-const OFFICE_LOCATIONS = offices.map(office => office.name);
+const OFFICE_LOCATIONS = offices.map((office) => office.name);
 
 // Generate time slots for the next 2 weeks
-const generateTimeSlots = (startDate: Date, bookedSlots: Set<string>): TimeSlot[] => {
+const generateTimeSlots = (
+	startDate: Date,
+	bookedSlots: Set<string>,
+): TimeSlot[] => {
 	const slots: TimeSlot[] = [];
 	const current = new Date(startDate);
-	
+
 	// Generate 14 days (2 weeks)
 	for (let i = 0; i < 14; i++) {
 		// Skip Saturdays (6) and Sundays (0) - only weekdays
 		if (current.getDay() !== 0 && current.getDay() !== 6) {
-			const dateStr = current.toISOString().split('T')[0];
+			const dateStr = current.toISOString().split("T")[0];
 			const dayName = current.toLocaleDateString("en-US", {
 				weekday: "short",
 				month: "numeric",
 				day: "numeric",
 				year: "2-digit",
 			});
-			
+
 			slots.push({
 				day: dayName,
 				date: dateStr,
@@ -45,7 +48,7 @@ const generateTimeSlots = (startDate: Date, bookedSlots: Set<string>): TimeSlot[
 		}
 		current.setDate(current.getDate() + 1);
 	}
-	
+
 	return slots;
 };
 
@@ -54,7 +57,9 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		OFFICE_LOCATIONS[0],
 	);
 	const [reservations, setReservations] = React.useState<Reservation[]>([]);
-	const [editingReservationId, setEditingReservationId] = React.useState<string | null>(null);
+	const [editingReservationId, setEditingReservationId] = React.useState<
+		string | null
+	>(null);
 	const [showCalendar, setShowCalendar] = React.useState(false);
 	const [weekStartDate, setWeekStartDate] = React.useState<Date>(() => {
 		const today = new Date();
@@ -66,33 +71,38 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		}
 		return today;
 	});
-	const [bookedSlots, setBookedSlots] = React.useState<Set<string>>(new Set());
-	
-	const hotelingService = React.useMemo(() => new HotelingService(props.context), [props.context]);
-	
-	React.useEffect(() => {
-		loadReservations();
-	}, []);
-	
+	const [bookedSlots, setBookedSlots] = React.useState<Set<string>>(
+		new Set(),
+	);
+
+	const hotelingService = React.useMemo(
+		() => new HotelingService(props.context),
+		[props.context],
+	);
+
 	const loadReservations = async (): Promise<void> => {
 		try {
-			const myReservations = await hotelingService.getMyReservations(props.context.pageContext.user.email);
+			const myReservations = await hotelingService.getMyReservations(
+				props.context.pageContext.user.email,
+			);
 			const allReservations = await hotelingService.getAllReservations();
-			
+
 			// Convert to local format
-			const formattedReservations: Reservation[] = myReservations.map(r => ({
-				id: r.Id?.toString() || '',
-				location: r.Location,
-				date: r.ReservationDate.toISOString().split('T')[0],
-				time: r.TimeBlock as "Morning" | "Afternoon",
-			}));
-			
+			const formattedReservations: Reservation[] = myReservations.map(
+				(r) => ({
+					id: r.Id?.toString() || "",
+					location: r.Location,
+					date: r.ReservationDate.toISOString().split("T")[0],
+					time: r.TimeBlock as "Morning" | "Afternoon",
+				}),
+			);
+
 			setReservations(formattedReservations);
-			
+
 			// Build booked slots set from all reservations
 			const newBookedSlots = new Set<string>();
-			allReservations.forEach(r => {
-				const dateStr = r.ReservationDate.toISOString().split('T')[0];
+			allReservations.forEach((r) => {
+				const dateStr = r.ReservationDate.toISOString().split("T")[0];
 				const slotKey = `${dateStr}-${r.TimeBlock.toLowerCase()}`;
 				newBookedSlots.add(slotKey);
 			});
@@ -101,7 +111,11 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			console.error("Error loading reservations:", error);
 		}
 	};
-	
+
+	React.useEffect(() => {
+		setTimeout(async () => await loadReservations());
+	}, []);
+
 	const timeSlots = generateTimeSlots(weekStartDate, bookedSlots).slice(0, 5); // Show 5 business days (Monday-Friday)
 
 	const handleEdit = (reservationId: string): void => {
@@ -111,12 +125,12 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 
 	const handleDelete = async (reservationId: string): Promise<void> => {
 		if (
-			window.confirm(
-				"Are you sure you want to delete this reservation?",
-			)
+			window.confirm("Are you sure you want to delete this reservation?")
 		) {
 			try {
-				await hotelingService.deleteReservation(parseInt(reservationId));
+				await hotelingService.deleteReservation(
+					parseInt(reservationId),
+				);
 				await loadReservations();
 				setEditingReservationId(null);
 				setShowCalendar(false);
@@ -131,13 +145,18 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		alert("Reminder sent to your email");
 	};
 
-	const handleSelectTimeSlot = async (slot: TimeSlot, timeOfDay: "Morning" | "Afternoon"): Promise<void> => {
+	const handleSelectTimeSlot = async (
+		slot: TimeSlot,
+		timeOfDay: "Morning" | "Afternoon",
+	): Promise<void> => {
 		try {
 			if (editingReservationId) {
 				// Delete old reservation and create new one
-				await hotelingService.deleteReservation(parseInt(editingReservationId));
+				await hotelingService.deleteReservation(
+					parseInt(editingReservationId),
+				);
 			}
-			
+
 			// Create new reservation
 			await hotelingService.createReservation({
 				Location: selectedLocation,
@@ -146,7 +165,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 				TimeBlock: timeOfDay,
 				UserEmail: props.context.pageContext.user.email,
 			});
-			
+
 			await loadReservations();
 			setEditingReservationId(null);
 			setShowCalendar(false);
@@ -217,24 +236,35 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 					</h3>
 					<div className="space-y-3">
 						{reservations.map((reservation) => (
-							<div key={reservation.id} className="border border-slate-300 rounded-lg p-4">
+							<div
+								key={reservation.id}
+								className="border border-slate-300 rounded-lg p-4"
+							>
 								<div className="grid grid-cols-2 gap-6">
 									{/* Left: Actions */}
 									<div className="flex flex-col justify-start gap-2">
 										<button
-											onClick={() => handleEdit(reservation.id)}
+											onClick={() =>
+												handleEdit(reservation.id)
+											}
 											className="text-blue-700 hover:underline text-sm text-left"
 										>
 											Edit reservation
 										</button>
 										<button
-											onClick={() => handleDelete(reservation.id)}
+											onClick={() =>
+												handleDelete(reservation.id)
+											}
 											className="text-blue-700 hover:underline text-sm text-left"
 										>
 											Delete reservation
 										</button>
 										<button
-											onClick={() => handleSendReminder(reservation.id)}
+											onClick={() =>
+												handleSendReminder(
+													reservation.id,
+												)
+											}
 											className="text-blue-700 hover:underline text-sm text-left"
 										>
 											Send Reminder
@@ -245,16 +275,30 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 									<div>
 										<div className="space-y-3 text-sm">
 											<div>
-												<p className="text-slate-500">Location</p>
-												<p className="text-slate-800">{reservation.location}</p>
+												<p className="text-slate-500">
+													Location
+												</p>
+												<p className="text-slate-800">
+													{reservation.location}
+												</p>
 											</div>
 											<div>
-												<p className="text-slate-500">Date</p>
-												<p className="text-slate-800">{formatDate(reservation.date)}</p>
+												<p className="text-slate-500">
+													Date
+												</p>
+												<p className="text-slate-800">
+													{formatDate(
+														reservation.date,
+													)}
+												</p>
 											</div>
 											<div>
-												<p className="text-slate-500">Time</p>
-												<p className="text-slate-800">{reservation.time}</p>
+												<p className="text-slate-500">
+													Time
+												</p>
+												<p className="text-slate-800">
+													{reservation.time}
+												</p>
 											</div>
 										</div>
 									</div>
@@ -271,7 +315,9 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 					<div className="mb-4">
 						<div className="mb-4">
 							<h3 className="font-semibold text-slate-800 mb-3">
-								{editingReservationId ? "Edit Reservation" : "Add a New Reservation"}
+								{editingReservationId
+									? "Edit Reservation"
+									: "Add a New Reservation"}
 							</h3>
 							{!editingReservationId && (
 								<label className="block text-sm font-medium text-slate-700 mb-2">
@@ -281,7 +327,9 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 							{!editingReservationId && (
 								<select
 									value={selectedLocation}
-									onChange={(e) => setSelectedLocation(e.target.value)}
+									onChange={(e) =>
+										setSelectedLocation(e.target.value)
+									}
 									className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
 								>
 									{OFFICE_LOCATIONS.map((location) => (
@@ -300,7 +348,8 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 								← Previous Week
 							</button>
 							<h3 className="font-semibold text-slate-800">
-								{editingReservationId ? "Edit for " : ""}{selectedLocation}
+								{editingReservationId ? "Edit for " : ""}
+								{selectedLocation}
 							</h3>
 							<button
 								onClick={handleNextWeek}
@@ -417,7 +466,9 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 					}}
 					className="px-4 py-2 bg-blue-700 text-white rounded-md text-sm hover:bg-blue-800"
 				>
-					{reservations.length > 0 ? "+ Add Another Reservation" : "+ Make a Reservation"}
+					{reservations.length > 0
+						? "+ Add Another Reservation"
+						: "+ Make a Reservation"}
 				</button>
 			)}
 		</section>

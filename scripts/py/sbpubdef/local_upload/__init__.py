@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import requests
 import msal
 
+SHAREPOINT_LIST_COLUMNS = ["LinkTitle", "_ColorTag", "ComplianceAssetId", "ID", "ContentType", "Modified", "Created", "Author", "Editor", "_UIVersionString", "Attachments", "Edit", "LinkTitleNoMenu", "DocIcon", "ItemChildCount", "FolderChildCount", "_ComplianceFlags", "_ComplianceTag", "_ComplianceTagWrittenTime", "_ComplianceTagUserId", "_IsRecord", "AppAuthor", "AppEditor"]
 load_dotenv(Path(__file__).resolve().parents[4] / "config/.env.dev")
 session_headers = {}
 
@@ -52,7 +53,14 @@ def get_list_id(site_id, list_name):
 
 def get_list_columns(site_id, list_id):
     resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/columns", headers=session_headers)
-    return resp.json()
+    return resp.json().get('value', [])
+
+def get_list_column_names(site_id, list_id, include_sp_cols=False):
+    cols = []
+    for col in get_list_columns(site_id, list_id):
+        if include_sp_cols or not(col['name'] in SHAREPOINT_LIST_COLUMNS):
+            cols.append(col['name'])
+    return cols
 
 """
 CRUD: Create

@@ -27,6 +27,9 @@
 
 **other gulp serve commands:** ```pnpm theme``` ~~```pnpm npx fast-serve --config=themeInjector```~~ ~~`pnpm npx gulp serve` (webparts) or ```gulp serve --config landingRedirectExt``` etc.~~
 
+you may have to manually visit https://localhost:4321/temp/build/manifests.js to trust the certificate
+
+
 &nbsp;
 
 #### Upload to AppCatalog

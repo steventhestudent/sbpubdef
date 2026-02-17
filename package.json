@@ -9,15 +9,16 @@
 	"scripts": {
 		"build": "gulp bundle",
 		"clean": "gulp clean",
-		"test": "gulp test",
+		"cleanmake": "pnpm run clean && pnpm run make",
+		"dev": "concurrently \"pnpm run tailwind:watch\" \"pnpm exec fast-serve\"",
+		"make": "pnpm run tailwind:buildifDNE && pnpm npx gulp bundle --ship && pnpm npx gulp package-solution --ship",
+		"reclaimRAM": "pkill -f npm",
 		"serve": "fast-serve",
 		"tailwind:build": "pnpm npx @tailwindcss/cli -i ./src/styles/tailwind.css -o ./dist/tailwind.css --minify",
 		"tailwind:buildifDNE": "[ ! -f dist/tailwind.css ] && pnpm run tailwind:build || echo \"tailwind.css exists\"",
 		"tailwind:watch": "pnpm npx @tailwindcss/cli -i ./src/styles/tailwind.css -o ./dist/tailwind.css --watch",
-		"dev": "concurrently \"pnpm run tailwind:watch\" \"pnpm exec fast-serve\"",
-		"theme": "concurrently \"pnpm run tailwind:watch\" \"pnpm exec fast-serve --config=themeInjector\"",
-		"make": "pnpm run tailwind:buildifDNE && pnpm npx gulp bundle --ship && pnpm npx gulp package-solution --ship",
-		"reclaimRAM": "pkill -f npm"
+		"test": "gulp test",
+		"theme": "concurrently \"pnpm run tailwind:watch\" \"pnpm exec fast-serve --config=themeInjector\""
 	},
 	"dependencies": {
 		"@fluentui/react": "^8.106.4",

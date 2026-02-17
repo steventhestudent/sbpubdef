@@ -6,7 +6,6 @@ import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
 
 import { PD } from "@api/config";
-import { OfficeHoteling } from "@components/officehoteling/OfficeHoteling";
 
 // a wrapper to pass other things we want from props (userDisplayName)
 function PDIntranetViewWrapper(
@@ -119,7 +118,6 @@ function PDIntranetViewWrapper(
 					</p>
 					<div className="mt-4 mb-1">
 						<WelcomeSearch />
-						<OfficeHoteling />
 					</div>
 				</div>
 			</section>

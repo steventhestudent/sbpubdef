@@ -27,8 +27,9 @@ build.configureWebpack.mergeConfig({
 			"@data": path.resolve(__dirname, "lib/data"),
 			"@dist": path.resolve(__dirname, "dist"),
 			"@extensions": path.resolve(__dirname, "lib/extensions"),
+			"@services": path.resolve(__dirname, "lib/services"),
 			"@styles": path.resolve(__dirname, "lib/styles"),
-			"@type": path.resolve(__dirname, "lib/types"),
+			"@type": path.resolve(__dirname, "lib/type"),
 			"@utils": path.resolve(__dirname, "lib/utils"),
 			"@webparts": path.resolve(__dirname, "lib/webparts"),
 		};

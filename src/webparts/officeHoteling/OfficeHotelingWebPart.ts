@@ -49,17 +49,20 @@ export default class OfficeHotelingWebPart extends BaseClientSideWebPart<IOffice
 					let environmentMessage: string = "";
 					switch (context.app.host.name) {
 						case "Office": // running in Office
-							environmentMessage = this.context.isServedFromLocalhost
+							environmentMessage = this.context
+								.isServedFromLocalhost
 								? strings.AppLocalEnvironmentOffice
 								: strings.AppOfficeEnvironment;
 							break;
 						case "Outlook": // running in Outlook
-							environmentMessage = this.context.isServedFromLocalhost
+							environmentMessage = this.context
+								.isServedFromLocalhost
 								? strings.AppLocalEnvironmentOutlook
 								: strings.AppOutlookEnvironment;
 							break;
 						case "Teams": // running in Teams
-							environmentMessage = this.context.isServedFromLocalhost
+							environmentMessage = this.context
+								.isServedFromLocalhost
 								? strings.AppLocalEnvironmentTeams
 								: strings.AppTeamsTabEnvironment;
 							break;
@@ -84,9 +87,7 @@ export default class OfficeHotelingWebPart extends BaseClientSideWebPart<IOffice
 		}
 
 		this._isDarkTheme = !!currentTheme.isInverted;
-		const {
-			semanticColors,
-		} = currentTheme;
+		const { semanticColors } = currentTheme;
 
 		if (semanticColors) {
 			this.domElement.style.setProperty(

@@ -25,9 +25,10 @@
 			"@data/*": ["src/data/*"],
 			"@dist/*": ["dist/*"],
 			"@extensions/*": ["src/extensions/*"],
+			"@services/*": ["src/services/*"],
 			"@styles": ["src/styles"],
 			"@styles/*": ["src/styles/*"],
-			"@type/*": ["src/types/*"],
+			"@type/*": ["src/type/*"],
 			"@utils": ["src/utils"],
 			"@utils/*": ["src/utils/*"],
 			"@webparts/*": ["src/webparts/*"]

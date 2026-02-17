@@ -34,14 +34,6 @@
         }
       ]
     },
-    "office-hoteling-web-part": {
-      "components": [
-        {
-          "entrypoint": "./lib/webparts/officeHoteling/OfficeHotelingWebPart.js",
-          "manifest": "./src/webparts/officeHoteling/OfficeHotelingWebPart.manifest.json"
-        }
-      ]
-    },
     "manuals-and-handbooks-web-part": {
       "components": [
         {
@@ -153,6 +145,14 @@
           "manifest": "./src/webparts/urgencyPortal/UrgencyPortalWebPart.manifest.json"
         }
       ]
+    },
+    "office-hoteling-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/officeHoteling/OfficeHotelingWebPart.js",
+          "manifest": "./src/webparts/officeHoteling/OfficeHotelingWebPart.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},
@@ -160,7 +160,6 @@
     "LandingRedirectExtApplicationCustomizerStrings": "lib/extensions/landingRedirectExt/loc/{locale}.js",
     "WelcomeMessageWebPartStrings": "lib/webparts/welcomeMessage/loc/{locale}.js",
     "OfficeInformationWebPartStrings": "lib/webparts/officeInformation/loc/{locale}.js",
-    "OfficeHotelingWebPartStrings": "lib/webparts/officeHoteling/loc/{locale}.js",
     "ManualsAndHandbooksWebPartStrings": "lib/webparts/manualsAndHandbooks/loc/{locale}.js",
     "MostCommonFormsWebPartStrings": "lib/webparts/mostCommonForms/loc/{locale}.js",
     "AnnouncementsWebPartStrings": "lib/webparts/announcements/loc/{locale}.js",
@@ -176,6 +175,7 @@
     "PortalResourcesWebPartStrings": "lib/webparts/portalResources/loc/{locale}.js",
     "AttorneyWorkloadWebPartStrings": "lib/webparts/attorneyWorkload/loc/{locale}.js",
     "UrgencyPortalWebPartStrings": "lib/webparts/urgencyPortal/loc/{locale}.js",
-    "PropertyControlStrings": "node_modules/@pnp/spfx-property-controls/lib/loc/{locale}.js"
+    "PropertyControlStrings": "node_modules/@pnp/spfx-property-controls/lib/loc/{locale}.js",
+    "OfficeHotelingWebPartStrings": "lib/webparts/officeHoteling/loc/{locale}.js"
   }
 }

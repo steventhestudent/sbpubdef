@@ -1,11 +1,18 @@
 // BaseApi.ts
 import { PNPWrapper } from "@utils/PNPWrapper";
 
-export type AndOr = "and" | "or";
+export type KQLAndOr = "AND" | "OR";
+export type ODataAndOr = "and" | "or";
+export type AndOr = KQLAndOr | ODataAndOr;
+
+export type KQLCondition = string; // PromotedState=2
+export type ODataCondition = string; // column eq 'value'
+export type QueryCondition = KQLCondition | ODataCondition;
+
 export class QueryPart {
 	constructor(
 		public type: AndOr,
-		public condition: string,
+		public condition: QueryCondition,
 	) {}
 }
 
