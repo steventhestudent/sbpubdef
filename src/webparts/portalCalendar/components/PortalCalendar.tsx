@@ -6,6 +6,7 @@ import {
 	sameDay,
 	formatMonthYear,
 } from "@components/calendar/utils";
+import { Collapsible } from "@components/Collapsible";
 
 export default function PortalCalendar(
 	props: IPortalCalendarProps,
@@ -32,12 +33,18 @@ export default function PortalCalendar(
 		[cursor],
 	);
 
-	const gotoPrev: () => void = () => {
+	const gotoPrev: (e: React.MouseEvent<HTMLButtonElement>) => void = (
+		e: React.MouseEvent<HTMLButtonElement>,
+	) => {
+		e.stopPropagation();
 		const d = new Date(cursor);
 		d.setMonth(cursor.getMonth() - 1);
 		setCursor(d);
 	};
-	const gotoNext: () => void = () => {
+	const gotoNext: (e: React.MouseEvent<HTMLButtonElement>) => void = (
+		e: React.MouseEvent<HTMLButtonElement>,
+	) => {
+		e.stopPropagation();
 		const d = new Date(cursor);
 		d.setMonth(cursor.getMonth() + 1);
 		setCursor(d);
@@ -60,30 +67,34 @@ export default function PortalCalendar(
 		`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
 	return (
-		<section className="rounded-xl border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm">
-			<header className="flex items-center justify-between border-b border-slate-300 px-4 py-3 bg-[var(--webpart-header-bg-color)] rounded-t-xl">
-				<h4 className="text-base font-semibold text-slate-800">
-					Calendar / Events / Trainings
-				</h4>
-				<div className="flex items-center gap-2">
-					<button
-						onClick={gotoPrev}
-						className="rounded-md border border-slate-300 px-2 py-1 text-sm bg-[#c9cbcc]"
-					>
-						&larr;
-					</button>
-					<span className="text-sm text-slate-700">
-						{formatMonthYear(cursor)}
-					</span>
-					<button
-						onClick={gotoNext}
-						className="rounded-md border border-slate-300 px-2 py-1 text-sm bg-[#c9cbcc]"
-					>
-						&rarr;
-					</button>
-				</div>
-			</header>
-
+		<Collapsible
+			instanceId={props.context.instanceId}
+			hideChevron={true}
+			title={
+				<>
+					<h4 className="text-base font-semibold text-slate-800 float-left mt-[0.25em]">
+						Calendar / Events / Trainings
+					</h4>
+					<div className="flex items-center gap-2 float-right">
+						<button
+							onClick={gotoPrev}
+							className="rounded-md border border-slate-300 px-2 py-1 text-sm bg-[#c9cbcc]"
+						>
+							&larr;
+						</button>
+						<span className="text-sm text-slate-700">
+							{formatMonthYear(cursor)}
+						</span>
+						<button
+							onClick={gotoNext}
+							className="rounded-md border border-slate-300 px-2 py-1 text-sm bg-[#c9cbcc]"
+						>
+							&rarr;
+						</button>
+					</div>
+				</>
+			}
+		>
 			<div className="p-1 w-full">
 				<table className="border-collapse table-fixed w-full">
 					<thead>
@@ -197,6 +208,6 @@ export default function PortalCalendar(
 					<div className="p-2 text-xs text-slate-500">Loading…</div>
 				)}
 			</div>
-		</section>
+		</Collapsible>
 	);
 }

@@ -39,6 +39,7 @@ export type CollapsibleProps = {
 	className?: string;
 	contentClassName?: string;
 	headerClassName?: string;
+	hideChevron?: boolean;
 };
 
 export const Collapsible: React.FC<CollapsibleProps> = ({
@@ -51,6 +52,7 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 	className = "",
 	contentClassName = "",
 	headerClassName = "",
+	hideChevron = false,
 }) => {
 	const key = React.useMemo(
 		() => storageKey(instanceId, { pageKey }),
@@ -93,7 +95,7 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 	}, [key]);
 
 	// Accessible chevron button
-	const Chevron = (
+	const Chevron = hideChevron ? undefined : (
 		<button
 			type="button"
 			aria-expanded={!collapsed}
@@ -127,14 +129,14 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 			<header
 				className={`bg-[var(--webpart-header-bg-color)] rounded-t-xl border-b border-slate-800 px-3 py-2 flex items-center justify-between select-none ${headerClassName}`}
 			>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-2 w-full">
 					{headerClickable ? (
 						<button
 							type="button"
 							onClick={toggle}
 							aria-expanded={!collapsed}
 							aria-controls={`${instanceId}-content`}
-							className="text-left font-medium text-gray-800 hover:opacity-80 focus:outline-none"
+							className="text-left font-medium text-gray-800 hover:opacity-80 focus:outline-none w-full"
 						>
 							<h4 className="text-base font-semibold text-slate-800">
 								{title}
