@@ -129,6 +129,7 @@ export function WelcomeMessage(props: IWelcomeMessageProps): JSX.Element {
 		<PDRoleBasedSelect
 			alwaysHideSelect={true}
 			ctx={props.context}
+			preventRoleForcing={true}
 			views={{
 				Everyone: PDIntranetViewWrapper(props.userDisplayName),
 				PDIntranet: PDIntranetViewWrapper(props.userDisplayName),

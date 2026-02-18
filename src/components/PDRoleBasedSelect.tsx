@@ -21,12 +21,14 @@ export function PDRoleBasedSelect({
 			</span>
 		</div>
 	),
+	preventRoleForcing = false,
 }: {
 	ctx: WebPartContext;
 	views: RoleViews;
 	showSelect?: boolean;
 	alwaysHideSelect?: boolean;
 	selectLabel?: string | JSX.Element;
+	preventRoleForcing?: boolean;
 }): JSX.Element {
 	const cachedGroupNames: RoleKey[] =
 		JSON.parse(localStorage.getItem("userGroupNames") || '""') || [];
@@ -117,9 +119,10 @@ export function PDRoleBasedSelect({
 	}
 
 	function forceRole(role: string) {
+		if (preventRoleForcing) return;
 		setRole(role);
 		setUserGroups([role]);
-		setTimeout(() => (location.hash = ""));
+		setTimeout(() => (location.hash = "")); // wait for all other components to register hash change
 	}
 	React.useEffect(() => {
 		setTimeout(async () => {
