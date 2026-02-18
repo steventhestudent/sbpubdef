@@ -6,45 +6,8 @@ import RoleBasedViewProps from "@type/RoleBasedViewProps";
 import { ProcedureChecklist } from "@components/procedureChecklist/ProcedureChecklist";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 
-function PDIntranetView({
-	userGroupNames,
-	pnpWrapper,
-	sourceRole,
-}: RoleBasedViewProps): JSX.Element {
-	return (
-		<ul>
-			<li>mostCommonForms</li>
-			<li>manualsAndHandbooks</li>
-		</ul>
-	);
-}
-
-function ResourceGuides({
-	userGroupNames,
-	pnpWrapper,
-	sourceRole,
-}: RoleBasedViewProps): JSX.Element {
-	return (
-		<ul>
-			<li>ResourceGuides</li>
-		</ul>
-	);
-}
-
-function AttorneyWorkload({
-	userGroupNames,
-	pnpWrapper,
-	sourceRole,
-}: RoleBasedViewProps): JSX.Element {
-	return (
-		<ul>
-			<li>AttorneyWorkload</li>
-		</ul>
-	);
-}
-
 // a wrapper to pass other things we want from webpart props (context)
-function LOPViewWrapper(
+function CollapsibleWrapper(
 	ctx: WebPartContext,
 ): ({
 	userGroupNames,
@@ -56,16 +19,34 @@ function LOPViewWrapper(
 		pnpWrapper,
 		sourceRole,
 	}: RoleBasedViewProps): JSX.Element {
+		const collapsibleTitles: { [key: string]: string } = {
+			LOP: "LOPS - Legal Office Procedural System",
+			TrialSupervisor: "Attorney Workload",
+			CDD: "Resource Guides",
+		};
 		return (
 			<Collapsible
 				instanceId={ctx.instanceId}
-				title="LOPS - Legal Office Procedural System"
+				title={
+					(sourceRole && collapsibleTitles[sourceRole]) ||
+					sourceRole + " (Unplanned)"
+				}
 			>
-				<ProcedureChecklist
-					userGroupNames={userGroupNames}
-					pnpWrapper={pnpWrapper}
-					sourceRole={sourceRole}
-				/>
+				{(function () {
+					if (sourceRole === "CDD")
+						return <span>resource guides...</span>;
+					if (sourceRole === "TrialSupervisor")
+						return <span>AttorneyWorkload...</span>;
+					if (sourceRole === "LOP" || sourceRole === "IT")
+						return (
+							<ProcedureChecklist
+								userGroupNames={userGroupNames}
+								pnpWrapper={pnpWrapper}
+								sourceRole={sourceRole}
+							/>
+						);
+					return <span>mostCommonForms manualsAndHandbooks</span>;
+				})()}
 			</Collapsible>
 		);
 	};
@@ -76,14 +57,14 @@ export function PortalResources(props: IPortalResourcesProps): JSX.Element {
 		<PDRoleBasedSelect
 			ctx={props.context}
 			views={{
-				Everyone: PDIntranetView,
-				PDIntranet: PDIntranetView,
-				Attorney: PDIntranetView,
-				LOP: LOPViewWrapper(props.context),
-				HR: PDIntranetView,
-				IT: LOPViewWrapper(props.context),
-				CDD: ResourceGuides,
-				TrialSupervisor: AttorneyWorkload,
+				Everyone: CollapsibleWrapper(props.context),
+				PDIntranet: CollapsibleWrapper(props.context),
+				Attorney: CollapsibleWrapper(props.context),
+				LOP: CollapsibleWrapper(props.context),
+				HR: CollapsibleWrapper(props.context),
+				IT: CollapsibleWrapper(props.context),
+				CDD: CollapsibleWrapper(props.context),
+				TrialSupervisor: CollapsibleWrapper(props.context),
 			}}
 		/>
 	);
