@@ -106,11 +106,11 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 					/>
 					<button
 						type="button"
-						className="rounded-md border border-slate-300 px-3 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold"
+						className="rounded-md border-slate-300 px-3 text-sm text-white font-bold absolute right-[2.5em] mt-[0.6em] opacity-60 hover:opacity-100"
 						onClick={() => setSearch((s) => s.trim())}
 						aria-label="Run search"
 					>
-						↠
+						🔍
 					</button>
 				</div>
 

@@ -89,9 +89,23 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 						placeholder="Search any field…"
 						value={searchTerm}
 						onChange={handleSearchChange}
-						className="mt-1 w-full rounded-md border border-slate-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-[var(--pd-muted)]"
+						className="mt-1 w-full rounded-md border border-slate-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-[var(--pd-muted)]"
 					/>
+					<button
+						type="button"
+						className="rounded-md border-slate-300 px-3 text-sm text-white font-bold absolute right-[1.5em] mt-[0.9em] opacity-60 hover:opacity-100"
+						aria-label="Run search"
+					>
+						🔍
+					</button>
 				</form>
+
+				{/* status text */}
+				<p className="mt-2 text-xs text-slate-500">
+					{staff.length < 2
+						? "Loading directory…"
+						: `Showing ${filteredStaff.length} of ${staff.length} matches.`}
+				</p>
 
 				{/* Staff List */}
 				<div className="mt-2 max-h-[300px] overflow-y-auto rounded-md border border-slate-400">

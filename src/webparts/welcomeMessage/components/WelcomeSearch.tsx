@@ -34,16 +34,16 @@ export const WelcomeSearch: () => JSX.Element = () => {
 					data-tab="true"
 					maxLength={500}
 					placeholder="Search…"
-					className="w-full rounded-l-md border border-slate-500 hover:border-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white"
+					className="w-full rounded-l-md border border-slate-500 hover:border-slate-800 px-3 py-2 text-sm focus:outline-none bg-white"
 					aria-expanded="false"
 					name="WelcomeSearch"
 				/>
 				<button
 					type="submit"
-					className="rounded-r-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 font-bold"
+					className="rounded-r-md bg-[#0078D4] px-4 text-sm font-medium text-white hover:bg-[#005a9e] font-bold transition-colors duration-100"
 					aria-label="Run search"
 				>
-					↠
+					🔍
 				</button>
 			</div>
 		</form>

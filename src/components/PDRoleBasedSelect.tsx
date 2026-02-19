@@ -147,7 +147,7 @@ export function PDRoleBasedSelect({
 	if (alwaysHideSelect !== undefined) shouldShowSelect = !alwaysHideSelect;
 
 	return (
-		<section className="border border-[var(--webpart-border-color)] !bg-[var(--webpart-bg-color)] shadow-sm">
+		<section className="!bg-[var(--webpart-bg-color)] shadow-sm">
 			<header
 				data-show-select={shouldShowSelect}
 				className="hidden data-[show-select=true]:multi-['flex']

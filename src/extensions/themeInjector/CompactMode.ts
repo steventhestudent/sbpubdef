@@ -3,12 +3,11 @@ function addCompactModeStylesheet(): void {
 	stylesheet.id = "themeInjector.CompactModeStylesheet";
 	stylesheet.appendChild(
 		document.createTextNode(`
-					.CanvasZone {padding: 0 !important;}
-					.CanvasZoneSectionContainer .CanvasSection {padding: 0 !important;}
-					.CanvasSection .ControlZone {margin: 0 !important; padding: 0 !important;}
-					
+					.CanvasSection .ControlZone {margin: 0 !important;}
 					#DismissibleAnnouncementStrip.collapsed {margin-top: 4px; margin-bottom: 4px;}
 					footer {margin-top: 5px !important;}
+					/* hide sidebar */
+					#sp-appBar {display: none !important;}
 				`),
 	);
 	document.head.appendChild(stylesheet);
@@ -19,17 +18,32 @@ function addHalfCompactModeStylesheet(): void {
 	stylesheet.id = "themeInjector.HalfCompactModeStylesheet";
 	stylesheet.appendChild(
 		document.createTextNode(`
-					.CanvasZone {padding: 4px !important;}
-					.CanvasZoneSectionContainer .CanvasSection {padding: 4px !important;}
-					.CanvasSection .ControlZone {margin: 4px !important; padding: 4px !important;}
-					
+					.CanvasSection .ControlZone {margin: 8px !important;}
 					#DismissibleAnnouncementStrip.collapsed {margin-top: 4px; margin-bottom: 4px;}
+					/* hide sidebar */
+					#sp-appBar {display: none !important;}
+				`),
+	);
+	document.head.appendChild(stylesheet);
+}
+
+function addAlwaysZeroPaddingStylesheet(): void {
+	const stylesheet = document.createElement("style");
+	stylesheet.id = "themeInjector.AlwaysZeroPaddingStylesheet";
+	stylesheet.appendChild(
+		document.createTextNode(`
+					.CanvasZone {padding: 0px !important;}
+					.CanvasZoneSectionContainer .CanvasSection {padding: 0px !important;}
+					.CanvasSection .ControlZone {padding: 0px !important; margin: 16px !important;}
+					/* hide hub navigation */
+					.ms-HubNav {display: none !important;}
 				`),
 	);
 	document.head.appendChild(stylesheet);
 }
 
 export function CompactMode(): void {
+	addAlwaysZeroPaddingStylesheet();
 	function toggleCompactModeStylesheet(e: MouseEvent): void {
 		document
 			.querySelectorAll(
