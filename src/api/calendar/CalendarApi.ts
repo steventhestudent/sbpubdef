@@ -9,7 +9,7 @@ import {
 	PDEvent,
 	toDateSafe,
 	formatTime,
-} from "./utils";
+} from "@utils/calendar";
 
 // If you already have a current user email util, use that. // Otherwise, derive from ctx:
 function currentUserEmail(ctx: WebPartContext): string | undefined {
