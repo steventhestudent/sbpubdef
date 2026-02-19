@@ -118,7 +118,7 @@ export function PDRoleBasedSelect({
 		return "Everyone";
 	}
 
-	function forceRole(role: string) {
+	function forceRole(role: string): void {
 		if (preventRoleForcing) return;
 		setRole(role);
 		setUserGroups([role]);

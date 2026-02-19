@@ -50,7 +50,9 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 					date: i.EventDate, // ISO from list
 					endDate: i.EndDate,
 					location: i.Location,
-					detailsUrl: `${siteOrigin}/_layouts/15/Event.aspx?ListGuid=${listGuid}&ItemId=${i.Id}`,
+					// detailsUrl: `${siteOrigin}/sites/PD-Intranet/Lists/Events/DispForm.aspx?ID=${i.Id}`,
+					// detailsUrl: `${siteOrigin}/_layouts/15/Event.aspx?ListGuid=${listGuid}&ItemId=${i.Id}`,
+					detailsUrl: `${siteOrigin}/sites/PD-Intranet/_layouts/15/Event.aspx?ListGuid=${listGuid}&ItemId=${i.Id}`,
 					siteUrl: siteUrl || window.location.pathname,
 					PDDepartment: i.PD_x0020_Department,
 				}),

@@ -48,7 +48,7 @@ function PDIntranetView({
 
 	return (
 		<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-			<div className="overflow-y-auto max-h-96">
+			<div className="overflow-y-auto max-h-72">
 				<table
 					className="min-w-full divide-y divide-slate-200 table-fixed"
 					width="100%"
