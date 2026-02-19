@@ -195,13 +195,28 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 		ctx: WebPartContext,
 		opts?: EventGetOpts & { includeOutlook?: boolean },
 	): Promise<PDEvent[]> {
+		const shouldUseCache = this.pnpWrapper.shouldUseCache();
 		const sharePointEvents = await this.getRest(50, opts);
 		if (!opts?.includeOutlook) return sharePointEvents;
 
-		const [personal, group] = await Promise.all([
-			this.getOutlookEvents(ctx, 10),
-			this.getGroupCalendarEvents(ctx, 10),
-		]);
+		let personal;
+		let group;
+		if (shouldUseCache) {
+			const cachedGraphEvents =
+				sessionStorage.getItem("cachedGraphEvents");
+			if (cachedGraphEvents)
+				[personal, group] = JSON.parse(cachedGraphEvents);
+		}
+		if (!personal || !group) {
+			[personal, group] = await Promise.all([
+				this.getOutlookEvents(ctx, 10),
+				this.getGroupCalendarEvents(ctx, 10),
+			]);
+			sessionStorage.setItem(
+				"cachedGraphEvents",
+				JSON.stringify([personal, group]),
+			);
+		}
 
 		const combined: PDEvent[] = [...sharePointEvents, ...personal, ...group]
 			.filter((e) => e.date && new Date(e.date).getTime() >= Date.now())

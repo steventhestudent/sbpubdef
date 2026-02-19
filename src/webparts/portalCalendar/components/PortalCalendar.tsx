@@ -4,7 +4,7 @@ import { Collapsible } from "@components/Collapsible";
 import { PortalCalendarHeader } from "@components/calendar/PortalCalendarHeader";
 import { buildMonthMatrix } from "@utils/calendar";
 import { PortalCalendarCell } from "@components/calendar/PortalCalendarCell";
-import { useCalendarData } from "@api/calendar/CalendarApi";
+import { useCalendarData } from "@api/calendar";
 
 export default function PortalCalendar(
 	props: IPortalCalendarProps,
