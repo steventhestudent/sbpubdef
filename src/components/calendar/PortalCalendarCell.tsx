@@ -1,5 +1,5 @@
 import * as React from "react";
-import { CalendarItem, sameDay } from "@utils/calendar";
+import { CalendarItem, sameDay, wheelHandler } from "@utils/calendar";
 import { PortalCalendarCellItem } from "@components/calendar/PortalCalendarCellItem";
 
 export const PortalCalendarCell = ({
@@ -28,6 +28,11 @@ export const PortalCalendarCell = ({
 	const dayKey: (d: Date) => string = (d: Date) =>
 		`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 	const dayItems = byKey.get(dayKey(date)) || [];
+
+	React.useEffect(() => {
+		document.addEventListener("wheel", wheelHandler, { passive: false });
+	}, []);
+
 	return (
 		<td
 			className={`min-h-10 border border-[var(--webpart-inner-border-color)] align-top p-1 ${inThisMonth(date) ? "" : "bg-slate-50"}`}
@@ -42,7 +47,7 @@ export const PortalCalendarCell = ({
 				)}
 			</div>
 
-			<ul className="space-y-1 mt-1 max-h-[5.7em] overflow-y-auto pr-1">
+			<ul className="space-y-1 mt-1 max-h-[5.7em] overflow-hidden pr-1">
 				{dayItems.length === 0
 					? null
 					: dayItems.map((item, i) => (

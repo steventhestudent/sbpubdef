@@ -79,3 +79,23 @@ export function formatTime(d?: Date): string {
 export function formatMonthYear(d: Date): string {
 	return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 }
+
+export const findCellList: (
+	tar: HTMLElement,
+	level?: number,
+) => HTMLElement | undefined = (tar, level = 0) => {
+	if (tar.nodeName === "UL")
+		return tar.classList.contains("overflow-hidden") ? tar : undefined;
+	if (tar.nodeName === "LI")
+		return tar.parentElement!.classList.contains("overflow-hidden")
+			? tar.parentElement!
+			: undefined;
+	return level < 2 ? findCellList(tar.parentElement!, ++level) : undefined;
+};
+
+export const wheelHandler = (e: WheelEvent): void => {
+	const cellListTarget = findCellList(e.target! as HTMLElement);
+	if (!cellListTarget) return;
+	e.preventDefault();
+	cellListTarget.scrollTop += e.deltaY;
+};
