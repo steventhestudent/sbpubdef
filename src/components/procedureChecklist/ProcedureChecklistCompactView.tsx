@@ -26,6 +26,15 @@ export const ProcedureChecklistCompactView = ({
 
 	const [sublistIndex, setSublistIndex] = React.useState<number>(0);
 	const getSublist = (proc: ProcedureChecklistItem, i: number) => {
+		console.log(proc.obj); //cdd ready referral form has no list_txt!???
+		if (!proc.obj!.lists.length) {
+			proc.obj!.lists[0] = {
+				list_txt: "",
+				associated_images: [],
+				list_page_range: [0, 0],
+			};
+			return [""];
+		}
 		return proc
 			.obj!.lists[i].list_txt.split("\n")
 			.filter((str: string) => str.trim() !== "");

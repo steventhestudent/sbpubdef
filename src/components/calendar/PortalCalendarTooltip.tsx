@@ -59,7 +59,7 @@ export function PortalCalendarTooltip({
 		<div
 			id="PortalCalendarTooltip"
 			style={{ left: showOptions.x + "px", top: showOptions.y + "px" }}
-			className="z-[99999] absolute w-[326px] h-[396px] bg-red-900"
+			className="z-[99999] absolute w-[326px] h-[396px]"
 		>
 			Tooltip
 		</div>
