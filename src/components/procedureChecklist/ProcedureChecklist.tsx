@@ -103,6 +103,13 @@ export function ProcedureChecklist({
 					value={search}
 					onChange={(e) => setSearch(e.target.value)}
 				/>
+				<button
+					type="button"
+					className="rounded-md border-slate-300 px-3 text-sm text-white font-bold absolute right-[1.333em] mt-[0.666em] opacity-60 hover:opacity-100"
+					aria-label="Run search"
+				>
+					🔍
+				</button>
 			</div>
 			<p className="mt-2 text-xs text-slate-500">
 				{isLoading
