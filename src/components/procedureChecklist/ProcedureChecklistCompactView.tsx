@@ -26,11 +26,15 @@ export const ProcedureChecklistCompactView = ({
 
 	const [sublistIndex, setSublistIndex] = React.useState<number>(0);
 	const getSublist = (proc: ProcedureChecklistItem, i: number) => {
-		return proc.obj!.lists[i].list_txt.split("\n");
+		return proc
+			.obj!.lists[i].list_txt.split("\n")
+			.filter((str: string) => str.trim() !== "");
 	};
 	const sublist = getSublist(selectedProcedure, sublistIndex);
 
-	const [showOverlay, setShowOverlay] = React.useState<boolean>(false);
+	const [showOverlay, setShowOverlay] = React.useState<boolean | string>(
+		false,
+	);
 
 	const goToPreviousStep: () => void = () => {
 		if (currentStep > 1) setCurrentStep(currentStep - 1);
@@ -56,7 +60,6 @@ export const ProcedureChecklistCompactView = ({
 	return (
 		<div className="">
 			<p className="text-xs text-slate-500">
-				{`Viewing: ${selectedProcedure.title} - List ${sublistIndex + 1}/${selectedProcedure.obj.lists.length} Step ${currentStep}/${sublist.length}`}
 				{editorMode ? (
 					<span className="float-right hover:text-blue-500 cursor-pointer">
 						re-import
@@ -68,10 +71,36 @@ export const ProcedureChecklistCompactView = ({
 			<h2 className="mt-4">
 				{selectedProcedure.title || selectedProcedure.filename}
 			</h2>
+			{selectedProcedure.obj.effectiveDate ? (
+				<>
+					<b>Effective Date:</b> {selectedProcedure.obj.effectiveDate}
+				</>
+			) : (
+				<></>
+			)}
+			<br />
+			{selectedProcedure.obj.purpose ? (
+				<>
+					<b>Purpose:</b>
+					<div className="text-blue-500 hover:underline cursor-pointer float-right">
+						Show More...
+					</div>
+				</>
+			) : (
+				<></>
+			)}
+			<div className="max-h-[2.5em] overflow-hidden relative">
+				{selectedProcedure.obj.purpose}
+			</div>
 			{showOverlay ? (
 				<ProcedureChecklistOverlay
 					proc={selectedProcedure}
 					onClose={() => setShowOverlay(false)}
+					url={
+						showOverlay && showOverlay !== true
+							? showOverlay
+							: undefined
+					}
 				/>
 			) : (
 				<></>
@@ -109,17 +138,28 @@ export const ProcedureChecklistCompactView = ({
 							<div className="text-center px-4">
 								<p className="text-4xl mb-2">📋</p>
 								<p className="text-sm font-semibold text-slate-700">
-									Step {currentStep}
+									Sub-Step {currentStep} / {sublist.length}
 								</p>
 								<p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
 									{sublist[currentStep - 1]}
 								</p>
 							</div>
 						</div>
-						<p className="text-xs text-slate-500 italic">
-							Actual procedure screenshot will appear here
-						</p>
 					</div>
+				</div>
+				<div className="overflow-hidden w-full h-[80px] bg-gradient-to-br from-blue-50 to-slate-100 rounded-lg justify-center border-2 border-dashed border-slate-300">
+					{selectedProcedure.obj.lists[
+						sublistIndex
+					].associated_images.map((src, i) => (
+						<div className="h-full inline-block w-[80px] bg-black outline-1 outline-white cursor-pointer mr-2">
+							<img
+								key={i}
+								src={src}
+								className="h-full"
+								onClick={() => setShowOverlay(src)}
+							/>
+						</div>
+					))}
 				</div>
 				<div className="px-4 py-3 bg-slate-50 border-t border-slate-300">
 					<div className="flex items-center justify-between mb-2">
@@ -131,7 +171,7 @@ export const ProcedureChecklistCompactView = ({
 							← Back
 						</button>
 						<span className="text-sm text-slate-600 font-medium">
-							Step {currentStep} of {sublist.length}
+							{`Sub-list ${sublistIndex + 1} / ${selectedProcedure.obj.lists.length}`}
 						</span>
 						<button
 							onClick={goToNextStep}

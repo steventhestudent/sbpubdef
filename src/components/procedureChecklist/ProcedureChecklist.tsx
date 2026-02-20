@@ -97,7 +97,7 @@ export function ProcedureChecklist({
 				<p className="mt-2 text-xs text-slate-500">
 					{`${filtered.length} procedures available`}
 					<span className="float-right hover:text-blue-500 cursor-pointer">
-						{selectedProcedure ? "re-import" : "➕"}
+						{editorMode ? "➕" : ""}
 					</span>
 				</p>
 			) : (

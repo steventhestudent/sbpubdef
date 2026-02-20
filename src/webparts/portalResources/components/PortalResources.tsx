@@ -35,9 +35,13 @@ function CollapsibleWrapper(
 			>
 				{(function () {
 					if (sourceRole === "CDD")
-						return <span>resource guides...</span>;
+						return (
+							<div className="min-h-64">resource guides...</div>
+						);
 					if (sourceRole === "TrialSupervisor")
-						return <span>AttorneyWorkload...</span>;
+						return (
+							<div className="min-h-64">AttorneyWorkload...</div>
+						);
 					if (sourceRole === "LOP" || sourceRole === "IT")
 						return (
 							<ProcedureChecklist
