@@ -93,7 +93,7 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 					/>
 					<button
 						type="button"
-						className="rounded-md border-slate-300 px-3 text-sm text-white font-bold absolute right-[1.5em] mt-[0.9em] opacity-60 hover:opacity-100"
+						className="rounded-md border-slate-300 px-3 text-sm text-white font-bold absolute right-[1em] mt-[0.9em] opacity-60 hover:opacity-100"
 						aria-label="Run search"
 					>
 						🔍

@@ -6,10 +6,14 @@ export const PortalCalendarCell = ({
 	cursor,
 	items,
 	date,
+	onMouseEnterItem,
+	onMouseLeaveItem,
 }: {
 	cursor: Date;
 	items: CalendarItem[];
 	date: Date;
+	onMouseEnterItem?: (e: React.MouseEvent<HTMLLIElement>) => void;
+	onMouseLeaveItem?: (e: React.MouseEvent<HTMLLIElement>) => void;
 }): JSX.Element => {
 	const today = React.useMemo(() => new Date(), []);
 	const inThisMonth: (d: Date) => boolean = (d: Date) =>
@@ -51,7 +55,12 @@ export const PortalCalendarCell = ({
 				{dayItems.length === 0
 					? null
 					: dayItems.map((item, i) => (
-							<PortalCalendarCellItem key={i} item={item} />
+							<PortalCalendarCellItem
+								key={i}
+								item={item}
+								onMouseEnter={onMouseEnterItem}
+								onMouseLeave={onMouseLeaveItem}
+							/>
 						))}
 			</ul>
 		</td>
