@@ -10,7 +10,7 @@ export const tooltipEnter = (
 		React.SetStateAction<PortalCalendarTooltipShowOptions | undefined>
 	>,
 	$rel: React.RefObject<HTMLDivElement>,
-) => {
+): ((e: React.MouseEvent<HTMLLIElement>) => void) => {
 	return (e: React.MouseEvent<HTMLLIElement>) => {
 		const relRect = $rel.current!.getClientRects()[0];
 		console.log(
@@ -25,7 +25,7 @@ export const tooltipEnter = (
 	};
 };
 
-export function isThisElTooltip(el: Element) {
+export function isThisElTooltip(el: Element): boolean {
 	return el.id === "PortalCalendarTooltip";
 }
 
@@ -33,7 +33,7 @@ export const tooltipLeave = (
 	setTooltipShowOptions: React.Dispatch<
 		React.SetStateAction<PortalCalendarTooltipShowOptions | undefined>
 	>,
-) => {
+): ((e: React.MouseEvent<HTMLLIElement>) => void) => {
 	return (e: React.MouseEvent<HTMLLIElement>) => {
 		const elementUnderMouse = document.elementFromPoint(
 			e.clientX,
@@ -52,8 +52,10 @@ export function PortalCalendarTooltip({
 	setTooltipShowOptions: React.Dispatch<
 		React.SetStateAction<PortalCalendarTooltipShowOptions | undefined>
 	>;
-}) {
-	return !showOptions ? null : (
+}): JSX.Element {
+	return !showOptions ? (
+		<></>
+	) : (
 		<div
 			id="PortalCalendarTooltip"
 			style={{ left: showOptions.x + "px", top: showOptions.y + "px" }}
