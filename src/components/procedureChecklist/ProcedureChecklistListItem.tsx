@@ -18,7 +18,7 @@ export const ProcedureChecklistListItem = ({
 			<div className="flex items-center justify-between">
 				<div>
 					<p className="text-sm font-semibold text-slate-750">
-						{procedure.title}
+						{procedure.title || procedure.filename}
 					</p>
 					<p className="text-xs text-slate-600 mt-0.5">
 						Category: {procedure.category} • {procedure.pageCount}{" "}

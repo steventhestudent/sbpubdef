@@ -1,5 +1,6 @@
 import * as React from "react";
 import { ProcedureChecklistItem } from "@type/ProcedureChecklist";
+import { ProcedureChecklistOverlay } from "./ProcedureChecklistOverlay";
 
 export const ProcedureChecklistCompactView = ({
 	selectedProcedure,
@@ -25,6 +26,8 @@ export const ProcedureChecklistCompactView = ({
 	const sublist =
 		selectedProcedure.obj.lists[sublistIndex].list_txt.split("\n");
 
+	const [showOverlay, setShowOverlay] = React.useState<boolean>(false);
+
 	const goToNextStep: () => void = () => {
 		if (selectedProcedure && currentStep < sublist.length)
 			setCurrentStep(currentStep + 1);
@@ -35,8 +38,18 @@ export const ProcedureChecklistCompactView = ({
 	};
 
 	console.log(setSublistIndex);
+
 	return (
 		<div className="mt-3">
+			<h2>{selectedProcedure.title || selectedProcedure.filename}</h2>
+			{showOverlay ? (
+				<ProcedureChecklistOverlay
+					proc={selectedProcedure}
+					onClose={() => setShowOverlay(false)}
+				/>
+			) : (
+				<></>
+			)}
 			<div>
 				<button
 					onClick={() => setSelectedProcedure(null)}
@@ -44,6 +57,15 @@ export const ProcedureChecklistCompactView = ({
 				>
 					← Back to procedure list
 				</button>
+				<span
+					title="Fullscreen"
+					className="block text-center text-blue-600 hover:underline text-xs cursor-pointer float-right ml-2"
+					onClick={() => {
+						setShowOverlay(true);
+					}}
+				>
+					⛶
+				</span>
 				<span
 					title="Download..."
 					className="block text-center text-blue-600 hover:underline text-xs cursor-pointer float-right"

@@ -70,23 +70,27 @@ export function ProcedureChecklist({
 
 	return (
 		<section className="p-4 text-sm ">
-			<div className="mt-1 flex gap-2">
-				<input
-					id="lops-search"
-					type="search"
-					className="w-full rounded-md border border-slate-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-					placeholder="Procedure name or category…"
-					value={search}
-					onChange={(e) => setSearch(e.target.value)}
-				/>
-				<button
-					type="button"
-					className="rounded-md border-slate-300 px-3 text-sm text-white font-bold absolute right-[1.333em] mt-[0.666em] opacity-60 hover:opacity-100"
-					aria-label="Run search"
-				>
-					🔍
-				</button>
-			</div>
+			{selectedProcedure ? (
+				<></>
+			) : (
+				<div className="mt-1 flex gap-2">
+					<input
+						id="lops-search"
+						type="search"
+						className="w-full rounded-md border border-slate-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+						placeholder="Procedure name or category…"
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+					/>
+					<button
+						type="button"
+						className="rounded-md border-slate-300 px-3 text-sm text-white font-bold absolute right-[1.333em] mt-[0.666em] opacity-60 hover:opacity-100"
+						aria-label="Run search"
+					>
+						🔍
+					</button>
+				</div>
+			)}
 			<p className="mt-2 text-xs text-slate-500">
 				{isLoading
 					? "Loading procedures…"
@@ -95,7 +99,9 @@ export function ProcedureChecklist({
 							`Viewing: ${selectedProcedure.title} - Step ${currentStep} of ${selectedProcedure.obj ? selectedProcedure.obj.lists.length : "..."}`
 						: `${filtered.length} procedures available`}
 				{editorMode ? (
-					<span className="float-right">import</span>
+					<span className="float-right hover:text-blue-500 cursor-pointer">
+						{selectedProcedure ? "re-import" : "➕"}
+					</span>
 				) : (
 					<></>
 				)}
