@@ -20,6 +20,7 @@ function CollapsibleWrapper(
 		sourceRole,
 	}: RoleBasedViewProps): JSX.Element {
 		const collapsibleTitles: { [key: string]: string } = {
+			IT: "LOPS - Legal Office Procedural System",
 			LOP: "LOPS - Legal Office Procedural System",
 			TrialSupervisor: "Attorney Workload",
 			CDD: "Resource Guides",

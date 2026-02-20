@@ -4,12 +4,14 @@ import { ProcedureChecklistApi } from "@api/ProcedureChecklist";
 import { ProcedureChecklistItem } from "@type/ProcedureChecklist";
 import * as Utils from "@utils";
 import { ProcedureChecklistCompactView } from "@components/procedureChecklist/ProcedureChecklistCompactView";
+import { ProcedureChecklistListItem } from "@components/procedureChecklist/ProcedureChecklistListItem";
 
 export function ProcedureChecklist({
 	userGroupNames,
 	pnpWrapper,
 	sourceRole,
 }: RoleBasedViewProps): JSX.Element {
+	const editorMode: boolean = sourceRole === "IT";
 	const [procedures, setProcedures] = React.useState<
 		ProcedureChecklistItem[]
 	>([]);
@@ -18,9 +20,6 @@ export function ProcedureChecklist({
 	const [selectedProcedure, setSelectedProcedure] =
 		React.useState<ProcedureChecklistItem | null>(null);
 	const [currentStep, setCurrentStep] = React.useState<number>(1);
-	const sublistSteps = selectedProcedure
-		? selectedProcedure.obj!.lists.length
-		: 0;
 
 	const procedureChecklistApi = new ProcedureChecklistApi(pnpWrapper);
 	const load: () => Promise<void> = async () => {
@@ -55,15 +54,22 @@ export function ProcedureChecklist({
 		});
 	}, [search, procedures]);
 
-	const handleSelectProcedure: (procedure: ProcedureChecklistItem) => void = (
-		procedure: ProcedureChecklistItem,
-	) => {
-		setSelectedProcedure(procedure);
+	const onProcedureSelected = (proc: ProcedureChecklistItem) => {
+		setSelectedProcedure(proc);
 		setCurrentStep(1);
+		if (!proc.obj)
+			Utils.loadJSON(pnpWrapper.ctx, proc.json, (data) => {
+				const i = procedures.indexOf(proc);
+				proc.obj = data;
+				procedures[i] = proc;
+				setProcedures(procedures);
+				setSelectedProcedure(null);
+				setSelectedProcedure(procedures[i]);
+			});
 	};
 
 	return (
-		<section className="p-4 text-sm">
+		<section className="p-4 text-sm ">
 			<div className="mt-1 flex gap-2">
 				<input
 					id="lops-search"
@@ -85,8 +91,14 @@ export function ProcedureChecklist({
 				{isLoading
 					? "Loading procedures…"
 					: selectedProcedure
-						? `Viewing: ${selectedProcedure.title} - Step ${currentStep} of ${sublistSteps}`
+						? // ? `Viewing: ${selectedProcedure.title} - Step ${currentStep} of ${sublistSteps}`
+							`Viewing: ${selectedProcedure.title} - Step ${currentStep} of ${selectedProcedure.obj ? selectedProcedure.obj.lists.length : "..."}`
 						: `${filtered.length} procedures available`}
+				{editorMode ? (
+					<span className="float-right">import</span>
+				) : (
+					<></>
+				)}
 			</p>
 			{!isLoading && (
 				<>
@@ -99,29 +111,13 @@ export function ProcedureChecklist({
 							) : (
 								<ul className="mt-3 divide-y divide-slate-400 rounded-md border border-slate-400 bg-white overflow-y-scroll h-[15em]">
 									{filtered.map((proc) => (
-										<li
+										<ProcedureChecklistListItem
 											key={proc.id}
-											className="px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors"
-											onClick={() =>
-												handleSelectProcedure(proc)
+											procedure={proc}
+											onProcedureSelected={
+												onProcedureSelected
 											}
-										>
-											<div className="flex items-center justify-between">
-												<div>
-													<p className="text-sm font-semibold text-slate-750">
-														{proc.title}
-													</p>
-													<p className="text-xs text-slate-600 mt-0.5">
-														Category:{" "}
-														{proc.category} •{" "}
-														{sublistSteps} steps
-													</p>
-												</div>
-												<span className="text-blue-600 text-xs font-medium">
-													View →
-												</span>
-											</div>
-										</li>
+										/>
 									))}
 								</ul>
 							)}
@@ -132,7 +128,6 @@ export function ProcedureChecklist({
 							setSelectedProcedure={setSelectedProcedure}
 							currentStep={currentStep}
 							setCurrentStep={setCurrentStep}
-							sublistSteps={sublistSteps}
 						/>
 					)}
 				</>
