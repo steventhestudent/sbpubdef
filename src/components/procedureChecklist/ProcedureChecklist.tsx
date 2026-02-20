@@ -91,21 +91,18 @@ export function ProcedureChecklist({
 					</button>
 				</div>
 			)}
-			<p className="mt-2 text-xs text-slate-500">
-				{isLoading
-					? "Loading procedures…"
-					: selectedProcedure
-						? // ? `Viewing: ${selectedProcedure.title} - Step ${currentStep} of ${sublistSteps}`
-							`Viewing: ${selectedProcedure.title} - Step ${currentStep} of ${selectedProcedure.obj ? selectedProcedure.obj.lists.length : "..."}`
-						: `${filtered.length} procedures available`}
-				{editorMode ? (
+			{isLoading ? (
+				"Loading procedures…"
+			) : !selectedProcedure ? (
+				<p className="mt-2 text-xs text-slate-500">
+					{`${filtered.length} procedures available`}
 					<span className="float-right hover:text-blue-500 cursor-pointer">
 						{selectedProcedure ? "re-import" : "➕"}
 					</span>
-				) : (
-					<></>
-				)}
-			</p>
+				</p>
+			) : (
+				<></>
+			)}
 			{!isLoading && (
 				<>
 					{!selectedProcedure ? (
@@ -134,6 +131,7 @@ export function ProcedureChecklist({
 							setSelectedProcedure={setSelectedProcedure}
 							currentStep={currentStep}
 							setCurrentStep={setCurrentStep}
+							editorMode={editorMode}
 						/>
 					)}
 				</>

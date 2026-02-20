@@ -7,6 +7,7 @@ export const ProcedureChecklistCompactView = ({
 	setSelectedProcedure,
 	currentStep,
 	setCurrentStep,
+	editorMode = false,
 }: {
 	selectedProcedure: ProcedureChecklistItem;
 	setSelectedProcedure: (
@@ -15,6 +16,7 @@ export const ProcedureChecklistCompactView = ({
 	) => void;
 	currentStep: number;
 	setCurrentStep: (value: ((prevState: number) => number) | number) => void;
+	editorMode?: boolean;
 }) => {
 	React.useEffect(() => {
 		// setSteps([]); //todo: <-------------------
@@ -23,25 +25,49 @@ export const ProcedureChecklistCompactView = ({
 	if (!selectedProcedure.obj) return <div>loading...</div>;
 
 	const [sublistIndex, setSublistIndex] = React.useState<number>(0);
-	const sublist =
-		selectedProcedure.obj.lists[sublistIndex].list_txt.split("\n");
+	const getSublist = (proc: ProcedureChecklistItem, i: number) => {
+		return proc.obj!.lists[i].list_txt.split("\n");
+	};
+	const sublist = getSublist(selectedProcedure, sublistIndex);
 
 	const [showOverlay, setShowOverlay] = React.useState<boolean>(false);
 
-	const goToNextStep: () => void = () => {
-		if (selectedProcedure && currentStep < sublist.length)
-			setCurrentStep(currentStep + 1);
-	};
-
 	const goToPreviousStep: () => void = () => {
 		if (currentStep > 1) setCurrentStep(currentStep - 1);
+		else if (sublistIndex > 0) {
+			setSublistIndex(sublistIndex - 1);
+			setCurrentStep(-1);
+			console.log(`prev list`);
+		}
+	};
+	React.useEffect(() => {
+		if (currentStep === -1) setCurrentStep(sublist.length);
+	}, [currentStep]);
+
+	const goToNextStep: () => void = () => {
+		if (currentStep < sublist.length) setCurrentStep(currentStep + 1);
+		else if (sublistIndex < selectedProcedure.obj!.lists.length - 1) {
+			setSublistIndex(sublistIndex + 1);
+			setCurrentStep(1);
+			console.log(`next list`);
+		}
 	};
 
-	console.log(setSublistIndex);
-
 	return (
-		<div className="mt-3">
-			<h2>{selectedProcedure.title || selectedProcedure.filename}</h2>
+		<div className="">
+			<p className="text-xs text-slate-500">
+				{`Viewing: ${selectedProcedure.title} - List ${sublistIndex + 1}/${selectedProcedure.obj.lists.length} Step ${currentStep}/${sublist.length}`}
+				{editorMode ? (
+					<span className="float-right hover:text-blue-500 cursor-pointer">
+						re-import
+					</span>
+				) : (
+					<></>
+				)}
+			</p>
+			<h2 className="mt-4">
+				{selectedProcedure.title || selectedProcedure.filename}
+			</h2>
 			{showOverlay ? (
 				<ProcedureChecklistOverlay
 					proc={selectedProcedure}
@@ -99,7 +125,7 @@ export const ProcedureChecklistCompactView = ({
 					<div className="flex items-center justify-between mb-2">
 						<button
 							onClick={goToPreviousStep}
-							disabled={currentStep === 1}
+							disabled={currentStep === 1 && sublistIndex === 0}
 							className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
 						>
 							← Back
@@ -109,7 +135,11 @@ export const ProcedureChecklistCompactView = ({
 						</span>
 						<button
 							onClick={goToNextStep}
-							disabled={currentStep === sublist.length}
+							disabled={
+								currentStep === sublist.length &&
+								sublistIndex ==
+									selectedProcedure.obj!.lists.length - 1
+							}
 							className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
 						>
 							Next →
