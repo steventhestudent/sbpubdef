@@ -42,8 +42,21 @@ export default function PortalCalendar(
 		d.setMonth(cursor.getMonth() + 1);
 		setCursor(d);
 	};
+	const refreshCalendar = (): void => {
+		load({ includeOutlook: true }).catch((error) => {
+			console.warn("Failed to refresh calendar.", error);
+		});
+	};
 	const inThisMonth: (d: Date) => boolean = (d: Date) =>
 		d.getMonth() === cursor.getMonth();
+	const [tooltip, setTooltip] = React.useState<{
+		x: number;
+		y: number;
+		title: string;
+		timeLabel?: string;
+		location?: string;
+		meta?: string;
+	} | null>(null);
 
 	// group items by yyyy-mm-dd
 	const byKey = React.useMemo(() => {
@@ -59,6 +72,20 @@ export default function PortalCalendar(
 	const dayKey: (d: Date) => string = (d: Date) =>
 		`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
+	const showTooltip = (
+		e: React.MouseEvent<HTMLLIElement>,
+		item: typeof items[number],
+	): void => {
+		setTooltip({
+			x: e.clientX + 12,
+			y: e.clientY + 12,
+			title: item.title,
+			timeLabel: item.timeLabel,
+			location: item.location,
+			meta: item.meta,
+		});
+	};
+
 	return (
 		<section className="rounded-xl border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm">
 			<header className="flex items-center justify-between border-b border-slate-300 px-4 py-3 bg-[var(--webpart-header-bg-color)] rounded-t-xl">
@@ -66,6 +93,13 @@ export default function PortalCalendar(
 					Calendar / Events / Trainings
 				</h4>
 				<div className="flex items-center gap-2">
+					<button
+						onClick={refreshCalendar}
+						disabled={loading}
+						className="rounded-md border border-slate-300 px-2 py-1 text-sm bg-[#c9cbcc] disabled:opacity-50 disabled:cursor-not-allowed"
+					>
+						Refresh
+					</button>
 					<button
 						onClick={gotoPrev}
 						className="rounded-md border border-slate-300 px-2 py-1 text-sm bg-[#c9cbcc]"
@@ -84,7 +118,7 @@ export default function PortalCalendar(
 				</div>
 			</header>
 
-			<div className="p-1 w-full">
+			<div className="p-1 w-full relative">
 				<table className="border-collapse table-fixed w-full">
 					<thead>
 						<tr>
@@ -133,6 +167,9 @@ export default function PortalCalendar(
 													: dayItems.map((item) => (
 															<li
 																key={item.id}
+																onMouseEnter={(e) => showTooltip(e, item)}
+																onMouseMove={(e) => showTooltip(e, item)}
+																onMouseLeave={() => setTooltip(null)}
 																className={`rounded px-1 py-0.5 text-xs whitespace-nowrap overflow-hidden text-ellipsis
                                          ${
 												item.kind === "event"
@@ -150,7 +187,7 @@ export default function PortalCalendar(
 																		href={
 																			item.href
 																		}
-																		target="_blank"
+																		target={item.href.includes("#hoteling") ? "_self" : "_blank"}
 																		rel="noopener noreferrer"
 																	>
 																		{
@@ -192,6 +229,24 @@ export default function PortalCalendar(
 						))}
 					</tbody>
 				</table>
+
+				{tooltip && (
+					<div
+						className="fixed z-50 w-64 rounded-md border border-slate-300 bg-white p-3 shadow-lg"
+						style={{ left: tooltip.x, top: tooltip.y }}
+					>
+						<p className="text-sm font-semibold text-slate-800">{tooltip.title}</p>
+						{tooltip.timeLabel && (
+							<p className="mt-1 text-xs text-slate-600">Time: {tooltip.timeLabel}</p>
+						)}
+						{tooltip.location && (
+							<p className="text-xs text-slate-600">Location: {tooltip.location}</p>
+						)}
+						{tooltip.meta && (
+							<p className="text-xs text-slate-500">{tooltip.meta}</p>
+						)}
+					</div>
+				)}
 
 				{loading && (
 					<div className="p-2 text-xs text-slate-500">Loading…</div>
