@@ -1,5 +1,5 @@
 import os
-from sbpubdef.lop.procedure_checklist import ProcedureChecklist
+from azure_function.sbpubdef.lop.procedure_checklist import ProcedureChecklist
 
 # config
 SCRAPED_LOP_PAGE_RESOURCES = "~/proj/work/sbpubdef/resource/LOP"

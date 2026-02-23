@@ -2,3 +2,4 @@ PyMuPDF
 msal
 requests
 dotenv
+azure-functions

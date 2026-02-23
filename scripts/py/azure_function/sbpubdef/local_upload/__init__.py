@@ -5,7 +5,8 @@ import requests
 import msal
 
 SHAREPOINT_LIST_COLUMNS = ["LinkTitle", "_ColorTag", "ComplianceAssetId", "ID", "ContentType", "Modified", "Created", "Author", "Editor", "_UIVersionString", "Attachments", "Edit", "LinkTitleNoMenu", "DocIcon", "ItemChildCount", "FolderChildCount", "_ComplianceFlags", "_ComplianceTag", "_ComplianceTagWrittenTime", "_ComplianceTagUserId", "_IsRecord", "AppAuthor", "AppEditor"]
-load_dotenv(Path(__file__).resolve().parents[4] / "config/.env.dev")
+if os.getenv('AZURE_FUNCTIONS_ENVIRONMENT') == None: # not in azure functions environment -> .env files
+    [load_dotenv(Path(__file__).resolve().parents[5] / f"config/{env}") for env in [".env.public.dev", ".env.dev"]]
 session_headers = {}
 
 """
@@ -61,6 +62,25 @@ def get_list_column_names(site_id, list_id, include_sp_cols=False):
         if include_sp_cols or not(col['name'] in SHAREPOINT_LIST_COLUMNS):
             cols.append(col['name'])
     return cols
+
+# email
+""" App-only Graph sendMail: POST https://graph.microsoft.com/v1.0/users/{sender_upn}/sendMail sender_upn should be a licensed mailbox (often a service account). """
+def send_email(to_email: str | list, subject: str, body: str, *, sender_upn: str | None = None, from_email: str | None = None, content_type: str = "Text"):
+    if isinstance(to_email, str): to_email = [to_email]
+    sender_upn = sender_upn or os.getenv("SENDER_UPN") # pick sender from param or env var
+    if not sender_upn: return {"success": False, "err": "Missing sender_upn (pass sender_upn or set SENDER_UPN env var)."}
+    email_data = {
+        "message": {
+            "subject": subject,
+            "body": {"contentType": content_type, "content": body},
+            "toRecipients": [{"emailAddress": {"address": email}} for email in to_email],
+        }
+    }
+    if from_email: email_data["message"]["from"] = {"emailAddress": {"address": from_email}} # Optional. In many orgs, Graph ignores/blocks custom 'from' unless SendAs/SendOnBehalf is configured.
+    url = f"https://graph.microsoft.com/v1.0/users/{sender_upn}/sendMail"
+    resp = requests.post(url, headers={**session_headers, "Content-Type": "application/json"}, json=email_data)
+    if resp.status_code == 202: return {"success": True, "err": ""}
+    return { "success": False, "err": f"Failed to send email via {url}: {resp.status_code} - {resp.text}" }
 
 """
 CRUD: Create

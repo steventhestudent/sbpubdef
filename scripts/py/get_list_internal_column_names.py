@@ -1,4 +1,4 @@
-from sbpubdef.local_upload import authenticate, get_site_id, get_list_id, get_list_column_names
+from azure_function.sbpubdef.local_upload import authenticate, get_site_id, get_list_id, get_list_column_names
 
 authenticate()
 site_id = get_site_id("PD-Intranet")
