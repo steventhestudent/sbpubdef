@@ -146,12 +146,12 @@ export const ProcedureChecklistCompactView = ({
 						<div className="w-full h-48 bg-gradient-to-br from-blue-50 to-slate-100 rounded-lg flex items-center justify-center mb-3 border-2 border-dashed border-slate-300">
 							<div className="text-center px-4">
 								<p className="text-4xl mb-2">📋</p>
-								<p className="text-sm font-semibold text-slate-700">
-									Sub-Step {currentStep} / {sublist.length}
-								</p>
-								<p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-									{sublist[currentStep - 1]}
-								</p>
+								<p className="text-sm font-semibold text-slate-500">
+  Sub-Step {currentStep} / {sublist.length}
+</p>
+<p className="text-xs text-slate-900 font-semibold mt-1 max-w-md mx-auto">
+  {sublist[currentStep - 1]}
+</p>
 							</div>
 						</div>
 					</div>
