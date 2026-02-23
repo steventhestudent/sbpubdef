@@ -1,5 +1,5 @@
 PyMuPDF
 msal
 requests
-dotenv
+python-dotenv
 azure-functions
