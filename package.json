@@ -66,6 +66,8 @@
 		"eslint": "8.57.1",
 		"eslint-plugin-react-hooks": "4.3.0",
 		"gulp": "4.0.2",
+		"prettier": "^3.8.1",
+		"prettier-plugin-tailwindcss": "^0.7.2",
 		"spfx-fast-serve-helpers": "~1.21.0",
 		"typescript": "~5.3.3"
 	},
