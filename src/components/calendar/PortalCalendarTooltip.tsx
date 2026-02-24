@@ -1,26 +1,36 @@
 import * as React from "react";
+import { CalendarItem } from "@utils/calendar";
 
 export type PortalCalendarTooltipShowOptions = {
 	x: number;
 	y: number;
+	title: string;
+	timeLabel?: string;
+	location?: string;
+	meta?: string;
 };
 
 export const tooltipEnter = (
 	setTooltipShowOptions: React.Dispatch<
 		React.SetStateAction<PortalCalendarTooltipShowOptions | undefined>
 	>,
+	item: CalendarItem,
 	$rel: React.RefObject<HTMLDivElement>,
 ): ((e: React.MouseEvent<HTMLLIElement>) => void) => {
 	return (e: React.MouseEvent<HTMLLIElement>) => {
 		const relRect = $rel.current!.getClientRects()[0];
 		console.log(
-			e.pageX - relRect.left,
-			e.pageY - relRect.top,
+			e.clientX - relRect.left,
+			e.clientY - relRect.top,
 			$rel.current,
 		);
 		setTooltipShowOptions({
-			x: e.pageX - relRect.left,
-			y: e.pageY - relRect.top,
+			x: e.clientX + 12,
+			y: e.clientY + 12,
+			title: item.title,
+			timeLabel: item.timeLabel,
+			location: item.location,
+			meta: item.meta,
 		});
 	};
 };
@@ -33,6 +43,7 @@ export const tooltipLeave = (
 	setTooltipShowOptions: React.Dispatch<
 		React.SetStateAction<PortalCalendarTooltipShowOptions | undefined>
 	>,
+	item: CalendarItem,
 ): ((e: React.MouseEvent<HTMLLIElement>) => void) => {
 	return (e: React.MouseEvent<HTMLLIElement>) => {
 		const elementUnderMouse = document.elementFromPoint(
@@ -57,11 +68,25 @@ export function PortalCalendarTooltip({
 		<></>
 	) : (
 		<div
-			id="PortalCalendarTooltip"
-			style={{ left: showOptions.x + "px", top: showOptions.y + "px" }}
-			className="z-[99999] absolute w-[326px] h-[396px]"
+			className="fixed z-50 w-64 rounded-md border border-slate-300 bg-white p-3 shadow-lg"
+			style={{ left: showOptions.x, top: showOptions.y }}
 		>
-			Tooltip
+			<p className="text-sm font-semibold text-slate-800">
+				{showOptions.title}
+			</p>
+			{showOptions.timeLabel && (
+				<p className="mt-1 text-xs text-slate-600">
+					Time: {showOptions.timeLabel}
+				</p>
+			)}
+			{showOptions.location && (
+				<p className="text-xs text-slate-600">
+					Location: {showOptions.location}
+				</p>
+			)}
+			{showOptions.meta && (
+				<p className="text-xs text-slate-500">{showOptions.meta}</p>
+			)}
 		</div>
 	);
 }

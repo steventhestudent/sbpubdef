@@ -19,6 +19,7 @@ export const PortalCalendarCellItem = ({
 													: "bg-amber-50 text-amber-900"
 											}`}
 			onMouseEnter={onMouseEnter}
+			onMouseMove={onMouseEnter}
 			onMouseLeave={onMouseLeave}
 		>
 			<span className="font-medium">{item.timeLabel || "—"}</span>{" "}
@@ -26,7 +27,9 @@ export const PortalCalendarCellItem = ({
 				<a
 					className="hover:underline"
 					href={item.href}
-					target="_blank"
+					target={
+						item.href.includes("#hoteling") ? "_self" : "_blank"
+					}
 					rel="noopener noreferrer"
 				>
 					{item.title}

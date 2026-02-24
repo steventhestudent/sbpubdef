@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { IPortalCalendarProps } from "./IPortalCalendarProps";
-import { buildMonthMatrix } from "@utils/calendar";
+import { buildMonthMatrix, CalendarItem } from "@utils/calendar";
 import { useCalendarData } from "@api/calendar";
 import { Collapsible } from "@components/Collapsible";
 import {
@@ -33,6 +33,12 @@ export default function PortalCalendar(
 		}
 	}, []); // load as dep causes infinite re-runs. just load onmount, since: //todo: scope useCalendarData within ±1 month (currently loading ALL calendar data ever) —— then reloads become necessary
 
+	const refreshCalendar = (): void => {
+		load({ includeOutlook: true }).catch((error) => {
+			console.warn("Failed to refresh calendar.", error);
+		});
+	};
+
 	const weeks = React.useMemo(
 		() => buildMonthMatrix(cursor.getFullYear(), cursor.getMonth()),
 		[cursor],
@@ -57,6 +63,8 @@ export default function PortalCalendar(
 					<PortalCalendarHeader
 						cursor={cursor}
 						setCursor={setCursor}
+						loading={loading}
+						refreshCalendar={refreshCalendar}
 					/>
 				}
 			>
@@ -83,13 +91,23 @@ export default function PortalCalendar(
 											cursor={cursor}
 											items={items}
 											date={d}
-											onMouseEnterItem={tooltipEnter(
-												setTooltipShowOptions,
-												$rel,
-											)}
-											onMouseLeaveItem={tooltipLeave(
-												setTooltipShowOptions,
-											)}
+											onMouseEnterItem={(
+												item: CalendarItem,
+											) =>
+												tooltipEnter(
+													setTooltipShowOptions,
+													item,
+													$rel,
+												)
+											}
+											onMouseLeaveItem={(
+												item: CalendarItem,
+											) =>
+												tooltipLeave(
+													setTooltipShowOptions,
+													item,
+												)
+											}
 										/>
 									))}
 								</tr>
