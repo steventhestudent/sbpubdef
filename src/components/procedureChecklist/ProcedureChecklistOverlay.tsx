@@ -9,13 +9,13 @@ export const ProcedureChecklistOverlay = ({
 	proc: ProcedureChecklistItem;
 	onClose?: () => void;
 	url?: string;
-}) => {
+}): JSX.Element => {
 	return (
 		<aside className="w-full h-full fixed top-0 left-0 bg-gray-500/50 z-1">
 			<div
 				className="w-full h-full absolute cursor-pointer"
 				onClick={onClose}
-			></div>
+			/>
 			{url ? (
 				<img
 					src={url}

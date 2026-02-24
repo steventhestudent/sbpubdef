@@ -1,7 +1,10 @@
 import * as React from "react";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
 import { ProcedureChecklistApi } from "@api/ProcedureChecklist";
-import { ProcedureChecklistItem } from "@type/ProcedureChecklist";
+import {
+	ProcedureChecklistItem,
+	ProcedureChecklistParsedJSON,
+} from "@type/ProcedureChecklist";
 import * as Utils from "@utils";
 import { ProcedureChecklistCompactView } from "@components/procedureChecklist/ProcedureChecklistCompactView";
 import { ProcedureChecklistListItem } from "@components/procedureChecklist/ProcedureChecklistListItem";
@@ -17,8 +20,9 @@ export function ProcedureChecklist({
 	>([]);
 	const [search, setSearch] = React.useState("");
 	const [isLoading, setIsLoading] = React.useState<boolean>(true);
-	const [selectedProcedure, setSelectedProcedure] =
-		React.useState<ProcedureChecklistItem | null>(null);
+	const [selectedProcedure, setSelectedProcedure] = React.useState<
+		ProcedureChecklistItem | undefined
+	>(undefined);
 	const [currentStep, setCurrentStep] = React.useState<number>(1);
 
 	const procedureChecklistApi = new ProcedureChecklistApi(pnpWrapper);
@@ -54,18 +58,22 @@ export function ProcedureChecklist({
 		});
 	}, [search, procedures]);
 
-	const onProcedureSelected = (proc: ProcedureChecklistItem) => {
+	const onProcedureSelected = (proc: ProcedureChecklistItem): void => {
 		setSelectedProcedure(proc);
 		setCurrentStep(1);
 		if (!proc.obj)
-			Utils.loadJSON(pnpWrapper.ctx, proc.json, (data) => {
-				const i = procedures.indexOf(proc);
-				proc.obj = data;
-				procedures[i] = proc;
-				setProcedures(procedures);
-				setSelectedProcedure(null);
-				setSelectedProcedure(procedures[i]);
-			});
+			Utils.loadJSON<ProcedureChecklistParsedJSON>(
+				pnpWrapper.ctx,
+				proc.json,
+				(data) => {
+					const i = procedures.indexOf(proc);
+					proc.obj = data;
+					procedures[i] = proc;
+					setProcedures(procedures);
+					setSelectedProcedure(undefined);
+					setSelectedProcedure(procedures[i]);
+				},
+			);
 	};
 
 	return (
