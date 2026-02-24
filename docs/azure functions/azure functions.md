@@ -60,8 +60,8 @@ In Microsoft 365 admin center:
 
 # set environment variables from .env.public.dev / .env.dev @ azure portal -> Function App -> Settings -> Environment Variables
 
+￼![](Attachments/49DF477D-DD98-4051-8A84-8747242CBD0A.jpg)
 ```
-￼
 
 ```
 
@@ -168,4 +168,94 @@ note: if u can't see the invocation or see HTTP 401 Unauthorized try restarting 
 
 # using authentication
 
-note: we probably shouldn't expose Function key to spfx... use easyauth?
+**note:** we probably shouldn't expose Function key to spfx... so use auth instead
+
+# Authentication: Entra ID auth + spfx AadHttpClient:
+### new app registration (azure_functions) (just to link to 'Expose An API'... the Azure Function App itself will use the other app registration w/ more consent)
+- ![Application (dient)](Attachments/589DD7E4-2216-40F2-8078-7FAD060215E9.tiff)
+
+## Entra app registration
+1. **[Expose an API](https://entra.microsoft.com/?l=en.en-us#view/Microsoft_AAD_RegisteredApps/ApplicationMenuBlade/~/ProtectAnAPI/appId/dabe112a-d320-4a46-99ec-f2f990039393/isMSAApp~/false)** → set **Application ID URI** to:
+* api://<CLIENT_ID> (easy, unique)
+1. Add a scope:
+* **Scope name:** access_as_entra_user
+* **Who can consent:** Admins and users (since it’s your tenant)
+* **Admin consent display name:** “Access sbpubdef API”
+* ![Edit a scope](Attachments/6FB7B31B-9DC4-43E3-B16E-0FDFE196CE36.tiff)  
+  This gives SPFx something to request tokens for.  
+  You’ll still be able to use curl — you just won’t be able to call it w/ only function key. With Entra ID auth, curl needs a **Bearer token**:  
+  ?code=<functionKey> (secret in URL)     -->    Authorization: Bearer <access_token>
+
+### allow sharepoint past 403 error
+authentication -> Identity Provider -> Allowed client applications -> Add a client application: 08e18876-6177-487e-b8b5-cf950c1e598c  
+this is the 'key / bearer's azp claim'
+
+### ~~allow azure cli~~
+~~app registration -> azure_functions | Expose an API -> Authorized client applications -> Add a client application: 04b07795-8ddb-461a-bbee-02f9e1bf7b46~~
+```
+# token for your API (recommended once you expose an API scope)
+TOKEN=$(az account get-access-token --resource api://<YOUR-FUNCTION-APP-CLIENT-ID> --query accessToken -o tsv)
+
+curl -i -X POST "https://<yourfunc>.azurewebsites.net/api/SendEmail" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"to_email":"you@csproject25.onmicrosoft.com","subject":"hi","body":"from curl"}'
+
+```
+[install azure cli](https://learn.microsoft.com/en-us/cli/azure/?view=azure-cli-latest)
+
+## Step 2 — Turn on Authentication (Easy Auth) on the Function App
+Azure Portal → Function App (**sbpubdef**) → **Authentication** → **Add identity provider** → **Microsoft**.
+* **App registration:** select **azure_functions**
+* options: **any signed-in tenant user** / ~~specific users/groups~~
+* **Require authentication:** **On**
+* Allow requests from specific client applications (list of client/app id's (leave blank))  
+  After this, requests without a valid Entra token never reach your function code.
+
+## Step 3 — Configure SPFx permissions to your API
+In your SPFx solution config/package-solution.json add:
+```
+"webApiPermissionRequests": [
+  {
+    "resource": "<YOUR-azure_functions-CLIENT-ID>",
+    "scope": "access_as_user"
+  }
+]
+
+```
+* pnpm run make -> Upload to App Catalog -> In SharePoint Admin Center → **API access**, approve the pending request
+
+## Step 4 — Call your Function from SPFx using AadHttpClient (no keys, no CORS pain)
+Use AadHttpClient instead of fetch. Example:
+```
+import { AadHttpClient } from '@microsoft/sp-http';
+
+const apiBase = "https://sbpubdef-agfwa0d9e3b9anch.westus3-01.azurewebsites.net";
+
+const client = await this.context.aadHttpClientFactory.getClient(
+  "api://<YOUR-azure_functions-CLIENT-ID>"
+);
+
+const response = await client.post(
+  `${apiBase}/api/SendEmail`,
+  AadHttpClient.configurations.v1,
+  {
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      to_email: [userEmail],
+      subject: `Hoteling Reminder: ${reservation.location}`,
+      body: "<p>...</p>",
+      content_type: "HTML"
+    })
+  }
+);
+
+```
+
+## Step 5 — Update Function authLevel
+Once EasyAuth is on, set your function to:
+```
+"authLevel": "anonymous"
+
+```
+Why: you’re no longer using function keys for security; EasyAuth is the security boundary. Keeping function auth just adds a second “key” layer you don’t want to ship. (This is a common pattern when fronting Functions with platform auth.)  

@@ -7,6 +7,7 @@ import {
 	readHotelingReservations,
 	writeHotelingReservations,
 } from "@services/officeHotelingSync";
+import { AadHttpClient } from "@microsoft/sp-http";
 
 interface Reservation {
 	id: string;
@@ -499,39 +500,59 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 
 		const sendReminder = async (): Promise<void> => {
 			const functionUrl =
-				"https://sbpubdef-agfwa0d9e3b9anch.westus3-01.azurewebsites.net/api/SendEmail"; //todo: use .env.public.dev
-			const functionKey =
-				localStorage.getItem("DONT_PUSH_SECRET_KEY") || "";
-			const response = await fetch(`${functionUrl}?code=${functionKey}`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
+				"https://sbpubdef-agfwa0d9e3b9anch.westus3-01.azurewebsites.net/api/SendEmail"; // TODO: use .env.public.dev
+			try {
+				// Your API app registration (GUID). This matches what you used in webApiPermissionRequests.
+				const apiAppId = "c852c7d6-8c34-4b51-a368-92be5f2ac96a";
+				const client: AadHttpClient =
+					await props.context.aadHttpClientFactory.getClient(
+						apiAppId,
+					);
+				const payload = {
 					to_email: [userEmail],
 					subject: `Hoteling Reminder: ${reservation.location}`,
 					body: `
-           <p>This is your reminder for an upcoming hoteling reservation.</p
-           <p><strong>Date:</strong> ${formatDate(reservation.date)}</p>
-           <p><strong>Time:</strong> ${reservation.time}</p>
-           <p><strong>Location:</strong> ${reservation.location}</p>
-           <p><strong>Desk:</strong> ${reservation.desk ?? "N/A"}</p>
-         `,
+        <p>This is your reminder for an upcoming hoteling reservation.</p>
+        <p><strong>Date:</strong> ${formatDate(reservation.date)}</p>
+        <p><strong>Time:</strong> ${reservation.time}</p>
+        <p><strong>Location:</strong> ${reservation.location}</p>
+        <p><strong>Desk:</strong> ${reservation.desk ?? "N/A"}</p>
+      `,
 					content_type: "HTML",
-				}),
-			});
+				};
 
-			if (response.ok) {
-				console.log("Reminder email sent.");
-				setStatusMessage({
-					type: "success",
-					text: "Reminder email sent.",
-				});
-			} else {
-				console.error("Failed to send reminder email.");
+				const response = await client.post(
+					functionUrl,
+					AadHttpClient.configurations.v1,
+					{
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(payload),
+					},
+				);
+
+				if (response.ok) {
+					console.log("Reminder email sent.");
+					setStatusMessage({
+						type: "success",
+						text: "Reminder email sent.",
+					});
+					return;
+				}
+				const errText = await response.text().catch(() => "");
+				console.error(
+					"Failed to send reminder email.",
+					response.status,
+					errText,
+				);
 				setStatusMessage({
 					type: "error",
-					text: "Failed to send reminder email.",
+					text: `Failed to send reminder email. (${response.status})`,
+				});
+			} catch (e: any) {
+				console.error("Failed to send reminder email (exception).", e);
+				setStatusMessage({
+					type: "error",
+					text: `Failed to send reminder email. ${e?.message ?? e}`,
 				});
 			}
 		};

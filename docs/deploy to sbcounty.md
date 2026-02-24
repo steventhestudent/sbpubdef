@@ -1,0 +1,5 @@
+- update config/
+  - .env.public.prod
+  - .env.prod
+  - package-solution.json
+    - webApiPermissionRequests from app registration: Application (client) ID + scope name
