@@ -22,26 +22,35 @@ export const PortalCalendarCellItem = ({
 			onMouseMove={onMouseEnter}
 			onMouseLeave={onMouseLeave}
 		>
-			<span className="font-medium">{item.timeLabel || "—"}</span>{" "}
 			{item.href ? (
 				<a
-					className="hover:underline"
+					className="block hover:underline"
 					href={item.href}
 					target={
 						item.href.includes("#hoteling") ? "_self" : "_blank"
 					}
 					rel="noopener noreferrer"
 				>
-					{item.title}
+					<span className="font-medium">{item.timeLabel || "—"}</span>{" "}
+					<span>{item.title}</span>
+					{item.location && (
+						<span className="text-slate-500"> — {item.location}</span>
+					)}
+					{item.meta && (
+						<span className="ml-1 text-slate-500">({item.meta})</span>
+					)}
 				</a>
 			) : (
-				<span>{item.title}</span>
-			)}
-			{item.location && (
-				<span className="text-slate-500"> — {item.location}</span>
-			)}
-			{item.meta && (
-				<span className="ml-1 text-slate-500">({item.meta})</span>
+				<>
+					<span className="font-medium">{item.timeLabel || "—"}</span>{" "}
+					<span>{item.title}</span>
+					{item.location && (
+						<span className="text-slate-500"> — {item.location}</span>
+					)}
+					{item.meta && (
+						<span className="ml-1 text-slate-500">({item.meta})</span>
+					)}
+				</>
 			)}
 		</li>
 	);

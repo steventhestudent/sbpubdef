@@ -6,12 +6,17 @@ import { EventsApi } from "@api/events/EventsApi";
 import * as Utils from "@utils";
 import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
+import { GraphClient, MSGraphClientV3 } from "@utils/graph/GraphClient";
 
 function PDIntranetView({
 	userGroupNames,
 	pnpWrapper,
 }: RoleBasedViewProps): JSX.Element {
 	const [items, setItems] = React.useState<PDEvent[]>([]);
+	const [addingEventId, setAddingEventId] = React.useState<string | number | null>(null);
+	const [calendarStatus, setCalendarStatus] = React.useState<
+		{ type: "success" | "error"; text: string } | null
+	>(null);
 
 	const defaultItems: PDEvent[] = [
 		{
@@ -46,9 +51,77 @@ function PDIntranetView({
 		Utils.loadCachedThenFresh(load);
 	}, [load]);
 
+	const addToOutlookCalendar = async (event: PDEvent): Promise<void> => {
+		if (!event.date) {
+			setCalendarStatus({
+				type: "error",
+				text: `Cannot add "${event.title}" to Outlook because the event date is missing.`,
+			});
+			return;
+		}
+
+		const start = new Date(event.date);
+		if (isNaN(start.getTime())) {
+			setCalendarStatus({
+				type: "error",
+				text: `Cannot add "${event.title}" to Outlook because the event date is invalid.`,
+			});
+			return;
+		}
+
+		const end = new Date(start.getTime() + 60 * 60 * 1000);
+
+		setAddingEventId(event.id);
+		try {
+			const client: MSGraphClientV3 = await GraphClient(pnpWrapper.ctx);
+			await client.api("/me/events").post({
+				subject: event.title,
+				start: {
+					dateTime: start.toISOString(),
+					timeZone: "UTC",
+				},
+				end: {
+					dateTime: end.toISOString(),
+					timeZone: "UTC",
+				},
+				location: {
+					displayName: event.location || "",
+				},
+				body: {
+					contentType: "HTML",
+					content: `<p>Added from Upcoming Events.</p>${event.detailsUrl ? `<p><a href="${event.detailsUrl}">View details</a></p>` : ""}`,
+				},
+			});
+
+			setCalendarStatus({
+				type: "success",
+				text: `Added "${event.title}" to your Outlook calendar.`,
+			});
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			setCalendarStatus({
+				type: "error",
+				text: `Failed to add "${event.title}" to Outlook: ${message}`,
+			});
+		} finally {
+			setAddingEventId(null);
+		}
+	};
+
 	return (
 		<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-			<div className="overflow-y-auto max-h-72">
+			{calendarStatus && (
+				<div
+					className={`mx-3 mt-3 rounded border px-3 py-2 text-sm ${
+						calendarStatus.type === "success"
+							? "border-green-300 bg-green-50 text-green-800"
+							: "border-red-300 bg-red-50 text-red-800"
+					}`}
+				>
+					{calendarStatus.text}
+				</div>
+			)}
+			<div className="overflow-y-auto max-h-96">
 				<table
 					className="min-w-full divide-y divide-slate-200 table-fixed"
 					width="100%"
@@ -121,6 +194,27 @@ function PDIntranetView({
 										<div className="p-1 text-slate-700 text-sm">
 											{event.location || "—"}
 										</div>
+										<button
+											type="button"
+											onClick={() => {
+												addToOutlookCalendar(event).catch((error) => {
+													setCalendarStatus({
+														type: "error",
+														text: `Failed to add "${event.title}" to Outlook: ${
+															error instanceof Error
+																? error.message
+																: String(error)
+														}`,
+													});
+												});
+											}}
+											disabled={addingEventId === event.id}
+											className="ml-1 mt-1 inline-flex text-xs text-blue-700 hover:underline disabled:text-slate-400 disabled:no-underline"
+										>
+											{addingEventId === event.id
+												? "Adding..."
+												: "Add to my calendar"}
+										</button>
 									</td>
 								</tr>
 							);

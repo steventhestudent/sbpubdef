@@ -11,11 +11,33 @@ export interface OfficeHotelingReservation {
 }
 
 export const HOTELING_SYNC_EVENT = "office-hoteling-sync";
-const HOTELING_STORAGE_KEY = "sbpubdef-office-hoteling-reservations";
+const HOTELING_STORAGE_KEY_BASE = "sbpubdef-office-hoteling-reservations";
 const HOTELING_DEBUG_SESSION_KEY = "sbpubdef-office-hoteling-debug-reset-done";
 
 const canUseStorage = (): boolean =>
 	typeof window !== "undefined" && typeof window.localStorage !== "undefined";
+
+const getCurrentUserKey = (): string => {
+	if (typeof window === "undefined") {
+		return "anonymous";
+	}
+
+	const pageContext = (window as unknown as {
+		_spPageContextInfo?: { userEmail?: string; userLoginName?: string };
+	})._spPageContextInfo;
+
+	const rawUser =
+		pageContext?.userEmail ||
+		pageContext?.userLoginName ||
+		"anonymous";
+
+	return rawUser
+		.toLowerCase()
+		.replace(/[^a-z0-9@._-]/g, "");
+};
+
+const getStorageKey = (): string =>
+	`${HOTELING_STORAGE_KEY_BASE}:${getCurrentUserKey()}`;
 
 const isDebugSession = (): boolean => {
 	if (typeof window === "undefined") {
@@ -44,7 +66,7 @@ const ensureDebugSessionBaseline = (): void => {
 			return;
 		}
 
-		window.localStorage.removeItem(HOTELING_STORAGE_KEY);
+		window.localStorage.removeItem(getStorageKey());
 		window.sessionStorage.setItem(HOTELING_DEBUG_SESSION_KEY, "1");
 		window.dispatchEvent(new CustomEvent(HOTELING_SYNC_EVENT));
 	} catch (error) {
@@ -63,7 +85,7 @@ export const readHotelingReservations = (): OfficeHotelingReservation[] => {
 	ensureDebugSessionBaseline();
 
 	try {
-		const raw = window.localStorage.getItem(HOTELING_STORAGE_KEY);
+		const raw = window.localStorage.getItem(getStorageKey());
 		if (!raw) {
 			return [];
 		}
@@ -110,7 +132,7 @@ export const writeHotelingReservations = (
 
 	try {
 		window.localStorage.setItem(
-			HOTELING_STORAGE_KEY,
+			getStorageKey(),
 			JSON.stringify(reservations),
 		);
 		window.dispatchEvent(new CustomEvent(HOTELING_SYNC_EVENT));
@@ -128,7 +150,7 @@ export const clearHotelingReservations = (): void => {
 	}
 
 	try {
-		window.localStorage.removeItem(HOTELING_STORAGE_KEY);
+		window.localStorage.removeItem(getStorageKey());
 		window.dispatchEvent(new CustomEvent(HOTELING_SYNC_EVENT));
 	} catch (error) {
 		console.warn(

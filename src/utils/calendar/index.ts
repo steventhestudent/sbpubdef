@@ -13,6 +13,7 @@ export type PDEvent = {
 	id: number | string;
 	title: string;
 	date?: string; // ISO or parseable
+	endDate?: string;
 	location?: string;
 	detailsUrl?: string;
 };
