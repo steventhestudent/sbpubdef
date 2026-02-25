@@ -59,6 +59,8 @@ export default function PortalCalendar(
 			<Collapsible
 				instanceId={props.context.instanceId}
 				hideChevron={true}
+				headerClickable={false}
+				headerClassName="bg-white border-b border-slate-300"
 				title={
 					<PortalCalendarHeader
 						cursor={cursor}
@@ -68,16 +70,18 @@ export default function PortalCalendar(
 					/>
 				}
 			>
-				<div className="p-1 w-full">
-					<table className="border-collapse table-fixed w-full">
+				<div className="p-2 w-full overflow-x-auto">
+					<table className="border-collapse table-fixed w-full border border-slate-300">
 						<thead>
 							<tr>
 								{daysStr.split(" ").map((d) => (
 									<th
 										key={d}
-										className="px-2 py-1 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
+										className="border border-slate-300 bg-slate-100 px-2 py-1 text-center text-slate-700"
 									>
-										{d}
+										<div className="text-xs font-semibold uppercase tracking-wide">
+											{d}
+										</div>
 									</th>
 								))}
 							</tr>

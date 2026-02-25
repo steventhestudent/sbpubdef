@@ -1,13 +1,15 @@
 import * as React from "react";
 import type { IOfficeHotelingProps } from "./IOfficeHotelingProps";
-import { offices } from "@webparts/officeInformation/components/Offices";
 import { GraphClient, MSGraphClientV3 } from "@utils/graph/GraphClient";
-import { getSP } from "@utils/pnpjsConfig";
 import {
 	readHotelingReservations,
 	writeHotelingReservations,
 } from "@services/officeHotelingSync";
 import { AadHttpClient } from "@microsoft/sp-http";
+import { ISPFXContext, SPFx as spSPFx, spfi, SPFI } from "@pnp/sp";
+import "@pnp/sp/webs";
+import "@pnp/sp/lists";
+import "@pnp/sp/items";
 
 interface Reservation {
 	id: string;
@@ -41,10 +43,40 @@ interface ReservationGroup {
 	location: string;
 	desk?: string;
 	reservations: Reservation[];
-	timeLabel: "Morning" | "Afternoon" | "All day";
+	timeLabel: "Morning" | "Afternoon" | "All Day";
 }
 
-const OFFICE_LOCATIONS = offices.map((office) => office.name);
+interface ReservationSummaryGroup {
+	key: string;
+	date: string;
+	location: string;
+	station?: string;
+	timeLabel: "Morning" | "Afternoon" | "All Day";
+}
+
+const LOCATION_DESK_OPTIONS: Record<string, string[]> = {
+	"North County": [
+		"Station 1",
+		"Station 2",
+		"Station 3",
+		"Station 4",
+		"Station 5",
+	],
+	"South County": [
+		"First Floor - Station 1",
+		"First Floor - Station 2",
+		"Second Floor - Station 1",
+		"Second Floor - Station 2",
+		"Third Floor - Station 1",
+		"Third Floor - Station 2",
+		"Third Floor - Station 3",
+	],
+	Juvenile: ["Station 1", "Station 2"],
+	Lompoc: ["Station 1", "Station 2", "Station 3"],
+};
+
+const OFFICE_LOCATIONS = Object.keys(LOCATION_DESK_OPTIONS);
+const REMINDER_COOLDOWN_SECONDS = 10;
 
 const PUBLIC_HOLIDAYS = new Set<string>([
 	"2026-01-01",
@@ -112,7 +144,9 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 	const [selectedLocation, setSelectedLocation] = React.useState(
 		OFFICE_LOCATIONS[0],
 	);
-	const [selectedDesk, setSelectedDesk] = React.useState<string>("Desk 1");
+	const [selectedDesk, setSelectedDesk] = React.useState<string>(
+		LOCATION_DESK_OPTIONS[OFFICE_LOCATIONS[0]][0],
+	);
 	const [reservations, setReservations] = React.useState<Reservation[]>(() =>
 		readHotelingReservations(),
 	);
@@ -137,6 +171,21 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		React.useState<boolean>(false);
 	const [statusMessage, setStatusMessage] =
 		React.useState<StatusMessage | null>(null);
+	const [pendingSelections, setPendingSelections] = React.useState<
+		Reservation[]
+	>([]);
+	const [showPendingSelectionConfirmModal, setShowPendingSelectionConfirmModal] =
+		React.useState<boolean>(false);
+	const [reminderCooldownByReservationId, setReminderCooldownByReservationId] =
+		React.useState<Record<string, number>>({});
+	const [reminderWaitSeconds, setReminderWaitSeconds] = React.useState<number>(0);
+	const [showReminderWaitModal, setShowReminderWaitModal] =
+		React.useState<boolean>(false);
+	const [openDropdown, setOpenDropdown] = React.useState<
+		"location" | "station" | null
+	>(null);
+	const locationDropdownRef = React.useRef<HTMLDivElement | null>(null);
+	const stationDropdownRef = React.useRef<HTMLDivElement | null>(null);
 
 	React.useEffect(() => {
 		const setSlots = new Set<string>();
@@ -159,11 +208,74 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		return () => window.clearTimeout(timeoutId);
 	}, [statusMessage]);
 
+	React.useEffect(() => {
+		const locationDeskOptions = LOCATION_DESK_OPTIONS[selectedLocation] ?? [];
+		if (locationDeskOptions.length === 0) {
+			setSelectedDesk("");
+			return;
+		}
+
+		if (!locationDeskOptions.includes(selectedDesk)) {
+			setSelectedDesk(locationDeskOptions[0]);
+		}
+	}, [selectedLocation, selectedDesk]);
+
+	React.useEffect(() => {
+		const handleDocumentClick = (event: MouseEvent): void => {
+			const target = event.target as Node;
+			const clickedLocationDropdown =
+				locationDropdownRef.current?.contains(target) ?? false;
+			const clickedStationDropdown =
+				stationDropdownRef.current?.contains(target) ?? false;
+
+			if (!clickedLocationDropdown && !clickedStationDropdown) {
+				setOpenDropdown(null);
+			}
+		};
+
+		document.addEventListener("mousedown", handleDocumentClick);
+		return () => document.removeEventListener("mousedown", handleDocumentClick);
+	}, []);
+
+	React.useEffect(() => {
+		const hasActiveCooldown = Object.values(reminderCooldownByReservationId).some(
+			(seconds) => seconds > 0,
+		);
+		if (!hasActiveCooldown) {
+			return;
+		}
+
+		const intervalId = window.setInterval(() => {
+			setReminderCooldownByReservationId((current) => {
+				const nextEntries = Object.entries(current)
+					.map(([reservationId, seconds]) => [
+						reservationId,
+						Math.max(0, seconds - 1),
+					] as const)
+					.filter(([, seconds]) => seconds > 0);
+
+				return Object.fromEntries(nextEntries);
+			});
+		}, 1000);
+
+		return () => window.clearInterval(intervalId);
+	}, [reminderCooldownByReservationId]);
+
 	const timeSlots = generateTimeSlots(
 		weekStartDate,
 		bookedSlots,
 		selectedDesk,
 	);
+
+	const deskOptionsForSelectedLocation =
+		LOCATION_DESK_OPTIONS[selectedLocation] ?? [];
+
+	const dropdownButtonClassName =
+		"w-full px-3 py-2 border border-slate-300 rounded text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-between";
+	const dropdownMenuClassName =
+		"absolute z-30 mt-1 w-full border border-slate-300 rounded bg-white max-h-56 overflow-y-auto";
+	const dropdownOptionClassName =
+		"w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50";
 
 	const today = new Date();
 	today.setHours(0, 0, 0, 0);
@@ -251,16 +363,188 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		reservation: Reservation,
 		recipientEmail: string,
 	): Promise<void> => {
-		const subject = `Reservation Confirmed: ${reservation.location}`;
-		const bodyHtml = `
-			<p>Your hoteling reservation has been confirmed.</p>
-			<p><strong>Date:</strong> ${formatDate(reservation.date)}</p>
-			<p><strong>Time:</strong> ${reservation.time}</p>
-			<p><strong>Location:</strong> ${reservation.location}</p>
-			<p><strong>Desk:</strong> ${reservation.desk ?? "N/A"}</p>
+		const relatedReservations = [
+			...reservations.filter(
+				(item) =>
+					item.date === reservation.date &&
+					item.location === reservation.location &&
+					(item.desk ?? "") === (reservation.desk ?? ""),
+			),
+			reservation,
+		].filter(
+			(item, index, self) =>
+				self.findIndex((candidate) => candidate.id === item.id) === index,
+		);
+
+		await sendReservationSummaryEmail(relatedReservations, recipientEmail, {
+			titleText: "Reservation Confirmed",
+			introText: "Your hoteling reservation has been confirmed.",
+			subjectPrefix: "Reservation Confirmed",
+		});
+	};
+
+	const summarizeReservations = (
+		reservationsToSummarize: Reservation[],
+	): ReservationSummaryGroup[] => {
+		const groupedMap = new Map<string, Reservation[]>();
+
+		reservationsToSummarize.forEach((reservation) => {
+			const key = reservation.date;
+			const current = groupedMap.get(key) ?? [];
+			current.push(reservation);
+			groupedMap.set(key, current);
+		});
+
+		return Array.from(groupedMap.entries())
+			.map(([key, grouped]) => {
+				const hasMorning = grouped.some((item) => item.time === "Morning");
+				const hasAfternoon = grouped.some((item) => item.time === "Afternoon");
+				const uniqueLocations = Array.from(
+					new Set(grouped.map((item) => item.location)),
+				);
+				const uniqueStations = Array.from(
+					new Set(
+						grouped.map(
+							(item) =>
+								`${item.location}: ${item.desk ?? "N/A"}`,
+						),
+					),
+				);
+
+				let timeLabel: ReservationSummaryGroup["timeLabel"] = "Morning";
+				if (hasMorning && hasAfternoon) {
+					timeLabel = "All Day";
+				} else if (hasAfternoon) {
+					timeLabel = "Afternoon";
+				}
+
+				const first = grouped[0];
+				return {
+					key,
+					date: first.date,
+					location: uniqueLocations.join(", "),
+					station: uniqueStations.join(" | "),
+					timeLabel,
+				};
+			})
+			.sort((a, b) => a.date.localeCompare(b.date));
+	};
+
+	const buildReservationSummaryEmailHtml = (
+		summaryGroups: ReservationSummaryGroup[],
+		uniqueLocations: string[],
+		options?: { titleText?: string; introText?: string },
+	): string => {
+		const formatEmailTimeLabel = (
+			timeLabel: ReservationSummaryGroup["timeLabel"],
+		): string => {
+			switch (timeLabel) {
+				case "Morning":
+					return "8AM-12PM";
+				case "Afternoon":
+					return "1PM-5PM";
+				case "All Day":
+					return "8AM-5PM";
+				default:
+					return timeLabel;
+			}
+		};
+
+		const titleText = options?.titleText ?? "Reservation Confirmed";
+		const introText =
+			options?.introText ?? "Your hoteling reservation has been confirmed.";
+
+		const summaryRowsHtml = summaryGroups
+			.map(
+				(group) => `
+					<tr>
+						<td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 14px;">${formatDate(group.date)}</td>
+						<td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 14px;">${formatEmailTimeLabel(group.timeLabel)}</td>
+						<td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 14px;">${group.location}</td>
+						<td style="padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #0f172a; font-size: 14px;">${group.station ?? "N/A"}</td>
+					</tr>
+				`,
+			)
+			.join("");
+
+		return `
+			<div style="font-family: Segoe UI, Arial, sans-serif; color: #0f172a; background: #f8fafc; padding: 20px;">
+				<div style="max-width: 760px; margin: 0 auto; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
+					<div style="padding: 16px 18px; background: #eff6ff; border-bottom: 1px solid #dbeafe;">
+						<div style="font-size: 18px; font-weight: 600; color: #1e3a8a;">${titleText}</div>
+						<div style="margin-top: 6px; font-size: 14px; color: #334155;">${introText}</div>
+					</div>
+
+					<div style="padding: 14px 18px 6px 18px; font-size: 14px; color: #334155;">
+						<div><strong>Total reservations:</strong> ${summaryGroups.length}</div>
+						<div style="margin-top: 4px;"><strong>Locations:</strong> ${uniqueLocations.join(", ")}</div>
+					</div>
+
+					<div style="padding: 12px 18px 18px 18px;">
+						<table role="presentation" cellspacing="0" cellpadding="0" style="width: 100%; border-collapse: collapse; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+							<thead>
+								<tr style="background: #f1f5f9;">
+									<th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase;">Date</th>
+									<th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase;">Time</th>
+									<th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase;">Location</th>
+									<th style="text-align: left; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; color: #334155; font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase;">Station</th>
+								</tr>
+							</thead>
+							<tbody>
+								${summaryRowsHtml}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
 		`;
+	};
+
+	async function sendReservationSummaryEmail(
+		reservationsToSummarize: Reservation[],
+		recipientEmail: string,
+		options?: {
+			titleText?: string;
+			introText?: string;
+			subjectPrefix?: string;
+			includeAllDayInSubject?: boolean;
+		},
+	): Promise<void> {
+		const summaryGroups = summarizeReservations(reservationsToSummarize);
+		const uniqueLocations = Array.from(
+			new Set(summaryGroups.map((group) => group.location)),
+		);
+		const includesAllDay = summaryGroups.some(
+			(group) => group.timeLabel === "All Day",
+		);
+		const subjectPrefix = options?.subjectPrefix ?? "Reservation Confirmed";
+		const includeAllDayInSubject = options?.includeAllDayInSubject ?? false;
+
+		const subject = includeAllDayInSubject && includesAllDay
+			? `${subjectPrefix}: All Day`
+			: subjectPrefix;
+
+		const bodyHtml = buildReservationSummaryEmailHtml(
+			summaryGroups,
+			uniqueLocations,
+			{
+				titleText: options?.titleText,
+				introText: options?.introText,
+			},
+		);
 
 		await sendEmailViaFunction([recipientEmail], subject, bodyHtml);
+	}
+
+	const getSharePointClient = (): SPFI => {
+		const contextSiteUrl = props.context?.pageContext?.web?.absoluteUrl;
+		if (!contextSiteUrl) {
+			throw new Error(
+				"SharePoint context is unavailable. Unable to access Events list.",
+			);
+		}
+
+		return spfi().using(spSPFx(props.context as unknown as ISPFXContext));
 	};
 
 
@@ -268,7 +552,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		reservation: Reservation,
 		options?: { forceAllDayRange?: boolean },
 	): Promise<{ itemId: number; webLink: string }> => {
-		const sp = getSP(props.context);
+		const sp = getSharePointClient();
 		const list = sp.web.lists.getByTitle("Events");
 		const listInfo: { Id: string } = await list.select("Id")();
 		const listGuid = listInfo.Id;
@@ -308,14 +592,29 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 	const deleteSharePointEventForReservation = async (
 		reservation: Reservation,
 	): Promise<void> => {
-		if (!reservation.sharePointEventId) {
+		const sharePointEventId = (() => {
+			if (reservation.sharePointEventId) {
+				return reservation.sharePointEventId;
+			}
+
+			const webLink = reservation.sharePointEventWebLink ?? "";
+			const itemIdMatch = webLink.match(/[?&]ItemId=(\d+)/i);
+			if (!itemIdMatch) {
+				return undefined;
+			}
+
+			const parsedItemId = Number(itemIdMatch[1]);
+			return Number.isFinite(parsedItemId) ? parsedItemId : undefined;
+		})();
+
+		if (!sharePointEventId) {
 			return;
 		}
 
-		const sp = getSP(props.context);
+		const sp = getSharePointClient();
 		await sp.web.lists
 			.getByTitle("Events")
-			.items.getById(reservation.sharePointEventId)
+			.items.getById(sharePointEventId)
 			.delete();
 	};
 
@@ -424,6 +723,51 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		return failures;
 	};
 
+	const runBatchReservationFollowUps = async (
+		reservationsToSummarize: Reservation[],
+	): Promise<string[]> => {
+		const recipientEmails = getConfirmationRecipientEmail()
+			.split(",")
+			.map((email) => email.trim())
+			.filter(Boolean);
+
+		if (recipientEmails.length === 0) {
+			return [
+				"Email confirmation failed: No recipient email address was provided.",
+			];
+		}
+
+		const followUps: Array<{ label: string; task: Promise<void> }> = [];
+		for (const recipientEmail of recipientEmails) {
+			if (!isValidEmail(recipientEmail)) {
+				return [
+					`Email confirmation failed: Recipient email format is invalid (${recipientEmail}).`,
+				];
+			}
+
+			followUps.push({
+				label: `Email confirmation (${recipientEmail})`,
+				task: sendReservationSummaryEmail(
+					reservationsToSummarize,
+					recipientEmail,
+				),
+			});
+		}
+
+		const results = await Promise.allSettled(followUps.map((f) => f.task));
+		const failures: string[] = [];
+
+		results.forEach((result, idx) => {
+			if (result.status === "rejected") {
+				const detail = `${followUps[idx].label} failed: ${extractErrorMessage(result.reason)}`;
+				failures.push(detail);
+				console.warn("A reservation follow-up action failed.", detail);
+			}
+		});
+
+		return failures;
+	};
+
 	const isDeleteAlreadyAppliedError = (error: unknown): boolean => {
 		const detail = extractErrorMessage(error).toLowerCase();
 		return (
@@ -463,6 +807,23 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		const processedOutlookEventIds = new Set<string>();
 		const processedSharePointEventIds = new Set<number>();
 
+		const getReservationSharePointEventId = (
+			reservation: Reservation,
+		): number | undefined => {
+			if (reservation.sharePointEventId) {
+				return reservation.sharePointEventId;
+			}
+
+			const webLink = reservation.sharePointEventWebLink ?? "";
+			const itemIdMatch = webLink.match(/[?&]ItemId=(\d+)/i);
+			if (!itemIdMatch) {
+				return undefined;
+			}
+
+			const parsedItemId = Number(itemIdMatch[1]);
+			return Number.isFinite(parsedItemId) ? parsedItemId : undefined;
+		};
+
 		deletedReservations.forEach((reservation) => {
 			if (
 				reservation.outlookEventId &&
@@ -481,11 +842,13 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 				});
 			}
 
+			const sharePointEventId =
+				getReservationSharePointEventId(reservation);
 			if (
-				reservation.sharePointEventId &&
-				!processedSharePointEventIds.has(reservation.sharePointEventId)
+				sharePointEventId &&
+				!processedSharePointEventIds.has(sharePointEventId)
 			) {
-				processedSharePointEventIds.add(reservation.sharePointEventId);
+				processedSharePointEventIds.add(sharePointEventId);
 				deleteSharePointEventForReservation(reservation).catch((error) => {
 					if (isDeleteAlreadyAppliedError(error)) {
 						return;
@@ -509,9 +872,23 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		setViewMode("my");
 	};
 
-	const handleSendReminder = (reservationId: string): void => {
-		const reservation = reservations.find((r) => r.id === reservationId);
-		if (!reservation) {
+	const handleSendReminder = (reservationIds: string[]): void => {
+		if (reservationIds.length === 0) {
+			return;
+		}
+
+		const cooldownKey = reservationIds[0];
+		const cooldownSeconds = reminderCooldownByReservationId[cooldownKey] ?? 0;
+		if (cooldownSeconds > 0) {
+			setReminderWaitSeconds(cooldownSeconds);
+			setShowReminderWaitModal(true);
+			return;
+		}
+
+		const reminderReservations = reservations.filter((reservation) =>
+			reservationIds.includes(reservation.id),
+		);
+		if (reminderReservations.length === 0) {
 			console.warn("Could not find reservation to send reminder.");
 			return;
 		}
@@ -524,19 +901,20 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			return;
 		}
 
+		setReminderCooldownByReservationId((current) => ({
+			...current,
+			[cooldownKey]: REMINDER_COOLDOWN_SECONDS,
+		}));
+
 		const sendReminder = async (): Promise<void> => {
 			try {
-				await sendEmailViaFunction(
-					[userEmail],
-					`Hoteling Reminder: ${reservation.location}`,
-					`
-        <p>This is your reminder for an upcoming hoteling reservation.</p>
-        <p><strong>Date:</strong> ${formatDate(reservation.date)}</p>
-        <p><strong>Time:</strong> ${reservation.time}</p>
-        <p><strong>Location:</strong> ${reservation.location}</p>
-        <p><strong>Desk:</strong> ${reservation.desk ?? "N/A"}</p>
-					`,
-				);
+				await sendReservationSummaryEmail(reminderReservations, userEmail, {
+					titleText: "Reservation Reminder",
+					introText:
+						"This is your reminder for an upcoming hoteling reservation.",
+					subjectPrefix: "Hoteling Reminder",
+					includeAllDayInSubject: true,
+				});
 				console.log("Reminder email sent.");
 				setStatusMessage({
 					type: "success",
@@ -550,6 +928,11 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 					type: "error",
 					text: `Failed to send reminder email. ${errorMessage}`,
 				});
+				setReminderCooldownByReservationId((current) => {
+					const next = { ...current };
+					delete next[cooldownKey];
+					return next;
+				});
 			}
 		};
 
@@ -560,6 +943,11 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 				type: "error",
 				text: `Reminder email failed: ${detail}`,
 			});
+			setReminderCooldownByReservationId((current) => {
+				const next = { ...current };
+				delete next[cooldownKey];
+				return next;
+			});
 		});
 	};
 
@@ -567,11 +955,6 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		slot: TimeSlot,
 		timeOfDay: "Morning" | "Afternoon",
 	): void => {
-		if (!editingReservationId && reservations.length >= 3) {
-			setShowLimitModal(true);
-			return;
-		}
-
 		const newPending: Reservation = {
 			id: editingReservationId
 				? editingReservationId
@@ -582,9 +965,56 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			desk: selectedDesk,
 		};
 
+		if (!editingReservationId) {
+			const existingSelectionIndex = pendingSelections.findIndex(
+				(selection) =>
+					selection.date === newPending.date &&
+					selection.time === newPending.time,
+			);
+
+			if (existingSelectionIndex >= 0) {
+				const existingSelection = pendingSelections[existingSelectionIndex];
+				const isSamePlacement =
+					existingSelection.location === newPending.location &&
+					(existingSelection.desk ?? "") === (newPending.desk ?? "");
+
+				if (!isSamePlacement) {
+					setStatusMessage({
+						type: "error",
+						text: `Time already selected for ${existingSelection.location} (${existingSelection.desk ?? "Station N/A"}).`,
+					});
+					return;
+				}
+
+				setPendingSelections((current) =>
+					current.filter((_, idx) => idx !== existingSelectionIndex),
+				);
+				return;
+			}
+
+			if (reservations.length + pendingSelections.length >= 3) {
+				setShowLimitModal(true);
+				return;
+			}
+
+			setPendingSelections((current) => [...current, newPending]);
+			setSendConfirmationToInbox(true);
+			return;
+		}
+
 		setSendConfirmationToInbox(true);
 		setPendingReservation(newPending);
 	};
+
+	const isPendingSelection = (
+		date: string,
+		timeOfDay: "Morning" | "Afternoon",
+	): boolean =>
+		pendingSelections.some(
+			(selection) =>
+				selection.date === date &&
+				selection.time === timeOfDay,
+		);
 
 	const handleConfirmReservation = async (
 		confirmed: boolean,
@@ -649,7 +1079,10 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 				);
 
 				if (pairedReservation) {
-					if (pairedReservation.sharePointEventId) {
+					if (
+						pairedReservation.sharePointEventId ||
+						pairedReservation.sharePointEventWebLink
+					) {
 						try {
 							await deleteSharePointEventForReservation(pairedReservation);
 						} catch (error) {
@@ -726,6 +1159,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		} finally {
 			setIsProcessingConfirmation(false);
 			setPendingReservation(null);
+			setPendingSelections([]);
 			setEditingReservationId(null);
 			setShowCalendar(false);
 			setViewMode("my");
@@ -736,6 +1170,141 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		handleConfirmReservation(confirmed).catch((error) => {
 			console.warn("Failed to confirm reservation.", error);
 		});
+	};
+
+	const handleConfirmSelectedReservations = async (
+		confirmed: boolean,
+	): Promise<void> => {
+		if (!confirmed) {
+			setShowPendingSelectionConfirmModal(false);
+			return;
+		}
+
+		if (pendingSelections.length === 0) {
+			setShowPendingSelectionConfirmModal(false);
+			return;
+		}
+
+		setIsProcessingConfirmation(true);
+		try {
+			let workingReservations = [...reservations];
+			const newBookedSlots = new Set(bookedSlots);
+			const extraFailures: string[] = [];
+			const savedReservations: Reservation[] = [];
+
+			for (const pendingSelection of pendingSelections) {
+				if (workingReservations.length >= 3) {
+					extraFailures.push(
+						"Reservation limit reached while saving selected time slots.",
+					);
+					break;
+				}
+
+				const reservationToSave: Reservation = {
+					...pendingSelection,
+				};
+
+				const pairedReservation = workingReservations.find(
+					(reservation) =>
+						reservation.date === pendingSelection.date &&
+						reservation.location === pendingSelection.location &&
+						(reservation.desk ?? "") ===
+							(pendingSelection.desk ?? "") &&
+						reservation.time !== pendingSelection.time,
+				);
+
+				if (pairedReservation) {
+					if (
+						pairedReservation.sharePointEventId ||
+						pairedReservation.sharePointEventWebLink
+					) {
+						try {
+							await deleteSharePointEventForReservation(pairedReservation);
+						} catch (error) {
+							extraFailures.push(
+								`Delete existing event failed: ${extractErrorMessage(error)}`,
+							);
+						}
+					}
+
+					try {
+						const createdAllDayEvent =
+							await createSharePointEventForReservation(
+								pendingSelection,
+								{ forceAllDayRange: true },
+							);
+
+						reservationToSave.sharePointEventId = createdAllDayEvent.itemId;
+						reservationToSave.sharePointEventWebLink =
+							createdAllDayEvent.webLink;
+
+						workingReservations = workingReservations.map((reservation) =>
+							reservation.id === pairedReservation.id
+								? {
+										...reservation,
+										sharePointEventId: createdAllDayEvent.itemId,
+										sharePointEventWebLink:
+											createdAllDayEvent.webLink,
+								}
+								: reservation,
+						);
+					} catch (error) {
+						extraFailures.push(
+							`All day event failed: ${extractErrorMessage(error)}`,
+						);
+					}
+				} else {
+					try {
+						const createdSharePointEvent =
+							await createSharePointEventForReservation(
+								pendingSelection,
+							);
+						reservationToSave.sharePointEventId =
+							createdSharePointEvent.itemId;
+						reservationToSave.sharePointEventWebLink =
+							createdSharePointEvent.webLink;
+					} catch (error) {
+						extraFailures.push(
+							`SharePoint event failed: ${extractErrorMessage(error)}`,
+						);
+					}
+				}
+
+				newBookedSlots.add(
+					`${pendingSelection.date}-${pendingSelection.time.toLowerCase()}`,
+				);
+				workingReservations = [...workingReservations, reservationToSave];
+				savedReservations.push(reservationToSave);
+			}
+
+			setBookedSlots(newBookedSlots);
+			setReservations(workingReservations);
+
+			const followUpFailures =
+				savedReservations.length > 0
+					? await runBatchReservationFollowUps(savedReservations)
+					: [];
+			const allFailures = [...extraFailures, ...followUpFailures];
+
+			if (allFailures.length > 0) {
+				setStatusMessage({
+					type: "error",
+					text: `Reservation saved. ${allFailures.join(" | ")}`,
+				});
+			} else {
+				setStatusMessage({
+					type: "success",
+					text: "Reservation saved and follow-up actions completed.",
+				});
+			}
+		} finally {
+			setIsProcessingConfirmation(false);
+			setShowPendingSelectionConfirmModal(false);
+			setPendingSelections([]);
+			setEditingReservationId(null);
+			setShowCalendar(false);
+			setViewMode("my");
+		}
 	};
 
 	const handlePreviousWeek = (): void => {
@@ -762,7 +1331,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		const groupedMap = new Map<string, Reservation[]>();
 
 		sortedReservations.forEach((reservation) => {
-			const groupKey = `${reservation.date}__${reservation.location}__${reservation.desk ?? ""}`;
+			const groupKey = reservation.date;
 			const existing = groupedMap.get(groupKey) ?? [];
 			existing.push(reservation);
 			groupedMap.set(groupKey, existing);
@@ -771,10 +1340,21 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		return Array.from(groupedMap.entries()).map(([key, group]) => {
 			const hasMorning = group.some((reservation) => reservation.time === "Morning");
 			const hasAfternoon = group.some((reservation) => reservation.time === "Afternoon");
+			const uniqueLocations = Array.from(
+				new Set(group.map((reservation) => reservation.location)),
+			);
+			const uniqueStations = Array.from(
+				new Set(
+					group.map(
+						(reservation) =>
+							`${reservation.location}: ${reservation.desk ?? "N/A"}`,
+					),
+				),
+			);
 
-			let timeLabel: "Morning" | "Afternoon" | "All day" = "Morning";
+			let timeLabel: "Morning" | "Afternoon" | "All Day" = "Morning";
 			if (hasMorning && hasAfternoon) {
-				timeLabel = "All day";
+				timeLabel = "All Day";
 			} else if (hasAfternoon) {
 				timeLabel = "Afternoon";
 			}
@@ -783,8 +1363,8 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			return {
 				key,
 				date: first.date,
-				location: first.location,
-				desk: first.desk,
+				location: uniqueLocations.join(", "),
+				desk: uniqueStations.join(" | "),
 				reservations: group,
 				timeLabel,
 			};
@@ -820,6 +1400,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 						e.stopPropagation();
 						setViewMode("my");
 						setShowCalendar(false);
+						setPendingSelections([]);
 					}}
 				>
 					My Reservations
@@ -884,7 +1465,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 												handleDelete(group.reservations.map((reservation) => reservation.id));
 											}}
 											disabled={!canDeleteGroup}
-											className="px-2 py-1 text-xs font-medium text-red-600 hover:text-red-800 disabled:text-slate-400 disabled:cursor-not-allowed"
+											className="px-2 py-1 text-xs font-medium border border-red-300 rounded text-red-700 bg-red-50 hover:bg-red-100 disabled:border-slate-200 disabled:text-slate-400 disabled:bg-slate-100 disabled:cursor-not-allowed"
 										>
 											Delete reservation
 										</button>
@@ -900,11 +1481,13 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 											onClick={(e) => {
 												e.preventDefault();
 												e.stopPropagation();
-												handleSendReminder(group.reservations[0].id);
+												handleSendReminder(group.reservations.map((reservation) => reservation.id));
 											}}
-											className="px-2 py-1 text-xs font-medium text-slate-600 hover:text-slate-800"
+											className="px-2 py-1 text-xs font-medium border border-blue-300 rounded text-blue-700 bg-blue-50 hover:bg-blue-100"
 										>
-											Send reservation reminder
+											{(reminderCooldownByReservationId[group.reservations[0].id] ?? 0) > 0
+												? `Send reservation reminder (${reminderCooldownByReservationId[group.reservations[0].id]}s)`
+												: "Send reservation reminder"}
 										</button>
 									</div>
 								</div>
@@ -929,46 +1512,76 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 										<label className="block text-sm font-medium text-slate-700 mb-2">
 											Select location
 										</label>
-										<select
-											value={selectedLocation}
-											onChange={(e) =>
-												setSelectedLocation(
-													e.target.value,
-												)
-											}
-											className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-										>
-											{OFFICE_LOCATIONS.map(
-												(location) => (
-													<option
-														key={location}
-														value={location}
-													>
-														{location}
-													</option>
-												),
+										<div className="relative" ref={locationDropdownRef}>
+											<button
+												type="button"
+												onClick={() =>
+													setOpenDropdown((current) =>
+														current === "location" ? null : "location",
+													)
+												}
+												className={dropdownButtonClassName}
+											>
+												<span>{selectedLocation}</span>
+												<span className="text-slate-500">▾</span>
+											</button>
+
+											{openDropdown === "location" && (
+												<div className={dropdownMenuClassName}>
+													{OFFICE_LOCATIONS.map((location) => (
+														<button
+															key={location}
+															type="button"
+															onClick={() => {
+																setSelectedLocation(location);
+																setOpenDropdown(null);
+															}}
+															className={`${dropdownOptionClassName} ${selectedLocation === location ? "bg-slate-100" : ""}`}
+														>
+															{location}
+														</button>
+													))}
+												</div>
 											)}
-										</select>
+										</div>
 									</div>
 									<div className="w-1/2 flex justify-end">
 										<div className="w-3/4">
 											<label className="block text-sm font-medium text-slate-700 mb-2 text-right">
-												Select desk
+													Select Station
 											</label>
-											<select
-												value={selectedDesk}
-												onChange={(e) =>
-													setSelectedDesk(
-														e.target.value,
-													)
-												}
-												className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-											>
-												<option>Desk 1</option>
-												<option>Desk 2</option>
-												<option>Desk 3</option>
-												<option>Desk 4</option>
-											</select>
+											<div className="relative" ref={stationDropdownRef}>
+												<button
+													type="button"
+													onClick={() =>
+														setOpenDropdown((current) =>
+															current === "station" ? null : "station",
+														)
+													}
+													className={dropdownButtonClassName}
+												>
+													<span>{selectedDesk || "Select Station"}</span>
+													<span className="text-slate-500">▾</span>
+												</button>
+
+												{openDropdown === "station" && (
+													<div className={dropdownMenuClassName}>
+														{deskOptionsForSelectedLocation.map((deskOption) => (
+															<button
+																key={deskOption}
+																type="button"
+																onClick={() => {
+																	setSelectedDesk(deskOption);
+																	setOpenDropdown(null);
+																}}
+																className={`${dropdownOptionClassName} ${selectedDesk === deskOption ? "bg-slate-100" : ""}`}
+															>
+																{deskOption}
+															</button>
+														))}
+													</div>
+												)}
+											</div>
 										</div>
 									</div>
 								</div>
@@ -1041,6 +1654,12 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 												key={`${slot.date}-morning`}
 												className="border border-slate-300 p-2"
 											>
+												{(() => {
+													const selected = isPendingSelection(
+														slot.date,
+														"Morning",
+													);
+													return (
 												<button
 													type="button"
 													onClick={(e) => {
@@ -1052,9 +1671,11 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 														);
 													}}
 													disabled={!slot.morning}
-													className={`w-full px-2 py-1.5 rounded text-xs font-medium transition-colors ${slot.isHoliday || slot.isPast ? "bg-slate-200 text-slate-500 cursor-not-allowed" : slot.morning ? "bg-green-200 hover:bg-green-300 cursor-pointer" : "bg-pink-200 cursor-not-allowed opacity-50"}`}
+													className={`w-full px-2 py-1.5 rounded text-xs font-medium transition-colors ${slot.isHoliday || slot.isPast ? "bg-slate-200 text-slate-500 cursor-not-allowed" : selected ? "bg-blue-200 hover:bg-blue-300 cursor-pointer" : slot.morning ? "bg-green-200 hover:bg-green-300 cursor-pointer" : "bg-pink-200 cursor-not-allowed opacity-50"}`}
 												>
-													{slot.isHoliday
+													{selected
+														? "Selected"
+														: slot.isHoliday
 														? "Holiday"
 														: slot.isPast
 															? "Past"
@@ -1062,6 +1683,8 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 																? "Available"
 																: "Booked"}
 												</button>
+													);
+												})()}
 											</td>
 										))}
 									</tr>
@@ -1074,6 +1697,12 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 												key={`${slot.date}-afternoon`}
 												className="border border-slate-300 p-2"
 											>
+												{(() => {
+													const selected = isPendingSelection(
+														slot.date,
+														"Afternoon",
+													);
+													return (
 												<button
 													type="button"
 													onClick={(e) => {
@@ -1085,9 +1714,11 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 														);
 													}}
 													disabled={!slot.afternoon}
-													className={`w-full px-2 py-1.5 rounded text-xs font-medium transition-colors ${slot.isHoliday || slot.isPast ? "bg-slate-200 text-slate-500 cursor-not-allowed" : slot.afternoon ? "bg-green-200 hover:bg-green-300 cursor-pointer" : "bg-pink-200 cursor-not-allowed opacity-50"}`}
+													className={`w-full px-2 py-1.5 rounded text-xs font-medium transition-colors ${slot.isHoliday || slot.isPast ? "bg-slate-200 text-slate-500 cursor-not-allowed" : selected ? "bg-blue-200 hover:bg-blue-300 cursor-pointer" : slot.afternoon ? "bg-green-200 hover:bg-green-300 cursor-pointer" : "bg-pink-200 cursor-not-allowed opacity-50"}`}
 												>
-													{slot.isHoliday
+													{selected
+														? "Selected"
+														: slot.isHoliday
 														? "Holiday"
 														: slot.isPast
 															? "Past"
@@ -1095,6 +1726,8 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 																? "Available"
 																: "Booked"}
 												</button>
+													);
+												})()}
 											</td>
 										))}
 									</tr>
@@ -1102,7 +1735,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 							</table>
 						</div>
 					</div>
-					<div className="flex gap-3 mt-4">
+					<div className="flex items-center justify-between mt-4">
 						{!pendingReservation && (
 							<button
 								type="button"
@@ -1110,12 +1743,27 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 									e.preventDefault();
 									e.stopPropagation();
 									setShowCalendar(false);
+									setPendingSelections([]);
 									setEditingReservationId(null);
 									setViewMode("my");
 								}}
 								className="px-4 py-2 border border-slate-300 rounded text-sm font-medium text-slate-700 hover:bg-slate-50"
 							>
 								Back
+							</button>
+						)}
+						{!editingReservationId && (
+							<button
+								type="button"
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									setShowPendingSelectionConfirmModal(true);
+								}}
+								disabled={pendingSelections.length === 0}
+								className="px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+							>
+								Confirm
 							</button>
 						)}
 					</div>
@@ -1189,6 +1837,85 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 				</div>
 			)}
 
+			{showPendingSelectionConfirmModal && pendingSelections.length > 0 && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+					<div className="bg-white rounded-md p-6 w-[90%] max-w-xl">
+						<h4 className="font-semibold mb-3">Confirm Reservations</h4>
+						<div className="mb-4">
+							<p className="text-sm font-medium text-slate-700 mb-2">
+								Selected reservations
+							</p>
+							<div className="max-h-56 overflow-y-auto space-y-2">
+								{summarizeReservations(pendingSelections).map((group) => (
+									<div
+										key={group.key}
+										className="rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700"
+									>
+										<p className="font-semibold text-slate-800">
+											{formatDate(group.date)}
+										</p>
+										<p className="mt-1">
+											<span className="font-medium">Time:</span> {group.timeLabel}
+										</p>
+										<p>
+											<span className="font-medium">Location(s):</span> {group.location}
+										</p>
+										<p>
+											<span className="font-medium">Station(s):</span> {group.station ?? "N/A"}
+										</p>
+									</div>
+								))}
+							</div>
+						</div>
+						<div className="mb-4 flex flex-col gap-3">
+							<p className="text-sm font-medium text-slate-700">
+								Email confirmation
+							</p>
+							<label className="inline-flex items-center gap-2 text-sm text-slate-700">
+								<input
+									type="checkbox"
+									checked={sendConfirmationToInbox}
+									onChange={(e) =>
+										setSendConfirmationToInbox(e.target.checked)
+									}
+								/>
+								<span>Send confirmation to my inbox</span>
+							</label>
+						</div>
+						<div className="flex gap-3 justify-end">
+							<button
+								type="button"
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									handleConfirmSelectedReservations(false).catch((error) => {
+										console.warn("Failed to close reservation confirmation.", error);
+									});
+								}}
+								disabled={isProcessingConfirmation}
+								className="px-3 py-2 border border-slate-300 rounded text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed"
+							>
+								Cancel
+							</button>
+							<button
+								type="button"
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									handleConfirmSelectedReservations(true).catch((error) => {
+										console.warn("Failed to confirm selected reservations.", error);
+									});
+								}}
+								disabled={isProcessingConfirmation}
+								className="px-3 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
+							>
+								{isProcessingConfirmation ? "Saving..." : "Confirm"}
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
 			{pendingDeleteIds && pendingDeleteIds.length > 0 && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
 					<div className="bg-white rounded-md p-6 w-[90%] max-w-xl">
@@ -1249,6 +1976,32 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 								className="px-3 py-2 bg-slate-600 text-white rounded text-sm font-medium hover:bg-slate-700"
 							>
 								Close
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{showReminderWaitModal && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+					<div className="bg-white rounded-md p-6 w-[90%] max-w-xl">
+						<h4 className="font-semibold mb-3 text-blue-700">
+							Please wait before sending again
+						</h4>
+						<p className="mb-4 text-slate-700">
+							Wait {reminderWaitSeconds} second{reminderWaitSeconds === 1 ? "" : "s"} before clicking Send reservation reminder again.
+						</p>
+						<div className="flex gap-3 justify-end">
+							<button
+								type="button"
+								onClick={(e) => {
+									e.preventDefault();
+									e.stopPropagation();
+									setShowReminderWaitModal(false);
+								}}
+								className="px-3 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700"
+							>
+								OK
 							</button>
 						</div>
 					</div>

@@ -30,37 +30,37 @@ export const PortalCalendarHeader = ({
 	};
 
 	return (
-		<>
-			<h4 className="text-base font-semibold text-slate-800 float-left mt-[0.25em]">
+		<div className="flex items-center justify-between w-full">
+			<h4 className="text-base font-semibold text-slate-800">
 				Calendar / Events / Trainings
+			</h4>
+			<div className="flex items-center gap-2">
 				<button
-					className="hover:bg-gray-800 absolute w-[1em] h-[1em] ml-[2em] mt-[-0.07em] pb-[0.2em] rounded-md border border-slate-300 text-2xl/0 bg-[#c9cbcc] disabled:opacity-50 disabled:cursor-not-allowed"
+					onClick={gotoPrev}
+					className="px-3 py-2 border border-slate-300 rounded text-lg leading-none font-medium text-slate-700 hover:bg-slate-50"
+				>
+					&larr;
+				</button>
+				<span className="text-base font-semibold text-slate-800 min-w-[10rem] text-center">
+					{formatMonthYear(cursor)}
+				</span>
+				<button
+					onClick={gotoNext}
+					className="px-3 py-2 border border-slate-300 rounded text-lg leading-none font-medium text-slate-700 hover:bg-slate-50"
+				>
+					&rarr;
+				</button>
+				<button
 					onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
 						e.stopPropagation();
 						refreshCalendar();
 					}}
 					disabled={loading}
+					className="px-3 py-2 border border-slate-300 rounded text-lg leading-none font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
 				>
 					⟳
 				</button>
-			</h4>
-			<div className="flex items-center gap-2 float-right">
-				<button
-					onClick={gotoPrev}
-					className="rounded-md border border-slate-300 px-2 py-1 text-sm bg-[#c9cbcc] hover:bg-gray-800"
-				>
-					&larr;
-				</button>
-				<span className="text-sm text-slate-700">
-					{formatMonthYear(cursor)}
-				</span>
-				<button
-					onClick={gotoNext}
-					className="rounded-md border border-slate-300 px-2 py-1 text-sm bg-[#c9cbcc] hover:bg-gray-800"
-				>
-					&rarr;
-				</button>
 			</div>
-		</>
+		</div>
 	);
 };

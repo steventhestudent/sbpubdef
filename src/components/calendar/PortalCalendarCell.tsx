@@ -43,7 +43,7 @@ export const PortalCalendarCell = ({
 
 	return (
 		<td
-			className={`min-h-10 border border-[var(--webpart-inner-border-color)] align-top p-1 ${inThisMonth(date) ? "" : "bg-slate-50"}`}
+			className={`min-h-10 border border-slate-300 align-top p-2 ${inThisMonth(date) ? "" : "bg-slate-50"}`}
 			width="14%"
 		>
 			<div className="text-xs text-slate-500 text-right">

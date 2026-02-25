@@ -95,7 +95,7 @@ function mapHotelingToCal(): CalendarItem[] {
 	const groups = new Map<string, ReturnType<typeof readHotelingReservations>>();
 
 	readHotelingReservations().forEach((reservation) => {
-		const key = `${reservation.date}__${reservation.location}__${reservation.desk ?? ""}`;
+		const key = reservation.date;
 		const current = groups.get(key) ?? [];
 		current.push(reservation);
 		groups.set(key, current);
@@ -113,9 +113,13 @@ function mapHotelingToCal(): CalendarItem[] {
 			const when = new Date(year, month - 1, day, hour, 0, 0, 0);
 			if (isNaN(when.getTime())) return undefined;
 
+			const uniqueLocations = Array.from(
+				new Set(reservations.map((reservation) => reservation.location)),
+			);
+
 			const timeLabel =
 				hasMorning && hasAfternoon
-					? "All day (8:00 AM - 5:00 PM)"
+					? "All Day"
 					: hasMorning
 						? "Morning"
 						: "Afternoon";
@@ -130,10 +134,10 @@ function mapHotelingToCal(): CalendarItem[] {
 			return {
 				id: `H-${key}`,
 				kind: "event" as const,
-				title: `Hoteling ${first.desk ? `(${first.desk})` : ""}`.trim(),
+				title: "Hoteling",
 				when,
 				timeLabel,
-				location: first.location,
+				location: uniqueLocations.join(", "),
 				href:
 					linkSource.sharePointEventWebLink ||
 					linkSource.outlookEventWebLink ||
