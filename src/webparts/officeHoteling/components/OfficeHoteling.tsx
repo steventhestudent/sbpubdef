@@ -7,6 +7,7 @@ import {
 	readHotelingReservations,
 	writeHotelingReservations,
 } from "@services/officeHotelingSync";
+import { AadHttpClient } from "@microsoft/sp-http";
 
 interface Reservation {
 	id: string;
