@@ -548,7 +548,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 					type: "error",
 					text: `Failed to send reminder email. (${response.status})`,
 				});
-			} catch (e: any) {
+			} catch (e) {
 				console.error("Failed to send reminder email (exception).", e);
 				setStatusMessage({
 					type: "error",

@@ -7,7 +7,7 @@
 -   [sbpubdef todo.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/sbpubdef%20todo.md)
 -   [flow — Add Embed Page (List Item) - New Page-Embed.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/flow%20%E2%80%94%20Add%20Embed%20Page%20(List%20item)%20-%20New%20Page-Embed.md)
 -   [new webpart.md](docs/new%20webpart.md)
--   [azure functions.md](docs/azure%20functions/azure%20functions.md)
+-   [new azure function.md](docs/azure%20functions/new%20azure%20function.md)
     &nbsp;
 
 ## Install

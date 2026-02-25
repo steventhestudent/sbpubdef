@@ -5,7 +5,7 @@ import requests
 import msal
 
 SHAREPOINT_LIST_COLUMNS = ["LinkTitle", "_ColorTag", "ComplianceAssetId", "ID", "ContentType", "Modified", "Created", "Author", "Editor", "_UIVersionString", "Attachments", "Edit", "LinkTitleNoMenu", "DocIcon", "ItemChildCount", "FolderChildCount", "_ComplianceFlags", "_ComplianceTag", "_ComplianceTagWrittenTime", "_ComplianceTagUserId", "_IsRecord", "AppAuthor", "AppEditor"]
-if os.getenv('AZURE_FUNCTIONS_ENVIRONMENT') == None: # not in azure functions environment -> .env files
+if (os.getenv('AZURE_FUNCTIONS_ENVIRONMENT') == None) or (os.getenv('AZURE_FUNCTIONS_ENVIRONMENT') == "Development"): # not in azure functions environment (module call/func start) -> use .env files
     [load_dotenv(Path(__file__).resolve().parents[5] / f"config/{env}") for env in [".env.public.dev", ".env.dev"]]
 session_headers = {}
 
