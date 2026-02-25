@@ -34,6 +34,15 @@ interface StatusMessage {
 	text: string;
 }
 
+interface ReservationGroup {
+	key: string;
+	date: string;
+	location: string;
+	desk?: string;
+	reservations: Reservation[];
+	timeLabel: "Morning" | "Afternoon" | "All day";
+}
+
 const OFFICE_LOCATIONS = offices.map((office) => office.name);
 
 const PUBLIC_HOLIDAYS = new Set<string>([
@@ -119,20 +128,10 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 	);
 	const [pendingReservation, setPendingReservation] =
 		React.useState<Reservation | null>(null);
-	const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(
-		null,
-	);
+	const [pendingDeleteIds, setPendingDeleteIds] = React.useState<string[] | null>(null);
 	const [showLimitModal, setShowLimitModal] = React.useState<boolean>(false);
-	const [currentReservationIndex, setCurrentReservationIndex] =
-		React.useState<number>(0);
 	const [sendConfirmationToInbox, setSendConfirmationToInbox] =
 		React.useState<boolean>(true);
-	const [sendConfirmationToCustomEmail, setSendConfirmationToCustomEmail] =
-		React.useState<boolean>(false);
-	const [customConfirmationEmail, setCustomConfirmationEmail] =
-		React.useState<string>("");
-	const [addToMicrosoftCalendar, setAddToMicrosoftCalendar] =
-		React.useState<boolean>(false);
 	const [isProcessingConfirmation, setIsProcessingConfirmation] =
 		React.useState<boolean>(false);
 	const [statusMessage, setStatusMessage] =
@@ -145,11 +144,6 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		});
 		setBookedSlots(setSlots);
 		writeHotelingReservations(reservations);
-
-		setCurrentReservationIndex((prev) => {
-			const maxIndex = Math.max(0, reservations.length - 1);
-			return Math.min(prev, maxIndex);
-		});
 	}, [reservations]);
 
 	React.useEffect(() => {
@@ -214,11 +208,48 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		});
 	};
 
+	const SEND_EMAIL_FUNCTION_URL =
+		"https://sbpubdef-agfwa0d9e3b9anch.westus3-01.azurewebsites.net/api/SendEmail";
+	const SEND_EMAIL_API_APP_ID = "c852c7d6-8c34-4b51-a368-92be5f2ac96a";
+
+	const sendEmailViaFunction = async (
+		toEmails: string[],
+		subject: string,
+		body: string,
+	): Promise<void> => {
+		const client: AadHttpClient =
+			await props.context.aadHttpClientFactory.getClient(
+				SEND_EMAIL_API_APP_ID,
+			);
+
+		const payload = {
+			to_email: toEmails,
+			subject,
+			body,
+			content_type: "HTML",
+		};
+
+		const response = await client.post(
+			SEND_EMAIL_FUNCTION_URL,
+			AadHttpClient.configurations.v1,
+			{
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(payload),
+			},
+		);
+
+		if (!response.ok) {
+			const errText = await response.text().catch(() => "");
+			throw new Error(
+				`Failed to send email via function (${response.status}) ${errText}`,
+			);
+		}
+	};
+
 	const sendReservationEmail = async (
 		reservation: Reservation,
 		recipientEmail: string,
 	): Promise<void> => {
-		const client: MSGraphClientV3 = await GraphClient(props.context);
 		const subject = `Reservation Confirmed: ${reservation.location}`;
 		const bodyHtml = `
 			<p>Your hoteling reservation has been confirmed.</p>
@@ -228,73 +259,44 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			<p><strong>Desk:</strong> ${reservation.desk ?? "N/A"}</p>
 		`;
 
-		await client.api("/me/sendMail").post({
-			message: {
-				subject,
-				body: {
-					contentType: "HTML",
-					content: bodyHtml,
-				},
-				toRecipients: [
-					{
-						emailAddress: {
-							address: recipientEmail,
-						},
-					},
-				],
-			},
-			saveToSentItems: true,
-		});
+		await sendEmailViaFunction([recipientEmail], subject, bodyHtml);
 	};
 
-	const addReservationEventToCalendar = async (
-		reservation: Reservation,
-	): Promise<{ eventId: string; webLink?: string }> => {
-		const client: MSGraphClientV3 = await GraphClient(props.context);
-		const { start, end } = getReservationDateRange(reservation);
-
-		const created: { id: string; webLink?: string } = await client
-			.api("/me/events")
-			.post({
-				subject: `Office Hoteling: ${reservation.location}`,
-				body: {
-					contentType: "HTML",
-					content: `<p>Office hoteling reservation for ${reservation.location}${reservation.desk ? ` (${reservation.desk})` : ""}.</p>`,
-				},
-				start: {
-					dateTime: start.toISOString(),
-					timeZone: "UTC",
-				},
-				end: {
-					dateTime: end.toISOString(),
-					timeZone: "UTC",
-				},
-				location: {
-					displayName: reservation.location,
-				},
-			});
-
-		return {
-			eventId: created.id,
-			webLink: created.webLink,
-		};
-	};
 
 	const createSharePointEventForReservation = async (
 		reservation: Reservation,
+		options?: { forceAllDayRange?: boolean },
 	): Promise<{ itemId: number; webLink: string }> => {
 		const sp = getSP(props.context);
 		const list = sp.web.lists.getByTitle("Events");
 		const listInfo: { Id: string } = await list.select("Id")();
 		const listGuid = listInfo.Id;
-		const { start, end } = getReservationDateRange(reservation);
+
+		const allDayRange = (() => {
+			const [year, month, day] = reservation.date.split("-").map(Number);
+			return {
+				start: new Date(year, month - 1, day, 8, 0, 0, 0),
+				end: new Date(year, month - 1, day, 17, 0, 0, 0),
+			};
+		})();
+
+		const { start, end } = options?.forceAllDayRange
+			? allDayRange
+			: getReservationDateRange(reservation);
+
+		const titleSuffix = options?.forceAllDayRange
+			? " - All Day (8:00 AM - 5:00 PM)"
+			: "";
+		const descriptionTime = options?.forceAllDayRange
+			? "All Day (8:00 AM - 5:00 PM)"
+			: reservation.time;
 
 		const added: { Id: number } = await list.items.add({
-			Title: `Office Hoteling: ${reservation.location}${reservation.desk ? ` (${reservation.desk})` : ""}`,
+			Title: `Office Hoteling: ${reservation.location}${reservation.desk ? ` (${reservation.desk})` : ""}${titleSuffix}`,
 			EventDate: start.toISOString(),
 			EndDate: end.toISOString(),
 			Location: reservation.location,
-			Description: `Hoteling reservation (${reservation.time})${reservation.desk ? ` - ${reservation.desk}` : ""}`,
+			Description: `Hoteling reservation (${descriptionTime})${reservation.desk ? ` - ${reservation.desk}` : ""}`,
 			fAllDayEvent: false,
 		});
 
@@ -374,13 +376,6 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			}
 		}
 
-		if (sendConfirmationToCustomEmail) {
-			const customEmail = customConfirmationEmail.trim();
-			if (customEmail) {
-				recipients.add(customEmail);
-			}
-		}
-
 		return Array.from(recipients).join(",");
 	};
 
@@ -428,55 +423,86 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		return failures;
 	};
 
-	const handleDelete = (reservationId: string): void => {
-		const reservation = reservations.find((r) => r.id === reservationId);
-		if (!reservation || !canDeleteReservation(reservation)) {
+	const isDeleteAlreadyAppliedError = (error: unknown): boolean => {
+		const detail = extractErrorMessage(error).toLowerCase();
+		return (
+			detail.includes("http 404") ||
+			detail.includes("item does not exist") ||
+			detail.includes("not found")
+		);
+	};
+
+	const handleDelete = (reservationIds: string[]): void => {
+		if (reservationIds.length === 0) {
 			return;
 		}
-		setPendingDeleteId(reservationId);
+
+		const canDeleteAll = reservationIds.every((id) => {
+			const reservation = reservations.find((r) => r.id === id);
+			return !!reservation && canDeleteReservation(reservation);
+		});
+
+		if (!canDeleteAll) {
+			return;
+		}
+
+		setPendingDeleteIds(reservationIds);
 	};
 
 	const handleConfirmDelete = (confirmed: boolean): void => {
-		if (!confirmed || !pendingDeleteId) {
-			setPendingDeleteId(null);
+		if (!confirmed || !pendingDeleteIds || pendingDeleteIds.length === 0) {
+			setPendingDeleteIds(null);
 			return;
 		}
 
-		const deletedReservation = reservations.find(
-			(r) => r.id === pendingDeleteId,
+		const deletedReservations = reservations.filter((r) =>
+			pendingDeleteIds.includes(r.id),
 		);
-		if (deletedReservation?.outlookEventId) {
-			deleteReservationEventFromCalendar(deletedReservation).catch(
-				(error) => {
+
+		const processedOutlookEventIds = new Set<string>();
+		const processedSharePointEventIds = new Set<number>();
+
+		deletedReservations.forEach((reservation) => {
+			if (
+				reservation.outlookEventId &&
+				!processedOutlookEventIds.has(reservation.outlookEventId)
+			) {
+				processedOutlookEventIds.add(reservation.outlookEventId);
+				deleteReservationEventFromCalendar(reservation).catch((error) => {
+					if (isDeleteAlreadyAppliedError(error)) {
+						return;
+					}
 					const detail = extractErrorMessage(error);
 					setStatusMessage({
 						type: "error",
 						text: `Reservation deleted, but calendar event delete failed: ${detail}`,
 					});
-				},
-			);
-		}
+				});
+			}
 
-		if (deletedReservation?.sharePointEventId) {
-			deleteSharePointEventForReservation(deletedReservation).catch(
-				(error) => {
+			if (
+				reservation.sharePointEventId &&
+				!processedSharePointEventIds.has(reservation.sharePointEventId)
+			) {
+				processedSharePointEventIds.add(reservation.sharePointEventId);
+				deleteSharePointEventForReservation(reservation).catch((error) => {
+					if (isDeleteAlreadyAppliedError(error)) {
+						return;
+					}
 					const detail = extractErrorMessage(error);
 					setStatusMessage({
 						type: "error",
 						text: `Reservation deleted, but SharePoint event delete failed: ${detail}`,
 					});
-				},
-			);
-		}
+				});
+			}
+		});
 
 		const newReservations = reservations.filter(
-			(r) => r.id !== pendingDeleteId,
+			(reservation) => !pendingDeleteIds.includes(reservation.id),
 		);
 		setReservations(newReservations);
-		setCurrentReservationIndex((prev) =>
-			Math.min(prev, Math.max(0, newReservations.length - 1)),
-		);
-		setPendingDeleteId(null);
+		setPendingDeleteIds(null);
 		setEditingReservationId(null);
 		setShowCalendar(false);
 		setViewMode("my");
@@ -498,40 +524,30 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		}
 
 		const sendReminder = async (): Promise<void> => {
-			const functionUrl =
-				"https://sbpubdef-agfwa0d9e3b9anch.westus3-01.azurewebsites.net/api/SendEmail"; //todo: use .env.public.dev
-			const functionKey =
-				localStorage.getItem("DONT_PUSH_SECRET_KEY") || "";
-			const response = await fetch(`${functionUrl}?code=${functionKey}`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					to_email: [userEmail],
-					subject: `Hoteling Reminder: ${reservation.location}`,
-					body: `
-           <p>This is your reminder for an upcoming hoteling reservation.</p
-           <p><strong>Date:</strong> ${formatDate(reservation.date)}</p>
-           <p><strong>Time:</strong> ${reservation.time}</p>
-           <p><strong>Location:</strong> ${reservation.location}</p>
-           <p><strong>Desk:</strong> ${reservation.desk ?? "N/A"}</p>
-         `,
-					content_type: "HTML",
-				}),
-			});
-
-			if (response.ok) {
+			try {
+				await sendEmailViaFunction(
+					[userEmail],
+					`Hoteling Reminder: ${reservation.location}`,
+					`
+        <p>This is your reminder for an upcoming hoteling reservation.</p>
+        <p><strong>Date:</strong> ${formatDate(reservation.date)}</p>
+        <p><strong>Time:</strong> ${reservation.time}</p>
+        <p><strong>Location:</strong> ${reservation.location}</p>
+        <p><strong>Desk:</strong> ${reservation.desk ?? "N/A"}</p>
+					`,
+				);
 				console.log("Reminder email sent.");
 				setStatusMessage({
 					type: "success",
 					text: "Reminder email sent.",
 				});
-			} else {
-				console.error("Failed to send reminder email.");
+			} catch (e: unknown) {
+				console.error("Failed to send reminder email (exception).", e);
+				const errorMessage =
+					e instanceof Error ? e.message : String(e);
 				setStatusMessage({
 					type: "error",
-					text: "Failed to send reminder email.",
+					text: `Failed to send reminder email. ${errorMessage}`,
 				});
 			}
 		};
@@ -566,20 +582,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		};
 
 		setSendConfirmationToInbox(true);
-		setSendConfirmationToCustomEmail(false);
-		setCustomConfirmationEmail("");
-		setAddToMicrosoftCalendar(false);
 		setPendingReservation(newPending);
-	};
-
-	const prevReservation = (): void => {
-		setCurrentReservationIndex((i) => Math.max(0, i - 1));
-	};
-
-	const nextReservation = (): void => {
-		setCurrentReservationIndex((i) =>
-			Math.min(reservations.length - 1, i + 1),
-		);
 	};
 
 	const handleConfirmReservation = async (
@@ -632,34 +635,68 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 				const reservationToSave: Reservation = {
 					...pendingReservation,
 				};
+				let updatedExistingReservations = reservations;
 				const extraFailures: string[] = [];
-				try {
-					const createdSharePointEvent =
-						await createSharePointEventForReservation(
-							pendingReservation,
-						);
-					reservationToSave.sharePointEventId =
-						createdSharePointEvent.itemId;
-					reservationToSave.sharePointEventWebLink =
-						createdSharePointEvent.webLink;
-				} catch (error) {
-					extraFailures.push(
-						`SharePoint event failed: ${extractErrorMessage(error)}`,
-					);
-				}
 
-				if (addToMicrosoftCalendar) {
-					try {
-						const createdEvent =
-							await addReservationEventToCalendar(
-								pendingReservation,
+				const pairedReservation = reservations.find(
+					(reservation) =>
+						reservation.date === pendingReservation.date &&
+						reservation.location === pendingReservation.location &&
+						(reservation.desk ?? "") ===
+							(pendingReservation.desk ?? "") &&
+						reservation.time !== pendingReservation.time,
+				);
+
+				if (pairedReservation) {
+					if (pairedReservation.sharePointEventId) {
+						try {
+							await deleteSharePointEventForReservation(pairedReservation);
+						} catch (error) {
+							extraFailures.push(
+								`Delete existing event failed: ${extractErrorMessage(error)}`,
 							);
-						reservationToSave.outlookEventId = createdEvent.eventId;
-						reservationToSave.outlookEventWebLink =
-							createdEvent.webLink;
+						}
+					}
+
+					try {
+						const createdAllDayEvent =
+							await createSharePointEventForReservation(
+								pendingReservation,
+								{ forceAllDayRange: true },
+							);
+
+						reservationToSave.sharePointEventId = createdAllDayEvent.itemId;
+						reservationToSave.sharePointEventWebLink =
+							createdAllDayEvent.webLink;
+
+						updatedExistingReservations = reservations.map((reservation) =>
+							reservation.id === pairedReservation.id
+								? {
+										...reservation,
+										sharePointEventId: createdAllDayEvent.itemId,
+										sharePointEventWebLink:
+											createdAllDayEvent.webLink,
+								}
+								: reservation,
+						);
 					} catch (error) {
 						extraFailures.push(
-							`Calendar event failed: ${extractErrorMessage(error)}`,
+							`All day event failed: ${extractErrorMessage(error)}`,
+						);
+					}
+				} else {
+					try {
+						const createdSharePointEvent =
+							await createSharePointEventForReservation(
+								pendingReservation,
+							);
+						reservationToSave.sharePointEventId =
+							createdSharePointEvent.itemId;
+						reservationToSave.sharePointEventWebLink =
+							createdSharePointEvent.webLink;
+					} catch (error) {
+						extraFailures.push(
+							`SharePoint event failed: ${extractErrorMessage(error)}`,
 						);
 					}
 				}
@@ -669,7 +706,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 					`${pendingReservation.date}-${pendingReservation.time.toLowerCase()}`,
 				);
 				setBookedSlots(newBookedSlots);
-				setReservations([...reservations, reservationToSave]);
+				setReservations([...updatedExistingReservations, reservationToSave]);
 				const followUpFailures =
 					await runReservationFollowUps(pendingReservation);
 				const allFailures = [...extraFailures, ...followUpFailures];
@@ -719,17 +756,39 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 	const sortedReservations = [...reservations].sort(
 		(a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
 	);
-	const safeReservationIndex = Math.min(
-		currentReservationIndex,
-		Math.max(0, sortedReservations.length - 1),
-	);
-	const activeReservation =
-		sortedReservations.length > 0
-			? sortedReservations[safeReservationIndex]
-			: null;
-	const canDeleteCurrentReservation = activeReservation
-		? canDeleteReservation(activeReservation)
-		: false;
+
+	const groupedReservations = React.useMemo<ReservationGroup[]>(() => {
+		const groupedMap = new Map<string, Reservation[]>();
+
+		sortedReservations.forEach((reservation) => {
+			const groupKey = `${reservation.date}__${reservation.location}__${reservation.desk ?? ""}`;
+			const existing = groupedMap.get(groupKey) ?? [];
+			existing.push(reservation);
+			groupedMap.set(groupKey, existing);
+		});
+
+		return Array.from(groupedMap.entries()).map(([key, group]) => {
+			const hasMorning = group.some((reservation) => reservation.time === "Morning");
+			const hasAfternoon = group.some((reservation) => reservation.time === "Afternoon");
+
+			let timeLabel: "Morning" | "Afternoon" | "All day" = "Morning";
+			if (hasMorning && hasAfternoon) {
+				timeLabel = "All day";
+			} else if (hasAfternoon) {
+				timeLabel = "Afternoon";
+			}
+
+			const first = group[0];
+			return {
+				key,
+				date: first.date,
+				location: first.location,
+				desk: first.desk,
+				reservations: group,
+				timeLabel,
+			};
+		});
+	}, [sortedReservations]);
 
 	return (
 		<section className="border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm p-6">
@@ -785,146 +844,71 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			{viewMode === "my" && (
 				<div className="mb-6">
 					<h3 className="font-semibold text-slate-800 mb-3">
-						My Reservations ({sortedReservations.length})
+						My Reservations ({groupedReservations.length})
 					</h3>
-					{sortedReservations.length === 0 && (
+					{groupedReservations.length === 0 && (
 						<p className="text-sm text-slate-600">
 							You currently have no reservation.
 						</p>
 					)}
-					<div className="space-y-3">
-						{sortedReservations.length > 0 && (
-							<div className="border border-slate-300 rounded-lg p-4">
-								<div className="flex items-start justify-between mb-4">
-									<div>
-										<p className="text-sm text-slate-500">
-											Reservation{" "}
-											{safeReservationIndex + 1} of{" "}
-											{sortedReservations.length}
+					<div className="flex flex-wrap justify-start gap-3">
+						{groupedReservations.map((group) => {
+							const canDeleteGroup = group.reservations.every((reservation) =>
+								canDeleteReservation(reservation),
+							);
+
+							return (
+								<div
+									key={group.key}
+									className="border border-slate-300 rounded-lg p-3 bg-white w-full md:w-[calc(50%-0.375rem)] xl:w-[calc(33.333%-0.5rem)]"
+								>
+									<div className="mb-3">
+										<p className="text-slate-800 font-medium text-sm">
+											{formatDate(group.date)}
 										</p>
-										<p className="text-slate-800 font-medium">
-											{activeReservation
-												? formatDate(
-														activeReservation.date,
-													)
-												: ""}
+										<p className="text-slate-600 text-sm mt-1">
+											{group.timeLabel} — {group.desk ?? "Desk N/A"}
 										</p>
-										<p className="text-slate-500 text-sm">
-											{activeReservation
-												? `${activeReservation.time} — ${activeReservation.desk ?? ""}`
-												: ""}
+										<p className="text-slate-700 text-sm mt-1">
+											{group.location}
 										</p>
 									</div>
-									<div className="flex items-center gap-3">
+
+									<div className="flex flex-col items-start gap-2">
 										<button
 											type="button"
 											onClick={(e) => {
 												e.preventDefault();
 												e.stopPropagation();
-												prevReservation();
+												handleDelete(group.reservations.map((reservation) => reservation.id));
 											}}
-											disabled={
-												safeReservationIndex === 0
-											}
-											className="px-3 py-2 border border-slate-300 rounded text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+											disabled={!canDeleteGroup}
+											className="px-2 py-1 text-xs font-medium text-red-600 hover:text-red-800 disabled:text-slate-400 disabled:cursor-not-allowed"
 										>
-											&lt; Prev
+											Delete reservation
 										</button>
+
+										{!canDeleteGroup && (
+											<p className="text-[11px] text-slate-500">
+												Delete is disabled within 24 hours of the reservation.
+											</p>
+										)}
+
 										<button
 											type="button"
 											onClick={(e) => {
 												e.preventDefault();
 												e.stopPropagation();
-												nextReservation();
+												handleSendReminder(group.reservations[0].id);
 											}}
-											disabled={
-												safeReservationIndex >=
-												sortedReservations.length - 1
-											}
-											className="px-3 py-2 border border-slate-300 rounded text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+											className="px-2 py-1 text-xs font-medium text-slate-600 hover:text-slate-800"
 										>
-											Next &gt;
+											Send reservation reminder
 										</button>
 									</div>
 								</div>
-								<div className="flex gap-4">
-									<div className="flex-1 p-4 bg-slate-50 border border-slate-200 rounded">
-										<p className="text-slate-700 text-sm">
-											Date
-										</p>
-										<p className="text-slate-900 font-semibold text-lg">
-											{activeReservation
-												? formatDate(
-														activeReservation.date,
-													)
-												: ""}
-										</p>
-										<p className="text-slate-600 text-sm mt-2">
-											Time:{" "}
-											{activeReservation
-												? activeReservation.time
-												: ""}
-										</p>
-									</div>
-									<div className="flex-1 p-4 bg-slate-50 border border-slate-200 rounded">
-										<p className="text-slate-700 text-sm">
-											Location
-										</p>
-										<p className="text-slate-900 font-semibold">
-											{activeReservation
-												? activeReservation.location
-												: ""}
-										</p>
-										<p className="text-slate-600 text-sm mt-2">
-											{activeReservation
-												? activeReservation.desk
-												: ""}
-										</p>
-										<div className="mt-4 flex flex-col items-end gap-2">
-											<button
-												type="button"
-												onClick={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
-													if (activeReservation)
-														handleDelete(
-															activeReservation.id,
-														);
-												}}
-												disabled={
-													!activeReservation ||
-													!canDeleteCurrentReservation
-												}
-												className="px-3 py-2 text-sm font-medium text-red-600 hover:text-red-800 disabled:text-slate-400 disabled:cursor-not-allowed"
-											>
-												Delete
-											</button>
-											{!canDeleteCurrentReservation && (
-												<p className="text-[11px] text-slate-500 text-right">
-													Delete is disabled within 24
-													hours of the reservation.
-												</p>
-											)}
-											<button
-												type="button"
-												onClick={(e) => {
-													e.preventDefault();
-													e.stopPropagation();
-													if (activeReservation)
-														handleSendReminder(
-															activeReservation.id,
-														);
-												}}
-												disabled={!activeReservation}
-												className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 disabled:text-slate-400 disabled:cursor-not-allowed"
-											>
-												Send reminder
-											</button>
-										</div>
-									</div>
-								</div>
-							</div>
-						)}
+							);
+						})}
 					</div>
 				</div>
 			)}
@@ -1171,46 +1155,6 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 								/>
 								<span>Send confirmation to my inbox</span>
 							</label>
-							<label className="inline-flex items-center gap-2 text-sm text-slate-700">
-								<input
-									type="checkbox"
-									checked={sendConfirmationToCustomEmail}
-									onChange={(e) =>
-										setSendConfirmationToCustomEmail(
-											e.target.checked,
-										)
-									}
-								/>
-								<span>Select email to send confirmation</span>
-							</label>
-							{sendConfirmationToCustomEmail && (
-								<input
-									type="email"
-									value={customConfirmationEmail}
-									onChange={(e) =>
-										setCustomConfirmationEmail(
-											e.target.value,
-										)
-									}
-									placeholder="name@domain.com"
-									className="w-full border border-slate-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-								/>
-							)}
-							<label className="inline-flex items-center gap-2 text-sm text-slate-700">
-								<input
-									type="checkbox"
-									checked={addToMicrosoftCalendar}
-									onChange={(e) =>
-										setAddToMicrosoftCalendar(
-											e.target.checked,
-										)
-									}
-								/>
-								<span>
-									Add this reservation to my Microsoft
-									calendar
-								</span>
-							</label>
 						</div>
 						<div className="flex gap-3 justify-end">
 							<button
@@ -1244,14 +1188,14 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 				</div>
 			)}
 
-			{pendingDeleteId && (
+			{pendingDeleteIds && pendingDeleteIds.length > 0 && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
 					<div className="bg-white rounded-md p-6 w-[90%] max-w-xl">
 						<h4 className="font-semibold mb-3">
 							Delete Reservation
 						</h4>
 						<p className="mb-4 text-slate-700">
-							Are you sure you want to delete this reservation?
+							Are you sure you want to delete this reservation{pendingDeleteIds.length > 1 ? " group" : ""}?
 							This action cannot be undone.
 						</p>
 						<div className="flex gap-3 justify-end">
