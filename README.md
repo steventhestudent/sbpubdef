@@ -20,7 +20,8 @@
 2. `cd sbpubdef`
 3. `pnpm install`
 4. `pnpm npx gulp trust-dev-cert`
-5. **optionally:** scraped forms / resource folder (private repo, so that this one can stay public): `git clone git@github.com:steventhestudent/sbpubdef-resources.git resource` ask for an invite
+5. `git config --local user.name ""  &&  git config --local user.email "@calstatela.edu"`
+6. **optionally:** scraped forms / resource folder (private repo, so that this one can stay public): `git clone git@github.com:steventhestudent/sbpubdef-resources.git resource` ask for an invite
 
 #### now, hot reload + tailwind (gulp) server works:
 

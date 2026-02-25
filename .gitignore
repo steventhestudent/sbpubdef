@@ -1,3 +1,5 @@
+src/type/env.generated.ts
+src/type/env.global.generated.d.ts
 *.ctx
 */.env.*
 # except don't ignore example .env:

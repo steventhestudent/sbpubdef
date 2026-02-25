@@ -10,9 +10,7 @@ build.addSuppression(
 var getTasks = build.rig.getTasks;
 build.rig.getTasks = function () {
 	var result = getTasks.call(build.rig);
-
 	result.set("serve", result.get("serve-deprecated"));
-
 	return result;
 };
 
@@ -37,18 +35,8 @@ build.configureWebpack.mergeConfig({
 	},
 });
 
-/* this breaks aliases so i commented it out */
-// // keep dist on gulp clean
-// const { resolve } = path;
-// build.configureWebpack.mergeConfig({
-// 	additionalConfiguration: (generatedConfig) => {
-// 		generatedConfig.resolve.alias = {
-// 			...(generatedConfig.resolve.alias || {}),
-// 			"@dist": resolve(__dirname, "dist"),
-// 		};
-// 		return generatedConfig;
-// 	},
-// });
+require("./scripts/js/gen-env-runtime")(); // writes src/type/env.generated.ts (imported on src/utils/CommonWebPartImports)
+require("./scripts/js/gen-env-types")(); // writes src/type/env.global.generated.d.ts
 
 /* fast-serve */
 const { addFastServe } = require("spfx-fast-serve-helpers");
