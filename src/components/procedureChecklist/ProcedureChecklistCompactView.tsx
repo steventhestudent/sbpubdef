@@ -10,14 +10,13 @@ export const ProcedureChecklistCompactView = ({
 	editorMode = false,
 }: {
 	selectedProcedure: ProcedureChecklistItem;
-	setSelectedProcedure: (
-		// prettier-ignore
-		value: ((prevState: ProcedureChecklistItem | null,) => ProcedureChecklistItem | null) | ProcedureChecklistItem | null,
-	) => void;
+	setSelectedProcedure: React.Dispatch<
+		React.SetStateAction<ProcedureChecklistItem | undefined>
+	>;
 	currentStep: number;
 	setCurrentStep: (value: ((prevState: number) => number) | number) => void;
 	editorMode?: boolean;
-}) => {
+}): JSX.Element => {
 	React.useEffect(() => {
 		// setSteps([]); //todo: <-------------------
 	}, []);
@@ -25,7 +24,7 @@ export const ProcedureChecklistCompactView = ({
 	if (!selectedProcedure.obj) return <div>loading...</div>;
 
 	const [sublistIndex, setSublistIndex] = React.useState<number>(0);
-	const getSublist = (proc: ProcedureChecklistItem, i: number) => {
+	const getSublist = (proc: ProcedureChecklistItem, i: number): string[] => {
 		console.log(proc.obj); //cdd ready referral form has no list_txt!???
 		if (!proc.obj!.lists.length) {
 			proc.obj!.lists[0] = {
@@ -116,7 +115,7 @@ export const ProcedureChecklistCompactView = ({
 			)}
 			<div>
 				<button
-					onClick={() => setSelectedProcedure(null)}
+					onClick={() => setSelectedProcedure(undefined)}
 					className="mb-2 text-sm text-blue-600 hover:underline"
 				>
 					← Back to procedure list
@@ -160,7 +159,10 @@ export const ProcedureChecklistCompactView = ({
 					{selectedProcedure.obj.lists[
 						sublistIndex
 					].associated_images.map((src, i) => (
-						<div className="h-full inline-block w-[80px] bg-black outline-1 outline-white cursor-pointer mr-2">
+						<div
+							key={`associated-image-${i}`}
+							className="h-full inline-block w-[80px] bg-black outline-1 outline-white cursor-pointer mr-2"
+						>
 							<img
 								key={i}
 								src={src}
@@ -186,7 +188,7 @@ export const ProcedureChecklistCompactView = ({
 							onClick={goToNextStep}
 							disabled={
 								currentStep === sublist.length &&
-								sublistIndex ==
+								sublistIndex ===
 									selectedProcedure.obj!.lists.length - 1
 							}
 							className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"

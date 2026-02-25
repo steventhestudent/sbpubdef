@@ -18,7 +18,7 @@ export function ProcedureChecklist({
 	const [search, setSearch] = React.useState("");
 	const [isLoading, setIsLoading] = React.useState<boolean>(true);
 	const [selectedProcedure, setSelectedProcedure] =
-		React.useState<ProcedureChecklistItem | null>(null);
+		React.useState<ProcedureChecklistItem | undefined>(undefined);
 	const [currentStep, setCurrentStep] = React.useState<number>(1);
 
 	const procedureChecklistApi = new ProcedureChecklistApi(pnpWrapper);
@@ -54,18 +54,22 @@ export function ProcedureChecklist({
 		});
 	}, [search, procedures]);
 
-	const onProcedureSelected = (proc: ProcedureChecklistItem) => {
+	const onProcedureSelected = (proc: ProcedureChecklistItem): void => {
 		setSelectedProcedure(proc);
 		setCurrentStep(1);
 		if (!proc.obj)
-			Utils.loadJSON(pnpWrapper.ctx, proc.json, (data) => {
+			Utils.loadJSON<ProcedureChecklistItem["obj"]>(
+				pnpWrapper.ctx,
+				proc.json,
+				(data) => {
 				const i = procedures.indexOf(proc);
 				proc.obj = data;
 				procedures[i] = proc;
 				setProcedures(procedures);
-				setSelectedProcedure(null);
+				setSelectedProcedure(undefined);
 				setSelectedProcedure(procedures[i]);
-			});
+				},
+			);
 	};
 
 	return (

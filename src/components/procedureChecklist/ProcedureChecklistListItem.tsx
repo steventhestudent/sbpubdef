@@ -7,7 +7,7 @@ export const ProcedureChecklistListItem = ({
 }: {
 	procedure: ProcedureChecklistItem;
 	onProcedureSelected?: (proc: ProcedureChecklistItem) => void;
-}) => {
+}): JSX.Element => {
 	return (
 		<li
 			className="px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors"
