@@ -8,6 +8,7 @@ import {
 import * as Utils from "@utils";
 import { ProcedureChecklistCompactView } from "@components/procedureChecklist/ProcedureChecklistCompactView";
 import { ProcedureChecklistListItem } from "@components/procedureChecklist/ProcedureChecklistListItem";
+import ClearableInput from "@components/ClearableInput";
 
 export function ProcedureChecklist({
 	userGroupNames,
@@ -77,26 +78,19 @@ export function ProcedureChecklist({
 	};
 
 	return (
-		<section className="p-4 text-sm ">
+		<section className="p-4 text-sm">
 			{selectedProcedure ? (
 				<></>
 			) : (
 				<div className="mt-1 flex gap-2">
-					<input
-						id="lops-search"
-						type="search"
-						className="w-full rounded-md border border-slate-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+					<ClearableInput
 						placeholder="Procedure name or category…"
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						onChange={(e) =>
+							setSearch(
+								(e.target as HTMLInputElement).value || "",
+							)
+						}
 					/>
-					<button
-						type="button"
-						className="rounded-md border-slate-300 px-3 text-sm text-white font-bold absolute right-[1.333em] mt-[0.666em] opacity-60 hover:opacity-100"
-						aria-label="Run search"
-					>
-						🔍
-					</button>
 				</div>
 			)}
 			{isLoading ? (
@@ -104,7 +98,7 @@ export function ProcedureChecklist({
 			) : !selectedProcedure ? (
 				<p className="mt-2 text-xs text-slate-500">
 					{`${filtered.length} procedures available`}
-					<span className="float-right hover:text-blue-500 cursor-pointer">
+					<span className="float-right cursor-pointer hover:text-blue-500">
 						{editorMode ? "➕" : ""}
 					</span>
 				</p>
@@ -120,7 +114,7 @@ export function ProcedureChecklist({
 									No procedures match this search.
 								</div>
 							) : (
-								<ul className="mt-3 divide-y divide-slate-400 rounded-md border border-slate-400 bg-white overflow-y-scroll h-[15em]">
+								<ul className="mt-3 h-[15em] divide-y divide-slate-400 overflow-x-hidden overflow-y-scroll rounded-md border border-slate-400 bg-white">
 									{filtered.map((proc) => (
 										<ProcedureChecklistListItem
 											key={proc.id}

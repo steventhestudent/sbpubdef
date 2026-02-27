@@ -10,22 +10,22 @@ export const ProcedureChecklistListItem = ({
 }): JSX.Element => {
 	return (
 		<li
-			className="px-3 py-2 hover:bg-slate-50 cursor-pointer transition-colors"
+			className="w-full cursor-pointer px-3 py-2 transition-colors hover:bg-slate-50"
 			onClick={() =>
 				onProcedureSelected ? onProcedureSelected(procedure) : 0
 			}
 		>
-			<div className="flex items-center justify-between">
-				<div>
-					<p className="text-sm font-semibold text-slate-750">
+			<div className="flex w-full items-center justify-between">
+				<div className="w-[80%] overflow-x-hidden">
+					<p className="text-slate-750 h-[1.2em] w-1 text-sm font-semibold overflow-ellipsis whitespace-nowrap">
 						{procedure.title || procedure.filename}
 					</p>
-					<p className="text-xs text-slate-600 mt-0.5">
+					<p className="mt-0.5 text-xs text-slate-600">
 						Category: {procedure.category} • {procedure.pageCount}{" "}
 						pages
 					</p>
 				</div>
-				<span className="text-blue-600 text-xs font-medium">
+				<span className="m-[-2em] mr-[-0.5em] rounded border-1 p-1 text-xs font-medium whitespace-pre text-blue-800">
 					View →
 				</span>
 			</div>
