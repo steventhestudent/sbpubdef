@@ -22,6 +22,7 @@ export const ProcedureChecklistCompactView = ({
 		// setSteps([]); //todo: <-------------------
 	}, []);
 
+	const [maximizePurpose, setMaximizePurpose] = React.useState(false);
 	if (!selectedProcedure.obj) return <div>loading...</div>;
 
 	const [sublistIndex, setSublistIndex] = React.useState<number>(0);
@@ -94,14 +95,23 @@ export const ProcedureChecklistCompactView = ({
 			{selectedProcedure.obj.purpose ? (
 				<>
 					<b>Purpose:</b>
-					<div className="float-right cursor-pointer text-blue-500 hover:underline">
-						Show More...
+					<div
+						className="float-right cursor-pointer text-blue-500 hover:underline"
+						onClick={() => setMaximizePurpose(!maximizePurpose)}
+					>
+						{maximizePurpose ? "Show Less..." : "Show More..."}
 					</div>
 				</>
 			) : (
 				<></>
 			)}
-			<div className="relative max-h-[2.5em] overflow-hidden">
+			<div
+				className="relative"
+				style={{
+					overflow: maximizePurpose ? "auto" : "hidden",
+					maxHeight: maximizePurpose ? "inherit" : "2.5em",
+				}}
+			>
 				{selectedProcedure.obj.purpose}
 			</div>
 			{showOverlay ? (

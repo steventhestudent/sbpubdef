@@ -152,7 +152,7 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 			{/* Content with smooth height transition */}
 			<div
 				id={`${instanceId}-content`}
-				className={`h-full w-full overflow-hidden transition-[grid-template-rows] duration-300 ease-in-out ${contentClassName}`}
+				className={`overflow-hidden transition-[grid-template-rows] duration-300 ease-in-out ${contentClassName}`}
 				style={{
 					display: "grid",
 					gridTemplateRows: collapsed ? "0fr" : "1fr",
