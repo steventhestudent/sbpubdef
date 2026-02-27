@@ -19,4 +19,5 @@ export interface IPowerBiParsedLink {
 export interface IUrgencyPortalProps {
 	context: WebPartContext;
 	links: IPowerBiLinkConfig[];
+	defaultUrl?: string;
 }

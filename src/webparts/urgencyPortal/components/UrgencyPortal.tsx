@@ -8,10 +8,7 @@ import {
 import { Collapsible } from "@components/Collapsible";
 
 type PBIEventResponseType =
-	| {
-			message?: string;
-			error?: { message?: string }; // eslint-disable-next-line no-mixed-spaces-and-tabs
-	  }
+	| { message?: string; error?: { message?: string } }
 	| undefined;
 
 const powerbiService = new pbi.service.Service(
@@ -39,11 +36,13 @@ async function getEmbedUrl(
 	);
 
 	if (!response.ok) {
-		const body = await response.text().catch(() => "");
+		const body = await response.text().catch((): string => "");
 		throw new Error(`Failed to get report (${response.status}). ${body}`);
 	}
 
-	const json: { embedUrl: string } = await response.json();
+	const json: { embedUrl: string } = (await response.json()) as {
+		embedUrl: string;
+	};
 	return json.embedUrl;
 }
 
@@ -137,7 +136,7 @@ function parseAll(links: IPowerBiLinkConfig[]): {
 	const items: IParsedItemWithUrl[] = [];
 	const errors: string[] = [];
 
-	(links || []).forEach((cfg) => {
+	(links || []).forEach((cfg: IPowerBiLinkConfig) => {
 		const res = parseLink(cfg);
 		if (res.error) errors.push(res.error);
 		if (res.item) items.push(res.item);
@@ -147,19 +146,17 @@ function parseAll(links: IPowerBiLinkConfig[]): {
 }
 
 function getItemKey(item: IParsedItemWithUrl): string {
-	const kind = item.kind;
-	const reportId = item.reportId;
-	const pageName = item.pageName || "";
-	const visualName = item.visualName || "";
-	return `${kind}|${reportId}|${pageName}|${visualName}`;
+	return item.originalUrl;
 }
 
 export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
-	const [selectedKey, setSelectedKey] = React.useState<string>("");
+	const [selectedKey, setSelectedKey] = React.useState<string>(
+		props.defaultUrl || "",
+	);
 	const [selection, setSelection] = React.useState<IParsedItemWithUrl | null>(
 		null,
 	);
-	const [isLoading, setIsLoading] = React.useState(false);
+	const [isLoading, setIsLoading] = React.useState<boolean>(false);
 	const [error, setError] = React.useState<string | null>(null);
 	const [openInNewTabUrl, setOpenInNewTabUrl] = React.useState<string | null>(
 		null,
@@ -168,9 +165,27 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 	const containerRef = React.useRef<HTMLDivElement>(null);
 
 	const { items, errors } = React.useMemo(
-		() => parseAll(props.links),
+		(): { items: IParsedItemWithUrl[]; errors: string[] } =>
+			parseAll(props.links),
 		[props.links],
 	);
+
+	React.useEffect(() => {
+		const configured = (props.defaultUrl || "").trim();
+		if (
+			configured &&
+			items.some((i: IParsedItemWithUrl) => i.originalUrl === configured)
+		) {
+			setSelectedKey(configured);
+			return;
+		}
+		if (
+			configured &&
+			!items.some((i: IParsedItemWithUrl) => i.originalUrl === configured)
+		) {
+			setSelectedKey("");
+		}
+	}, [props.defaultUrl, items]);
 
 	React.useEffect(() => {
 		if (!selectedKey) {
@@ -183,7 +198,10 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 			return;
 		}
 
-		const found = items.find((i) => getItemKey(i) === selectedKey) || null;
+		const found =
+			items.find(
+				(i: IParsedItemWithUrl) => getItemKey(i) === selectedKey,
+			) || null;
 		setSelection(found);
 		setError(null);
 	}, [selectedKey, items]);
@@ -304,7 +322,7 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 						}
 					},
 				);
-			} catch (e) {
+			} catch (e: unknown) {
 				if (!cancelled) {
 					setError(e instanceof Error ? e.message : String(e));
 					setIsLoading(false);
@@ -312,7 +330,7 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 			}
 		};
 
-		run().catch((e) => {
+		run().catch((e: unknown) => {
 			if (!cancelled) {
 				setError(e instanceof Error ? e.message : String(e));
 				setIsLoading(false);
@@ -344,26 +362,18 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 			instanceId={props.context.instanceId}
 			title="PowerBI - Urgency Portal"
 		>
-			<div
-				style={{
-					...wrapperStyle,
-					marginTop: 8,
-				}}
-			>
-				<div
-					style={{
-						paddingLeft: 5,
-						paddingRight: 5,
-					}}
-				>
+			<div style={{ ...wrapperStyle, marginTop: 8 }}>
+				<div style={{ paddingLeft: 5, paddingRight: 5 }}>
 					<select
 						style={selectStyle}
 						value={selectedKey}
-						onChange={(e) => setSelectedKey(e.currentTarget.value)}
+						onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+							setSelectedKey(e.currentTarget.value)
+						}
 						disabled={items.length === 0}
 					>
 						<option value="">-- Select --</option>
-						{items.map((item) => {
+						{items.map((item: IParsedItemWithUrl) => {
 							const key = getItemKey(item);
 							return (
 								<option key={key} value={key}>
