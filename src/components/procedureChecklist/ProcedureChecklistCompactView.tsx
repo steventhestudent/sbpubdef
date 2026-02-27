@@ -50,31 +50,58 @@ export const ProcedureChecklistCompactView = ({
 	);
 
 	const goToPreviousStep: () => void = () => {
-		if (currentStep > 1) setCurrentStep(currentStep - 1);
-		else if (sublistIndex > 0) {
-			setSublistIndex(sublistIndex - 1);
-			setCurrentStep(-1);
+		if (sublistIndex > 0) setSublistIndex(sublistIndex - 1);
+		else {
+			setSublistIndex(selectedProcedure.obj!.lists.length - 1);
 			console.log(`prev list`);
 		}
+		setCurrentStep(1);
+		// if (currentStep > 1) setCurrentStep(currentStep - 1);
+		// else if (sublistIndex > 0) {
+		// 	setSublistIndex(sublistIndex - 1);
+		// 	setCurrentStep(-1);
+		// 	console.log(`prev list`);
+		// }
 	};
 	React.useEffect(() => {
 		if (currentStep === -1) setCurrentStep(sublist.length);
 	}, [currentStep]);
 
 	const goToNextStep: () => void = () => {
-		if (currentStep < sublist.length) setCurrentStep(currentStep + 1);
-		else if (sublistIndex < selectedProcedure.obj!.lists.length - 1) {
+		if (sublistIndex < selectedProcedure.obj!.lists.length - 1)
 			setSublistIndex(sublistIndex + 1);
-			setCurrentStep(1);
+		else {
+			setSublistIndex(0);
 			console.log(`next list`);
 		}
+		setCurrentStep(1);
+		// if (currentStep < sublist.length) setCurrentStep(currentStep + 1);
+		// else if (sublistIndex < selectedProcedure.obj!.lists.length - 1) {
+		// 	setSublistIndex(sublistIndex + 1);
+		// 	setCurrentStep(1);
+		// 	console.log(`next list`);
+		// }
 	};
 
 	return (
 		<div className="">
 			<p className="text-xs text-slate-500">
 				{editorMode ? (
-					<span className="float-right cursor-pointer hover:text-blue-500">
+					<span
+						className="float-right cursor-pointer hover:text-blue-500"
+						onClick={(e) =>
+							(
+								(e.target as HTMLSpanElement)
+									.children[0] as HTMLInputElement
+							).click()
+						}
+					>
+						<input
+							className="hidden"
+							type="file"
+							onChange={() => console.log(`ok`)}
+							// ref={fileInputRef}
+						/>
 						re-import
 					</span>
 				) : (
@@ -154,43 +181,35 @@ export const ProcedureChecklistCompactView = ({
 				</span>
 			</div>
 			<div className="overflow-hidden rounded-md border border-slate-400 bg-white">
-				<div className="flex h-64 w-full items-center justify-center bg-slate-100">
+				<div className="min-h-64 w-full items-center justify-center bg-slate-100">
 					<div className="w-full p-6 text-center">
-						<div className="mb-3 flex h-48 w-full items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-gradient-to-br from-blue-50 to-slate-100">
-							<div className="px-4 text-center">
-								<p className="mb-2 text-4xl">📋</p>
-								<p className="text-sm font-semibold text-slate-500">
-									Sub-Step {currentStep} / {sublist.length}
-								</p>
-								<p className="mx-auto mt-1 max-w-md text-xs font-semibold text-slate-900">
-									{sublist[currentStep - 1]}
-								</p>
-							</div>
+						<div className="scrollbar-thin flex min-h-48 w-full items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-gradient-to-br from-blue-50 to-slate-100">
+							{selectedProcedure.obj.lists[
+								sublistIndex
+							].associated_images.map((src, i) => (
+								<div
+									key={i}
+									className="mr-2 inline-block w-[75%] cursor-pointer bg-black outline-1 outline-white"
+									style={{
+										width: i === 0 ? "200%" : "75%",
+									}}
+								>
+									<img
+										key={i}
+										src={src}
+										className="w-full"
+										onClick={() => setShowOverlay(src)}
+									/>
+								</div>
+							))}
 						</div>
 					</div>
 				</div>
-				<div className="h-[80px] w-full justify-center overflow-hidden rounded-lg border-2 border-dashed border-slate-300 bg-gradient-to-br from-blue-50 to-slate-100">
-					{selectedProcedure.obj.lists[
-						sublistIndex
-					].associated_images.map((src, i) => (
-						<div
-							key={i}
-							className="mr-2 inline-block h-full w-[80px] cursor-pointer bg-black outline-1 outline-white"
-						>
-							<img
-								key={i}
-								src={src}
-								className="h-full"
-								onClick={() => setShowOverlay(src)}
-							/>
-						</div>
-					))}
-				</div>
-				<div className="border-t border-slate-300 bg-slate-50 px-4 py-3">
+				<div className="mt-[-1em] border-t border-slate-300 bg-slate-50 px-4 py-3">
 					<div className="mb-2 flex items-center justify-between">
 						<button
 							onClick={goToPreviousStep}
-							disabled={currentStep === 1 && sublistIndex === 0}
+							// disabled={currentStep === 1 && sublistIndex === 0}
 							className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
 						>
 							← Back
@@ -200,15 +219,27 @@ export const ProcedureChecklistCompactView = ({
 						</span>
 						<button
 							onClick={goToNextStep}
-							disabled={
-								currentStep === sublist.length &&
-								sublistIndex ===
-									selectedProcedure.obj!.lists.length - 1
-							}
+							// disabled={
+							// 	currentStep === sublist.length &&
+							// 	sublistIndex ===
+							// 		selectedProcedure.obj!.lists.length - 1
+							//}
 							className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
 						>
 							Next →
 						</button>
+					</div>
+				</div>
+				<div className="w-full justify-center rounded-lg border-2 border-dashed border-slate-300 bg-gradient-to-br from-blue-50 to-slate-100">
+					<div className="px-4 py-4 text-center">
+						{/*<p className="text-sm font-semibold text-slate-500">*/}
+						{/*	Sub-Step {currentStep} / {sublist.length}*/}
+						{/*</p>*/}
+						<p className="mx-auto max-w-md text-xs font-semibold text-slate-900">
+							{sublist.map((sub, i) => (
+								<div key={i}>{sub}</div>
+							))}
+						</p>
 					</div>
 				</div>
 			</div>
