@@ -1,5 +1,4 @@
 import { ListApi } from "@api/ListApi";
-import { PD } from "@api/config";
 import { IList } from "@pnp/sp/lists";
 
 export type EventGetOpts = {
@@ -43,7 +42,7 @@ export abstract class EventApi<
 		try {
 			const cts = await list.contentTypes.select("StringId", "Name")();
 			const hit = (cts as Array<{ StringId: string; Name: string }>).find(
-				(ct) => ct.Name === PD.contentType.Event,
+				(ct) => ct.Name === ENV.CONTENTTYPE_EVENT,
 			); // "PD Events"
 			return hit?.StringId;
 		} catch {

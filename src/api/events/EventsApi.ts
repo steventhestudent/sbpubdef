@@ -5,7 +5,6 @@ import "@pnp/sp/content-types";
 
 import { EventApi, EventGetOpts } from "@api/EventApi";
 import { EventResult, PDEvent } from "@type/PDEvent";
-import { PD } from "@api/config";
 import { GraphClient, MSGraphClientV3 } from "@utils/graph/GraphClient";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 
@@ -25,7 +24,7 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 			const list = w.lists.getByTitle(this.listTitle(opts));
 			const { Id: listGuid } = await list.select("Id")(); // List GUID for Details URL
 			const deptProp = await this.resolveDeptProp(list);
-			// this.and(`startswith(ContentTypeId,'${PD.contentType.Event}')`);
+			// this.and(`startswith(ContentTypeId,'${ENV.CONTENTTYPE_EVENT}')`);
 			this.addDateFilters(opts);
 			if (department && deptProp)
 				this.and(`${deptProp} eq '${department.replace(/'/g, "''")}'`);
@@ -36,7 +35,7 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 					"EventDate",
 					"EndDate",
 					"Location",
-					PD.internalSiteColumn.PDDepartment,
+					ENV.INTERNALCOLUMN_PDDEPARTMENT,
 				)
 				.filter(this.odata)
 				.orderBy("EventDate", true) // ascending
@@ -50,11 +49,11 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 					date: i.EventDate, // ISO from list
 					endDate: i.EndDate,
 					location: i.Location,
-					// detailsUrl: `${siteOrigin}/sites/PD-Intranet/Lists/Events/DispForm.aspx?ID=${i.Id}`,
+					// detailsUrl: `${siteOrigin}/sites/${ENV.HUB_NAME}/Lists/Events/DispForm.aspx?ID=${i.Id}`,
 					// detailsUrl: `${siteOrigin}/_layouts/15/Event.aspx?ListGuid=${listGuid}&ItemId=${i.Id}`,
-					detailsUrl: `${siteOrigin}/sites/PD-Intranet/_layouts/15/Event.aspx?ListGuid=${listGuid}&ItemId=${i.Id}`,
+					detailsUrl: `${siteOrigin}/sites/${ENV.HUB_NAME}/_layouts/15/Event.aspx?ListGuid=${listGuid}&ItemId=${i.Id}`,
 					siteUrl: siteUrl || window.location.pathname,
-					PDDepartment: i.PD_x0020_Department,
+					PDDepartment: i[ENV.INTERNALCOLUMN_PDDEPARTMENT],
 				}),
 			);
 		});

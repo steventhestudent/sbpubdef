@@ -47,9 +47,12 @@ class FastServeRebuildLoggerPlugin {
 							),
 					).length > 0
 				) {
-					console.log(`bcos `, JSON.stringify(changed));
-					require("../scripts/js/gen-env-runtime")(); // writes src/type/env.generated.ts (imported on src/utils/CommonWebPartImports)
-					require("../scripts/js/gen-env-types")(); // writes src/type/env.global.generated.d.ts
+					console.log(
+						`rebuild triggered by changed files: `,
+						JSON.stringify(changed),
+					);
+					// writes src/type/env.global.generated.d.ts (provide autocomplete) // writes src/type/env.generated.ts (sets ENV) (imported on src/utils/CommonWebPartImports)
+					require("../scripts/js/gen-env");
 				}
 				console.log("[webpack.extend.js] pre-build work finished");
 				callback();

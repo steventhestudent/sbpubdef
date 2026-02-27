@@ -1,11 +1,8 @@
-export interface ListResult {
+export type ListResult = Record<string, string | undefined> & {
 	Title?: string;
 	Username?: string;
-	EXT_x002e_?: string;
-	WorkCell_x0023_?: string;
-	PersonalCell_x0023_?: string;
 	TitleName?: string;
-}
+};
 
 export interface PDStaffDirectoryItem {
 	name?: string;

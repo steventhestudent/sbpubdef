@@ -4,7 +4,6 @@ import "@pnp/sp/lists";
 import "@pnp/sp/fields";
 import { ListApi } from "@api/ListApi";
 import { ListResult, ProcedureChecklistItem } from "@type/ProcedureChecklist";
-import { PD } from "@api/config";
 
 type AssignGetOpts = { department?: string };
 
@@ -19,7 +18,7 @@ export class ProcedureChecklistApi extends ListApi<
 		const { department } = opts || {};
 		console.log(`searching department '${department}' staff...`);
 		this.and("ContentClass:STS_ListItem");
-		this.and(`ListTitle:${PD.lists.ProcedureChecklist}`);
+		this.and(`ListTitle:${ENV.LIST_PROCEDURECHECKLIST}`);
 		if (this.pnpWrapper.hubSiteId)
 			this.and(`DepartmentId:${this.pnpWrapper.hubSiteId}`);
 		else if (this._sites.length)
@@ -69,11 +68,11 @@ export class ProcedureChecklistApi extends ListApi<
 
 		const calls = targets.map(async (siteUrl) => {
 			const w = this.pnpWrapper.web(siteUrl);
-			const list = w.lists.getByTitle(PD.lists.ProcedureChecklist);
+			const list = w.lists.getByTitle(ENV.LIST_PROCEDURECHECKLIST);
 
 			if (department)
 				this.and(
-					`${PD.internalSiteColumn.PDDepartment} eq '${department.replace(/'/g, "''")}'`,
+					`${ENV.INTERNALCOLUMN_PDDEPARTMENT} eq '${department.replace(/'/g, "''")}'`,
 				);
 
 			const rows = await list.items
@@ -86,7 +85,7 @@ export class ProcedureChecklistApi extends ListApi<
 					"PageCount",
 					"json",
 					"DocumentURL",
-					// PD.internalSiteColumn.PDDepartment,
+					// ENV.INTERNALSITECOLUMN_PDDEPARTMENT,
 				)
 				.filter(this.odata)
 				.orderBy("Id", false)

@@ -20,19 +20,17 @@ export type PDAssignment = {
 	attorneyName?: string;
 };
 
-export type ListResult = ISearchResult & {
-	// FileRef?: string;
-	Id: number;
-	Title: string;
-	Client: string;
-	Court: string;
-	NextHearing?: string;
-	Status: string;
-	Link?: ISharePointLink | string;
-	AssignedAttorney_x002f_Team?: ISharePointPerson | ISharePointPerson[];
-	PD_x0020_Department?: string;
-	PDDepartment?: string;
-};
+export type ListResult = ISearchResult &
+	Record<string, string | undefined> & {
+		Id: number;
+		Title: string;
+		Client: string;
+		Court: string;
+		NextHearing?: string;
+		Status: string;
+		Link?: ISharePointLink | string;
+		PDDepartment?: string;
+	};
 
 /*
  * IAttorneyAssignmentsProps.ts
@@ -62,7 +60,7 @@ export interface ISharePointListItem {
 	NextHearing?: string;
 	Status: string;
 	Link?: ISharePointLink | string;
-	AssignedAttorney_x002f_Team?: ISharePointPerson | ISharePointPerson[];
+	// AssignedAttorney_x002f_Team?: ISharePointPerson | ISharePointPerson[];
 }
 
 export interface ISharePointListResponse {

@@ -73,7 +73,7 @@ export default class AttorneyAssignmentsWebPart extends BaseClientSideWebPart<IA
 			const userEmail =
 				this.context.pageContext.user.email?.toLowerCase();
 
-			const listUrl = `${webUrl}/_api/web/lists/getbytitle('${this.properties.listName}')/items?$select=Id,Title,Client,Court,NextHearing,Status,Link,AssignedAttorney_x002f_Team/Id,AssignedAttorney_x002f_Team/Title,AssignedAttorney_x002f_Team/EMail&$expand=AssignedAttorney_x002f_Team`;
+			const listUrl = `${webUrl}/_api/web/lists/getbytitle('${this.properties.listName}')/items?$select=Id,Title,Client,Court,NextHearing,Status,Link,${ENV.INTERNALCOLUMN_ASSIGNEDATTORNEYTEAM}/Id,${ENV.INTERNALCOLUMN_ASSIGNEDATTORNEYTEAM}/Title,${ENV.INTERNALCOLUMN_ASSIGNEDATTORNEYTEAM}/EMail&$expand=${ENV.INTERNALCOLUMN_ASSIGNEDATTORNEYTEAM}`;
 
 			const response: SPHttpClientResponse =
 				await this.context.spHttpClient.get(
@@ -89,7 +89,7 @@ export default class AttorneyAssignmentsWebPart extends BaseClientSideWebPart<IA
 			const data: ISharePointListResponse = await response.json();
 
 			return data.value.map((item) => {
-				const assigned = item.AssignedAttorney_x002f_Team;
+				const assigned = item[ENV.INTERNALCOLUMN_ASSIGNEDATTORNEYTEAM];
 				const assignedPerson = Array.isArray(assigned)
 					? assigned[0]
 					: assigned;

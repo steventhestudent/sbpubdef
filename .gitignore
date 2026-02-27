@@ -4,6 +4,7 @@ src/type/env.global.generated.d.ts
 */.env.*
 # except don't ignore example .env:
 !.env.example
+!.env.public
 !.env.public.dev
 !.env.public.prod
 

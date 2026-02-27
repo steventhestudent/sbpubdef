@@ -4,7 +4,6 @@ import "@pnp/sp/lists";
 import "@pnp/sp/fields";
 import { ListApi } from "@api/ListApi";
 import { ListResult, PDStaffDirectoryItem } from "@type/PDStaffDirectory";
-import { PD } from "@api/config";
 
 type AssignGetOpts = { department?: string };
 
@@ -19,7 +18,7 @@ export class StaffDirectoryApi extends ListApi<
 		const { department } = opts || {};
 		console.log(`searching department '${department}' staff...`);
 		this.and("ContentClass:STS_ListItem");
-		this.and(`ListTitle:${PD.lists.StaffDirectory}`);
+		this.and(`ListTitle:${ENV.LIST_STAFFDIRECTORY}`);
 		if (this.pnpWrapper.hubSiteId)
 			this.and(`DepartmentId:${this.pnpWrapper.hubSiteId}`);
 		else if (this._sites.length)
@@ -36,9 +35,9 @@ export class StaffDirectoryApi extends ListApi<
 				"Id",
 				"Title",
 				"Username",
-				"EXT_x002e_",
-				"WorkCell_x0023_",
-				"PersonalCell_x0023_",
+				ENV.INTERNALCOLUMN_EXT,
+				ENV.INTERNALCOLUMN_WORKCELL,
+				ENV.INTERNALCOLUMN_PERSONALCELL,
 				"TitleName",
 			],
 			SortList: [{ Property: "LastModifiedTime", Direction: 1 }],
@@ -49,9 +48,9 @@ export class StaffDirectoryApi extends ListApi<
 			(item: ListResult): PDStaffDirectoryItem => ({
 				name: item.Title,
 				username: item.Username,
-				ext: item.EXT_x002e_,
-				workCell: item.WorkCell_x0023_,
-				personalCell: item.PersonalCell_x0023_,
+				ext: item[ENV.INTERNALCOLUMN_EXT],
+				workCell: item[ENV.INTERNALCOLUMN_WORKCELL],
+				personalCell: item[ENV.INTERNALCOLUMN_PERSONALCELL],
 				titleName: item.TitleName,
 			}),
 		);
@@ -66,11 +65,11 @@ export class StaffDirectoryApi extends ListApi<
 
 		const calls = targets.map(async (siteUrl) => {
 			const w = this.pnpWrapper.web(siteUrl);
-			const list = w.lists.getByTitle(PD.lists.StaffDirectory);
+			const list = w.lists.getByTitle(ENV.LIST_STAFFDIRECTORY);
 
 			if (department)
 				this.and(
-					`${PD.internalSiteColumn.PDDepartment} eq '${department.replace(/'/g, "''")}'`,
+					`${ENV.INTERNALCOLUMN_PDDEPARTMENT} eq '${department.replace(/'/g, "''")}'`,
 				);
 
 			const rows = await list.items
@@ -78,11 +77,11 @@ export class StaffDirectoryApi extends ListApi<
 					"Id",
 					"Title",
 					"Username",
-					"EXT_x002e_",
-					"WorkCell_x0023_",
-					"PersonalCell_x0023_",
+					ENV.INTERNALCOLUMN_EXT,
+					ENV.INTERNALCOLUMN_WORKCELL,
+					ENV.INTERNALCOLUMN_PERSONALCELL,
 					"TitleName",
-					// PD.internalSiteColumn.PDDepartment,
+					// ENV.INTERNALCOLUMN_PDDEPARTMENT,
 				)
 				.filter(this.odata)
 				.orderBy("Id", false)
@@ -92,9 +91,9 @@ export class StaffDirectoryApi extends ListApi<
 				(item: ListResult): PDStaffDirectoryItem => ({
 					name: item.Title,
 					username: item.Username,
-					ext: item.EXT_x002e_,
-					workCell: item.WorkCell_x0023_,
-					personalCell: item.PersonalCell_x0023_,
+					ext: item[ENV.INTERNALCOLUMN_EXT],
+					workCell: item[ENV.INTERNALCOLUMN_WORKCELL],
+					personalCell: item[ENV.INTERNALCOLUMN_PERSONALCELL],
 					titleName: item.TitleName,
 				}),
 			);

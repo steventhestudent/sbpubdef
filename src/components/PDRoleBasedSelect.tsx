@@ -1,6 +1,5 @@
 import * as React from "react";
 import * as Utils from "@utils";
-import { PD, RoleKey } from "@api/config";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
@@ -16,7 +15,7 @@ export function PDRoleBasedSelect({
 	selectLabel = (
 		<div className="relative mt-[-0.5em]">
 			&lt;PDRoleBasedSelect&gt;
-			<span className="absolute font-thin text-xs w-full left-0 text-center top-[1.23em]">
+			<span className="absolute top-[1.23em] left-0 w-full text-center text-xs font-thin">
 				(hidden by default)
 			</span>
 		</div>
@@ -150,8 +149,7 @@ export function PDRoleBasedSelect({
 		<section className="!bg-[var(--webpart-bg-color)] shadow-sm">
 			<header
 				data-show-select={shouldShowSelect}
-				className="hidden data-[show-select=true]:multi-['flex']
-						bg-[#f2f2f2] border-b border-slate-800 px-3 py-2 items-center justify-between select-none"
+				className="data-[show-select=true]:multi-['flex'] hidden items-center justify-between border-b border-slate-800 bg-[#f2f2f2] px-3 py-2 select-none"
 			>
 				<div className="flex items-center gap-2">
 					<div className="text-shadow-black">{selectLabel}</div>
@@ -160,27 +158,26 @@ export function PDRoleBasedSelect({
 					value={role}
 					onChange={(e) => setRole(e.target.value)}
 					data-show-select={shouldShowSelect}
-					className="hidden data-[show-select=true]:multi-['block']
-								rounded-md border-slate-300 bg-white text-sm text-gray-800 focus:ring-2 focus:ring-blue-500 px-2 py-1"
+					className="data-[show-select=true]:multi-['block'] hidden rounded-md border-slate-300 bg-white px-2 py-1 text-sm text-gray-800 focus:ring-2 focus:ring-blue-500"
 				>
-					{(Object.keys(PD.role) as RoleKey[]).map((rk) => (
+					{ENV.ROLE_KEYS.map((rk, i) => (
 						<option
-							key={rk}
-							value={rk}
+							key={i}
+							value={ENV[rk]}
 							disabled={
 								isRoleEnabledForUser(rk) === true
 									? false
 									: false
 							}
 						>
-							{rk}
+							{ENV[rk]}
 						</option>
 					))}
 				</select>
 			</header>
 
 			<div
-				className="transition-[grid-template-rows] duration-300 ease-in-out overflow-hidden"
+				className="overflow-hidden transition-[grid-template-rows] duration-300 ease-in-out"
 				style={{ display: "grid", gridTemplateRows: "1fr" }}
 			>
 				<div className="min-h-0">
@@ -211,7 +208,7 @@ export function BlankGuestView({
 			<ul>
 				<h5 className="font-bold">Groups:</h5>
 				{userGroupNames.map((name: string, i) => (
-					<li className="list-disc ml-5" key={i}>
+					<li className="ml-5 list-disc" key={i}>
 						{name}
 					</li>
 				))}

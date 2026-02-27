@@ -5,13 +5,11 @@ export type NewsSearchResult = ISearchResult & {
 	FirstPublishedDate?: string;
 	SPSiteUrl?: string;
 	PDDepartment?: string;
-	PD_x0020_Department?: string;
 };
 export type SitePageItem = {
 	Title?: string;
 	FileRef?: string;
 	FirstPublishedDate?: string;
-	PD_x0020_Department?: string;
 	PDDepartment?: string;
 } & Record<string, unknown>;
 

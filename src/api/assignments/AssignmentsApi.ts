@@ -4,7 +4,6 @@ import "@pnp/sp/lists";
 import "@pnp/sp/fields";
 import { ListApi } from "@api/ListApi";
 import { ListResult, PDAssignment } from "@type/PDAssignment";
-import { PD } from "@api/config";
 
 type AssignGetOpts = { department?: string };
 
@@ -16,7 +15,7 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 		const { department } = opts || {};
 		console.log(`searching department '${department}' assignments...`);
 		this.and("ContentClass:STS_ListItem");
-		this.and(`ListTitle:${PD.lists.PDAssignment}`);
+		this.and(`ListTitle:${ENV.LIST_PDASSIGNMENT}`);
 		if (this.pnpWrapper.hubSiteId)
 			this.and(`DepartmentId:${this.pnpWrapper.hubSiteId}`);
 		else if (this._sites.length)
@@ -38,8 +37,8 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 				"Status",
 				"Link",
 				// "FileRef",
-				PD.internalSiteColumn.PDDepartment,
-				PD.internalSiteColumn.AssignedAttorneyTeam,
+				ENV.INTERNALCOLUMN_PDDEPARTMENT,
+				ENV.INTERNALCOLUMN_ASSIGNEDATTORNEYTEAM,
 			],
 			SortList: [{ Property: "LastModifiedTime", Direction: 1 }],
 			TrimDuplicates: false,
@@ -47,7 +46,7 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 
 		return res.PrimarySearchResults.map(
 			(item: ListResult): PDAssignment => {
-				const assigned = item.AssignedAttorney_x002f_Team;
+				const assigned = item[ENV.INTERNALCOLUMN_ASSIGNEDATTORNEYTEAM];
 				const assignedPerson = Array.isArray(assigned)
 					? assigned[0]
 					: assigned;
@@ -56,7 +55,7 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 					id: item.Id,
 					title: item.Title ?? "(untitled)",
 					PDDepartment:
-						item.PD_x0020_Department ||
+						item[ENV.INTERNALCOLUMN_PDDEPARTMENT] ||
 						item.PDDepartment ||
 						"Everyone",
 					caseNumber: item.Title, ///
@@ -86,11 +85,11 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 
 		const calls = targets.map(async (siteUrl) => {
 			const w = this.pnpWrapper.web(siteUrl);
-			const list = w.lists.getByTitle(PD.lists.PDAssignment);
+			const list = w.lists.getByTitle(ENV.LIST_PDASSIGNMENT);
 
 			if (department)
 				this.and(
-					`${PD.internalSiteColumn.PDDepartment} eq '${department.replace(/'/g, "''")}'`,
+					`${ENV.INTERNALCOLUMN_PDDEPARTMENT} eq '${department.replace(/'/g, "''")}'`,
 				);
 
 			const rows = await list.items
@@ -103,15 +102,15 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 					"Status",
 					"Link",
 					// "FileRef",
-					PD.internalSiteColumn.PDDepartment,
-					// PD.internalSiteColumn.AssignedAttorneyTeam,
+					ENV.INTERNALCOLUMN_PDDEPARTMENT,
+					ENV.INTERNALCOLUMN_ASSIGNEDATTORNEYTEAM,
 				)
 				.filter(this.odata)
 				.orderBy("Id", false)
 				.top(limitPerSite)();
 
 			return rows.map((item: ListResult): PDAssignment => {
-				const assigned = item.AssignedAttorney_x002f_Team;
+				const assigned = item[ENV.INTERNALCOLUMN_ASSIGNEDATTORNEYTEAM];
 				const assignedPerson = Array.isArray(assigned)
 					? assigned[0]
 					: assigned;
@@ -120,7 +119,7 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 					id: item.Id,
 					title: item.Title ?? "(untitled)",
 					PDDepartment:
-						item.PD_x0020_Department ||
+						item[ENV.INTERNALCOLUMN_PDDEPARTMENT] ||
 						item.PDDepartment ||
 						"Everyone",
 					caseNumber: item.Title, ///

@@ -1,16 +1,15 @@
-export interface EventResult {
-	Id: string | number;
+export type EventResult = Record<string, string | undefined> & {
+	Id: number;
 	Title: string;
 	EventDate: string;
 	Location: string;
 	DetailsUrl: string;
 	EndDate: string;
 	SiteUrl: string;
-	PD_x0020_Department?: string;
-}
+};
 
 export type PDEvent = {
-	id: string | number;
+	id: number;
 	title: string;
 	date?: string; // ISO string; you can change to Date if you prefer
 	endDate?: string; // optional

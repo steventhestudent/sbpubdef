@@ -15,7 +15,7 @@ function PDIntranetView({
 
 	const defaultItems: PDEvent[] = [
 		{
-			id: "",
+			id: 0,
 			title: "No Events (0 results)",
 		},
 	];
@@ -48,17 +48,17 @@ function PDIntranetView({
 
 	return (
 		<section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-			<div className="overflow-y-auto max-h-72">
+			<div className="max-h-72 overflow-y-auto">
 				<table
-					className="min-w-full divide-y divide-slate-200 table-fixed"
+					className="min-w-full table-fixed divide-y divide-slate-200"
 					width="100%"
 				>
-					<thead className="bg-slate-50 sticky top-0">
+					<thead className="sticky top-0 bg-slate-50">
 						<tr>
-							<th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+							<th className="px-4 py-2 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase">
 								Event
 							</th>
-							<th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+							<th className="px-4 py-2 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase">
 								Details
 							</th>
 						</tr>
@@ -115,10 +115,10 @@ function PDIntranetView({
 									</td>
 
 									<td className="px-1 py-1 text-sm text-slate-800">
-										<div className="px-1 py-1 text-[var(--pd-muted)] whitespace-nowrap text-xs">
+										<div className="px-1 py-1 text-xs whitespace-nowrap text-[var(--pd-muted)]">
 											{eventDate} @ {eventTime}
 										</div>
-										<div className="p-1 text-slate-700 text-sm">
+										<div className="p-1 text-sm text-slate-700">
 											{event.location || "—"}
 										</div>
 									</td>

@@ -6,7 +6,7 @@ export abstract class ListApi<
 > extends BaseApi<TRow, TGetOpts, TCreateInput> {
 	protected override preprocess(opts?: TGetOpts): void {
 		super.preprocess(opts);
-		this.withSites(["/sites/PD-Intranet"]);
+		this.withSites(["/sites/" + ENV.HUB_NAME]);
 	}
 
 	/*

@@ -1,5 +1,12 @@
 import * as React from "react";
-import type { IAttorneyWorkloadProps } from "./IAttorneyWorkloadProps";
+import type {
+	IAttorneyWorkloadProps,
+	ICountyData,
+	ICaseType,
+	IAttorney,
+	ICase,
+} from "./IAttorneyWorkloadProps";
+import styles from "./AttorneyWorkload.module.scss";
 
 export default function AttorneyWorkload(
 	props: IAttorneyWorkloadProps,
@@ -10,122 +17,155 @@ export default function AttorneyWorkload(
 		new Set(),
 	);
 
-	// --- Collapse all dropdowns whenever a new search is entered ---
-	const handleSearchChange: (
-		e: React.ChangeEvent<HTMLInputElement>,
-	) => void = (e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void =>
 		setSearchText(e.target.value);
-		setExpandedItems(new Set()); // collapse all
-	};
 
-	const toggleExpand: (id: string) => void = (id: string) => {
+	const toggleExpand = (id: string): void => {
 		const newExpanded = new Set(expandedItems);
 		if (newExpanded.has(id)) newExpanded.delete(id);
 		else newExpanded.add(id);
 		setExpandedItems(newExpanded);
 	};
 
-	// --- Filter logic ---
-	const filteredCounties = React.useMemo(() => {
+	// Determine which parents to auto-expand based on search
+	const getExpandedParents = React.useMemo(() => {
+		if (!searchText) return new Set<string>();
+		const lowerSearch = searchText.toLowerCase();
+		const expanded = new Set<string>();
+
+		counties.forEach((county) => {
+			const countyId = `county-${county.name}`;
+
+			// County level search
+			if (county.name.toLowerCase().includes(lowerSearch)) {
+				return; // County itself is search target, do not auto-expand
+			}
+
+			county.caseTypes.forEach((ct) => {
+				const ctId = `${countyId}-type-${ct.type}`;
+
+				// Case type level search
+				if (ct.type.toLowerCase().includes(lowerSearch)) {
+					expanded.add(countyId);
+					return;
+				}
+
+				ct.attorneys.forEach((att) => {
+					const attId = `${ctId}-att-${att.name}`;
+
+					// Attorney name search
+					if (att.name.toLowerCase().includes(lowerSearch)) {
+						expanded.add(countyId);
+						expanded.add(ctId);
+						return;
+					}
+
+					// Case number search
+					const matchingCases = att.cases.filter((c) =>
+						c.number.toLowerCase().includes(lowerSearch),
+					);
+					if (matchingCases.length > 0) {
+						expanded.add(countyId);
+						expanded.add(ctId);
+						expanded.add(attId);
+					}
+				});
+			});
+		});
+
+		return expanded;
+	}, [counties, searchText]);
+
+	// Filter counties for search (keep all levels visible so dropdowns are clickable)
+	const filteredCounties = React.useMemo((): ICountyData[] => {
 		if (!searchText) return counties;
 
 		const lowerSearch = searchText.toLowerCase();
 
 		return counties
 			.map((county) => {
-				if (county.name.toLowerCase().includes(lowerSearch)) {
-					return county;
-				}
+				const countyMatches = county.name
+					.toLowerCase()
+					.includes(lowerSearch);
 
 				const caseTypes = county.caseTypes
 					.map((ct) => {
-						if (ct.type.toLowerCase().includes(lowerSearch))
-							return ct;
+						const ctMatches = ct.type
+							.toLowerCase()
+							.includes(lowerSearch);
 
 						const attorneys = ct.attorneys
 							.map((att) => {
-								if (
-									att.name.toLowerCase().includes(lowerSearch)
-								)
-									return att;
-
-								const cases = att.cases.filter((c) =>
-									c.number
+								const attMatches =
+									att.name
 										.toLowerCase()
-										.includes(lowerSearch),
-								);
-								return { ...att, cases };
+										.includes(lowerSearch) ||
+									att.cases.some((c) =>
+										c.number
+											.toLowerCase()
+											.includes(lowerSearch),
+									);
+
+								return attMatches || ctMatches || countyMatches
+									? { ...att }
+									: null;
 							})
-							.filter((att) => att.cases.length > 0);
+							.filter((att): att is IAttorney => att !== null);
 
-						return { ...ct, attorneys };
+						return ctMatches ||
+							attorneys.length > 0 ||
+							countyMatches
+							? { ...ct, attorneys }
+							: null;
 					})
-					.filter((ct) => ct.attorneys.length > 0);
+					.filter((ct): ct is ICaseType => ct !== null);
 
-				return { ...county, caseTypes };
+				return countyMatches || caseTypes.length > 0
+					? { ...county, caseTypes }
+					: null;
 			})
-			.filter((county) => county.caseTypes.length > 0);
+			.filter((county): county is ICountyData => county !== null);
 	}, [counties, searchText]);
 
+	// Determine if a dropdown is open
+	const isDropdownOpen = (id: string): boolean =>
+		expandedItems.has(id) || getExpandedParents.has(id);
+
+	// Determine which cases to display for an attorney
+	const getVisibleCases = (att: IAttorney): ICase[] => {
+		const lowerSearch = searchText.toLowerCase();
+		if (!searchText) return att.cases; // show all normally
+		// If any case number matches search, show only matching case numbers
+		const matchingCases = att.cases.filter((c) =>
+			c.number.toLowerCase().includes(lowerSearch),
+		);
+		if (matchingCases.length > 0) return matchingCases;
+		// Otherwise (search by name, case type, county) show all cases
+		return att.cases;
+	};
+
 	return (
-		<section
-			className=""
-			style={{
-				maxWidth: "500px",
-				border: "1px solid #ccc",
-				borderRadius: "4px",
-			}}
-		>
-			{/* Title */}
-			<div
-				style={{
-					padding: "8px",
-					borderBottom: "1px solid #eee",
-					backgroundColor: "#f9f9f9",
-				}}
-			>
-				<h2 style={{ margin: 0, fontSize: "20px", fontWeight: "bold" }}>
-					Attorney Workload
-				</h2>
-			</div>
+		<section className={styles.attorneyWorkload}>
+			<h2 className={styles.title}>Attorney Workload</h2>
+			<input
+				className={styles.searchInput}
+				type="text"
+				placeholder="Search by county, case type, attorney, or case number..."
+				value={searchText}
+				onChange={handleSearchChange}
+			/>
 
-			{/* Search */}
-			<div style={{ padding: "8px", borderBottom: "1px solid #eee" }}>
-				<input
-					type="text"
-					placeholder="Search by county, case type, attorney, or case number..."
-					value={searchText}
-					onChange={handleSearchChange}
-					style={{
-						width: "100%",
-						padding: "6px",
-						boxSizing: "border-box",
-					}}
-				/>
-			</div>
-
-			{/* Counties */}
-			<div style={{ maxHeight: "400px", overflowY: "auto" }}>
+			<div className={styles.countiesContainer}>
 				{filteredCounties.length ? (
 					filteredCounties.map((county) => {
 						const countyId = `county-${county.name}`;
-						const isCountyOpen = expandedItems.has(countyId);
+						const isCountyOpen = isDropdownOpen(countyId);
 
 						return (
-							<div
-								key={county.name}
-								style={{ borderBottom: "1px solid #eee" }}
-							>
+							<div key={countyId} className={styles.countyCard}>
 								<button
+									className={styles.expandButton}
 									onClick={() => toggleExpand(countyId)}
-									style={{
-										width: "100%",
-										textAlign: "left",
-										padding: "8px",
-										background: "none",
-										border: "none",
-										cursor: "pointer",
-									}}
 								>
 									{isCountyOpen ? "▼" : "▶"} {county.name}
 								</button>
@@ -133,26 +173,20 @@ export default function AttorneyWorkload(
 								{isCountyOpen &&
 									county.caseTypes.map((ct) => {
 										const ctId = `${countyId}-type-${ct.type}`;
-										const isCtOpen =
-											expandedItems.has(ctId);
+										const isCtOpen = isDropdownOpen(ctId);
 
 										return (
 											<div
-												key={ct.type}
-												style={{ marginLeft: "16px" }}
+												key={ctId}
+												className={styles.caseTypeCard}
 											>
 												<button
+													className={
+														styles.expandButton
+													}
 													onClick={() =>
 														toggleExpand(ctId)
 													}
-													style={{
-														width: "100%",
-														textAlign: "left",
-														padding: "6px",
-														background: "none",
-														border: "none",
-														cursor: "pointer",
-													}}
 												>
 													{isCtOpen ? "▼" : "▶"}{" "}
 													{ct.type}
@@ -162,35 +196,26 @@ export default function AttorneyWorkload(
 													ct.attorneys.map((att) => {
 														const attId = `${ctId}-att-${att.name}`;
 														const isAttOpen =
-															expandedItems.has(
+															isDropdownOpen(
 																attId,
 															);
 
 														return (
 															<div
-																key={att.name}
-																style={{
-																	marginLeft:
-																		"16px",
-																}}
+																key={attId}
+																className={
+																	styles.attorneyCard
+																}
 															>
 																<button
+																	className={
+																		styles.expandButton
+																	}
 																	onClick={() =>
 																		toggleExpand(
 																			attId,
 																		)
 																	}
-																	style={{
-																		width: "100%",
-																		textAlign:
-																			"left",
-																		padding:
-																			"4px",
-																		background:
-																			"none",
-																		border: "none",
-																		cursor: "pointer",
-																	}}
 																>
 																	{isAttOpen
 																		? "▼"
@@ -200,19 +225,13 @@ export default function AttorneyWorkload(
 
 																{isAttOpen && (
 																	<div
-																		style={{
-																			marginLeft:
-																				"16px",
-																			display:
-																				"flex",
-																			gap: "4px",
-																			flexWrap:
-																				"wrap",
-																			paddingBottom:
-																				"8px",
-																		}}
+																		className={
+																			styles.casesContainer
+																		}
 																	>
-																		{att.cases.map(
+																		{getVisibleCases(
+																			att,
+																		).map(
 																			(
 																				c,
 																			) => (
@@ -220,17 +239,9 @@ export default function AttorneyWorkload(
 																					key={
 																						c.number
 																					}
-																					style={{
-																						padding:
-																							"2px 6px",
-																						backgroundColor:
-																							"#e0e0e0",
-																						color: "#333",
-																						borderRadius:
-																							"4px",
-																						fontSize:
-																							"11px",
-																					}}
+																					className={
+																						styles.caseNumber
+																					}
 																				>
 																					{
 																						c.number
@@ -250,7 +261,7 @@ export default function AttorneyWorkload(
 						);
 					})
 				) : (
-					<div style={{ padding: "12px" }}>
+					<div className={styles.noResults}>
 						No results found for &quot;{searchText}&quot;
 					</div>
 				)}
