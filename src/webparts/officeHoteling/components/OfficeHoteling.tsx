@@ -3,11 +3,8 @@ import type { IOfficeHotelingProps } from "./IOfficeHotelingProps";
 import { offices } from "@webparts/officeInformation/components/Offices";
 import { GraphClient, MSGraphClientV3 } from "@utils/graph/GraphClient";
 import { getSP } from "@utils/pnpjsConfig";
-import {
-	readHotelingReservations,
-	writeHotelingReservations,
-} from "@services/officeHotelingSync";
 import { AadHttpClient } from "@microsoft/sp-http";
+import { HotelingService } from "@services/HotelingService";
 
 interface Reservation {
 	id: string;
@@ -19,6 +16,7 @@ interface Reservation {
 	outlookEventWebLink?: string;
 	sharePointEventId?: number;
 	sharePointEventWebLink?: string;
+	spListItemId?: number; // Track SharePoint HotelingReservations list item ID
 }
 
 interface TimeSlot {
@@ -100,16 +98,16 @@ const generateTimeSlots = (
 };
 
 export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
+	// Initialize Hoteling Service
+	const hotelingService = new HotelingService(props.context);
+	const userEmail = props.context.pageContext.user.email || "";
+
 	const [selectedLocation, setSelectedLocation] = React.useState(
 		OFFICE_LOCATIONS[0],
 	);
 	const [selectedDesk, setSelectedDesk] = React.useState<string>("Desk 1");
-	const [reservations, setReservations] = React.useState<Reservation[]>(() =>
-		readHotelingReservations(),
-	);
-	const [editingReservationId, setEditingReservationId] = React.useState<
-		string | null
-	>(null);
+	const [reservations, setReservations] = React.useState<Reservation[]>([]);
+	const [editingReservationId, setEditingReservationId] = React.useState<string | null>(null);
 	const [viewMode, setViewMode] = React.useState<"my" | "add">("my");
 	const [showCalendar, setShowCalendar] = React.useState(false);
 	const [weekStartDate, setWeekStartDate] = React.useState<Date>(() =>
@@ -139,13 +137,39 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 	const [statusMessage, setStatusMessage] =
 		React.useState<StatusMessage | null>(null);
 
+	// Load reservations from SharePoint on mount
+	React.useEffect(() => {
+		const loadReservations = async () => {
+			try {
+				const spReservations = await hotelingService.getMyReservations(userEmail);
+				// Convert IReservation to Reservation format
+				const converted: Reservation[] = spReservations.map(r => ({
+					id: r.Id?.toString() || `res-${Date.now()}`,
+					location: r.Location,
+					date: r.ReservationDate.toISOString().split('T')[0],
+					time: r.TimeBlock as "Morning" | "Afternoon",
+					desk: r.Desk,
+					spListItemId: r.Id, // Store the SharePoint list item ID
+				}));
+				setReservations(converted);
+			} catch (error) {
+				console.error('Failed to load reservations from SharePoint:', error);
+				setStatusMessage({
+					type: 'error',
+					text: 'Failed to load reservations. Please refresh the page.'
+				});
+			}
+		};
+		
+		loadReservations();
+	}, []);
+
 	React.useEffect(() => {
 		const setSlots = new Set<string>();
 		reservations.forEach((r) => {
 			setSlots.add(`${r.date}-${r.time.toLowerCase()}`);
 		});
 		setBookedSlots(setSlots);
-		writeHotelingReservations(reservations);
 
 		setCurrentReservationIndex((prev) => {
 			const maxIndex = Math.max(0, reservations.length - 1);
@@ -437,7 +461,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		setPendingDeleteId(reservationId);
 	};
 
-	const handleConfirmDelete = (confirmed: boolean): void => {
+	const handleConfirmDelete = async (confirmed: boolean): Promise<void> => {
 		if (!confirmed || !pendingDeleteId) {
 			setPendingDeleteId(null);
 			return;
@@ -446,6 +470,28 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		const deletedReservation = reservations.find(
 			(r) => r.id === pendingDeleteId,
 		);
+
+		if (!deletedReservation) {
+			setPendingDeleteId(null);
+			return;
+		}
+
+		// Delete from SharePoint HotelingReservations list
+		if (deletedReservation.spListItemId) {
+			try {
+				await hotelingService.deleteReservation(deletedReservation.spListItemId);
+			} catch (error) {
+				const detail = extractErrorMessage(error);
+				setStatusMessage({
+					type: "error",
+					text: `Failed to delete reservation from SharePoint: ${detail}`,
+				});
+				setPendingDeleteId(null);
+				return;
+			}
+		}
+
+		// Delete calendar events
 		if (deletedReservation?.outlookEventId) {
 			deleteReservationEventFromCalendar(deletedReservation).catch(
 				(error) => {
@@ -654,6 +700,32 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 					...pendingReservation,
 				};
 				const extraFailures: string[] = [];
+
+			// Save to SharePoint HotelingReservations list
+console.log('save to list..');
+try {
+	const [year, month, day] = pendingReservation.date.split("-").map(Number);
+	const reservationDate = new Date(year, month - 1, day);
+	
+	console.log('Calling hotelingService.createReservation...');
+	
+	const createdId = await hotelingService.createReservation({
+		Location: pendingReservation.location,
+		Desk: pendingReservation.desk || "Desk 1",
+		ReservationDate: reservationDate,
+		TimeBlock: pendingReservation.time,
+		UserEmail: userEmail,
+	});
+	
+	console.log('Created reservation with ID:', createdId);
+	reservationToSave.spListItemId = createdId;
+} catch (error) {
+	console.error('save failed:', error);
+	extraFailures.push(
+		`SharePoint reservation failed: ${extractErrorMessage(error)}`,
+	);
+}
+				// Create SharePoint Events calendar entry
 				try {
 					const createdSharePointEvent =
 						await createSharePointEventForReservation(
@@ -718,6 +790,12 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 	const onConfirmReservation = (confirmed: boolean): void => {
 		handleConfirmReservation(confirmed).catch((error) => {
 			console.warn("Failed to confirm reservation.", error);
+		});
+	};
+
+	const onConfirmDelete = (confirmed: boolean): void => {
+		handleConfirmDelete(confirmed).catch((error) => {
+			console.warn("Failed to delete reservation.", error);
 		});
 	};
 
@@ -1281,7 +1359,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 								onClick={(e) => {
 									e.preventDefault();
 									e.stopPropagation();
-									handleConfirmDelete(false);
+									onConfirmDelete(false);
 								}}
 								className="px-3 py-2 border border-slate-300 rounded text-sm font-medium text-slate-700 hover:bg-slate-50"
 							>
@@ -1292,7 +1370,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 								onClick={(e) => {
 									e.preventDefault();
 									e.stopPropagation();
-									handleConfirmDelete(true);
+									onConfirmDelete(true);
 								}}
 								className="px-3 py-2 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700"
 							>

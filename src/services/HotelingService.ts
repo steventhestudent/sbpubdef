@@ -24,19 +24,21 @@ export class HotelingService {
   }
 
   // Create a new reservation
-  public async createReservation(reservation: IReservation): Promise<void> {
-    // Get the user ID first
-    const user = await this.sp.web.ensureUser(reservation.UserEmail);
-    
-    await this.sp.web.lists.getByTitle(this.listName).items.add({
-      Title: `${reservation.Location} - ${reservation.Desk} - ${reservation.TimeBlock}`,
-      Location: reservation.Location,
-      Desk: reservation.Desk,
-      ReservationDate: reservation.ReservationDate.toISOString(),
-      TimeBlock: reservation.TimeBlock,
-      UserEmailId: user.Id,
-    });
-  }
+public async createReservation(reservation: IReservation): Promise<number> {
+  // Get the user ID first
+  const user = await this.sp.web.ensureUser(reservation.UserEmail);
+  
+  const result = await this.sp.web.lists.getByTitle(this.listName).items.add({
+    Title: `${reservation.Location} - ${reservation.Desk} - ${reservation.TimeBlock}`,
+    Location: reservation.Location,
+    Desk: reservation.Desk,
+    ReservationDate: reservation.ReservationDate.toISOString(),
+    TimeBlock: reservation.TimeBlock,
+    UserEmailId: user.Id,
+  });
+
+  return result.Id;
+}
 
   // Get all reservations for current user
   public async getMyReservations(userEmail: string): Promise<IReservation[]> {
