@@ -11,27 +11,14 @@ export class ProcedureChecklistApi extends ListApi<
 	ProcedureChecklistItem,
 	AssignGetOpts
 > {
-	protected async getSearch(
-		limit = 100,
+	protected async getRest(
+		limitPerSite = 50,
 		opts?: AssignGetOpts,
 	): Promise<ProcedureChecklistItem[]> {
-		const { department } = opts || {};
-		console.log(`searching department '${department}' staff...`);
-		this.and("ContentClass:STS_ListItem");
-		this.and(`ListTitle:${ENV.LIST_PROCEDURECHECKLIST}`);
-		if (this.pnpWrapper.hubSiteId)
-			this.and(`DepartmentId:${this.pnpWrapper.hubSiteId}`);
-		else if (this._sites.length)
-			this.and(
-				"(" + this._sites.map((p) => `Path:${p}*`).join(" OR ") + ")",
-			);
-		// if (department && this.pnpWrapper.departmentMp)
-		// parts.push(`${this.pnpWrapper.departmentMp}="${department}"`);
-
-		const res = await this.pnpWrapper.sp.search({
-			Querytext: this.kql,
-			RowLimit: limit,
-			SelectProperties: [
+		const w = this.pnpWrapper.web(this.pnpWrapper.siteUrls[0]);
+		const list = w.lists.getByTitle(ENV.LIST_PROCEDURECHECKLIST);
+		const rows = await list.items
+			.select(
 				"Id",
 				"Title",
 				"Category",
@@ -40,12 +27,12 @@ export class ProcedureChecklistApi extends ListApi<
 				"PageCount",
 				"json",
 				"DocumentURL",
-			],
-			SortList: [{ Property: "LastModifiedTime", Direction: 1 }],
-			TrimDuplicates: false,
-		});
+			)
+			.filter(this.odata)
+			.orderBy("Id", false)
+			.top(limitPerSite)();
 
-		return res.PrimarySearchResults.map(
+		return rows.map(
 			(item: ListResult): ProcedureChecklistItem => ({
 				id: item.Id,
 				title: item.Title || "",
@@ -57,58 +44,5 @@ export class ProcedureChecklistApi extends ListApi<
 				documentURL: item.DocumentURL || "",
 			}),
 		);
-	}
-
-	protected async getRest(
-		limitPerSite = 50,
-		opts?: AssignGetOpts,
-	): Promise<ProcedureChecklistItem[]> {
-		const targets = this._sites.length ? this._sites : [""];
-		const { department } = opts || {};
-
-		const calls = targets.map(async (siteUrl) => {
-			const w = this.pnpWrapper.web(siteUrl);
-			const list = w.lists.getByTitle(ENV.LIST_PROCEDURECHECKLIST);
-
-			if (department)
-				this.and(
-					`${ENV.INTERNALCOLUMN_PDDEPARTMENT} eq '${department.replace(/'/g, "''")}'`,
-				);
-
-			const rows = await list.items
-				.select(
-					"Id",
-					"Title",
-					"Category",
-					"Filename",
-					"EffectiveDate",
-					"PageCount",
-					"json",
-					"DocumentURL",
-					// ENV.INTERNALSITECOLUMN_PDDEPARTMENT,
-				)
-				.filter(this.odata)
-				.orderBy("Id", false)
-				.top(limitPerSite)();
-
-			return rows.map(
-				(item: ListResult): ProcedureChecklistItem => ({
-					id: item.Id,
-					title: item.Title || "",
-					category: item.Category || "",
-					filename: item.Filename || "",
-					effectiveDate: item.EffectiveDate || "",
-					pageCount: item.PageCount || 0,
-					json: item.json || "{}",
-					documentURL: item.DocumentURL || "",
-				}),
-			);
-		});
-
-		const settled = await Promise.allSettled(calls);
-		const flat: ProcedureChecklistItem[] = [];
-		for (const r of settled)
-			if (r.status === "fulfilled") flat.push(...r.value);
-		return flat;
 	}
 }
