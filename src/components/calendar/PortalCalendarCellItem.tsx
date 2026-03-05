@@ -12,36 +12,54 @@ export const PortalCalendarCellItem = ({
 }): JSX.Element => {
 	return (
 		<li
-			className={`rounded px-1 py-0.5 text-xs whitespace-nowrap overflow-hidden text-ellipsis
-                                         ${
-												item.kind === "event"
-													? "bg-blue-50 text-blue-800"
-													: "bg-amber-50 text-amber-900"
-											}`}
+			className={`overflow-hidden rounded px-1 py-0.5 text-xs text-ellipsis whitespace-nowrap ${
+				item.kind === "event"
+					? "bg-blue-50 text-blue-800"
+					: "bg-amber-50 text-amber-900"
+			}`}
 			onMouseEnter={onMouseEnter}
 			onMouseMove={onMouseEnter}
 			onMouseLeave={onMouseLeave}
 		>
-			<span className="font-medium">{item.timeLabel || "—"}</span>{" "}
 			{item.href ? (
 				<a
-					className="hover:underline"
+					className="block hover:underline"
 					href={item.href}
 					target={
 						item.href.includes("#hoteling") ? "_self" : "_blank"
 					}
 					rel="noopener noreferrer"
 				>
-					{item.title}
+					<span className="font-medium">{item.timeLabel || "—"}</span>{" "}
+					<span>{item.title}</span>
+					{item.location && (
+						<span className="text-slate-500">
+							{" "}
+							— {item.location}
+						</span>
+					)}
+					{item.meta && (
+						<span className="ml-1 text-slate-500">
+							({item.meta})
+						</span>
+					)}
 				</a>
 			) : (
-				<span>{item.title}</span>
-			)}
-			{item.location && (
-				<span className="text-slate-500"> — {item.location}</span>
-			)}
-			{item.meta && (
-				<span className="ml-1 text-slate-500">({item.meta})</span>
+				<>
+					<span className="font-medium">{item.timeLabel || "—"}</span>{" "}
+					<span>{item.title}</span>
+					{item.location && (
+						<span className="text-slate-500">
+							{" "}
+							— {item.location}
+						</span>
+					)}
+					{item.meta && (
+						<span className="ml-1 text-slate-500">
+							({item.meta})
+						</span>
+					)}
+				</>
 			)}
 		</li>
 	);

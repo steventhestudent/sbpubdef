@@ -51,7 +51,7 @@ export default function PortalCalendar(
 	const $rel = React.useRef(null as HTMLDivElement | null);
 
 	return (
-		<div className="relative w-full -h-full" ref={$rel}>
+		<div className="-h-full relative w-full" ref={$rel}>
 			<PortalCalendarTooltip
 				showOptions={tooltipShowOptions}
 				setTooltipShowOptions={setTooltipShowOptions}
@@ -59,6 +59,8 @@ export default function PortalCalendar(
 			<Collapsible
 				instanceId={props.context.instanceId}
 				hideChevron={true}
+				headerClickable={false}
+				headerClassName="bg-white border-b border-slate-300"
 				title={
 					<PortalCalendarHeader
 						cursor={cursor}
@@ -68,16 +70,18 @@ export default function PortalCalendar(
 					/>
 				}
 			>
-				<div className="p-1 w-full">
-					<table className="border-collapse table-fixed w-full">
+				<div className="w-full overflow-x-auto p-2">
+					<table className="w-full table-fixed border-collapse border border-slate-300">
 						<thead>
 							<tr>
 								{daysStr.split(" ").map((d) => (
 									<th
 										key={d}
-										className="px-2 py-1 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
+										className="border border-slate-300 bg-slate-100 px-2 py-1 text-center text-slate-700"
 									>
-										{d}
+										<div className="text-xs font-semibold tracking-wide uppercase">
+											{d}
+										</div>
 									</th>
 								))}
 							</tr>

@@ -10,10 +10,9 @@ export const ProcedureChecklistCompactView = ({
 	editorMode = false,
 }: {
 	selectedProcedure: ProcedureChecklistItem;
-	setSelectedProcedure: (
-		// prettier-ignore
-		value: ((prevState: ProcedureChecklistItem | undefined,) => ProcedureChecklistItem | undefined) | ProcedureChecklistItem | undefined,
-	) => void;
+	setSelectedProcedure: React.Dispatch<
+		React.SetStateAction<ProcedureChecklistItem | undefined>
+	>;
 	currentStep: number;
 	setCurrentStep: (value: ((prevState: number) => number) | number) => void;
 	editorMode?: boolean;

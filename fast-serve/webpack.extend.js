@@ -52,7 +52,7 @@ class FastServeRebuildLoggerPlugin {
 						JSON.stringify(changed),
 					);
 					// writes src/type/env.global.generated.d.ts (provide autocomplete) // writes src/type/env.generated.ts (sets ENV) (imported on src/utils/CommonWebPartImports)
-					require("../scripts/js/gen-env");
+					require("../scripts/js/gen-env")();
 				}
 				console.log("[webpack.extend.js] pre-build work finished");
 				callback();

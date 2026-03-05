@@ -143,7 +143,9 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 							</h4>
 						</button>
 					) : (
-						<div className="font-medium text-gray-800">{title}</div>
+						<div className="w-full font-medium text-gray-800">
+							{title}
+						</div>
 					)}
 				</div>
 				{Chevron}

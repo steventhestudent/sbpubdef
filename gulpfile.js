@@ -36,7 +36,7 @@ build.configureWebpack.mergeConfig({
 });
 
 // writes src/type/env.global.generated.d.ts (provide autocomplete) // writes src/type/env.generated.ts (sets ENV) (imported on src/utils/CommonWebPartImports)
-require("./scripts/js/gen-env");
+require("./scripts/js/gen-env")();
 
 /* fast-serve */
 const { addFastServe } = require("spfx-fast-serve-helpers");

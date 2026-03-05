@@ -82,7 +82,7 @@ export const ENV = window.ENV as typeof ENV_VALUE;
 	fs.writeFileSync(outPath, content, "utf8");
 
 	console.log(
-		`[gen-env-runtime] Wrote \${outPath} (\${keys.length} keys, \${Object.keys(groupKeys).length} groups)`,
+		`[gen-env-runtime] Wrote ${outPath} (${keys.length} keys, ${Object.keys(groupKeys).length} groups)`,
 	);
 	return finalEnv;
 };

@@ -50,12 +50,34 @@ function mapEventsToCal(events: PDEvent[]): CalendarItem[] {
 		.map((e) => {
 			const when = toDateSafe(e.date);
 			if (!when) return undefined;
+
+			const end = toDateSafe(e.endDate);
+			const isSameDay =
+				!!end &&
+				when.getFullYear() === end.getFullYear() &&
+				when.getMonth() === end.getMonth() &&
+				when.getDate() === end.getDate();
+			const durationHours = end
+				? (end.getTime() - when.getTime()) / (1000 * 60 * 60)
+				: 0;
+
+			const isAllDaySelection =
+				!!end &&
+				isSameDay &&
+				when.getHours() <= 8 &&
+				end.getHours() >= 17 &&
+				durationHours >= 8;
+
+			const timeLabel = isAllDaySelection
+				? "All day (8:00 AM - 5:00 PM)"
+				: formatTime(when);
+
 			return {
 				id: `E-${e.id}`,
 				kind: "event" as const,
 				title: e.title,
 				when,
-				timeLabel: formatTime(when),
+				timeLabel,
 				location: e.location,
 				href: e.detailsUrl,
 				meta: undefined,
@@ -70,23 +92,64 @@ function mapHotelingToCal(): CalendarItem[] {
 			? `${window.location.pathname}${window.location.search}#hoteling`
 			: undefined;
 
-	return readHotelingReservations()
-		.map((reservation) => {
-			const [year, month, day] = reservation.date.split("-").map(Number);
-			const hour = reservation.time === "Morning" ? 8 : 12;
+	const groups = new Map<
+		string,
+		ReturnType<typeof readHotelingReservations>
+	>();
+
+	readHotelingReservations().forEach((reservation) => {
+		const key = reservation.date;
+		const current = groups.get(key) ?? [];
+		current.push(reservation);
+		groups.set(key, current);
+	});
+
+	return Array.from(groups.entries())
+		.map(([key, reservations]) => {
+			const first = reservations[0];
+			const [year, month, day] = first.date.split("-").map(Number);
+
+			const hasMorning = reservations.some(
+				(reservation) => reservation.time === "Morning",
+			);
+			const hasAfternoon = reservations.some(
+				(reservation) => reservation.time === "Afternoon",
+			);
+
+			const hour = hasAfternoon && !hasMorning ? 12 : 8;
 			const when = new Date(year, month - 1, day, hour, 0, 0, 0);
 			if (isNaN(when.getTime())) return undefined;
 
+			const uniqueLocations = Array.from(
+				new Set(
+					reservations.map((reservation) => reservation.location),
+				),
+			);
+
+			const timeLabel =
+				hasMorning && hasAfternoon
+					? "All Day"
+					: hasMorning
+						? "Morning"
+						: "Afternoon";
+
+			const linkSource =
+				reservations.find(
+					(reservation) =>
+						!!reservation.sharePointEventWebLink ||
+						!!reservation.outlookEventWebLink,
+				) ?? reservations[reservations.length - 1];
+
 			return {
-				id: `H-${reservation.id}`,
+				id: `H-${key}`,
 				kind: "event" as const,
-				title: `Hoteling ${reservation.desk ? `(${reservation.desk})` : ""}`.trim(),
+				title: "Hoteling",
 				when,
-				timeLabel: reservation.time,
-				location: reservation.location,
+				timeLabel,
+				location: uniqueLocations.join(", "),
 				href:
-					reservation.sharePointEventWebLink ||
-					reservation.outlookEventWebLink ||
+					linkSource.sharePointEventWebLink ||
+					linkSource.outlookEventWebLink ||
 					hotelingFallbackLink,
 				meta: "Reservation",
 			} as CalendarItem;

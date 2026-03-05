@@ -43,19 +43,19 @@ export const PortalCalendarCell = ({
 
 	return (
 		<td
-			className={`min-h-10 border border-[var(--webpart-inner-border-color)] align-top p-1 ${inThisMonth(date) ? "" : "bg-slate-50"}`}
+			className={`min-h-10 border border-slate-300 p-2 align-top ${inThisMonth(date) ? "" : "bg-slate-50"}`}
 			width="14%"
 		>
-			<div className="text-xs text-slate-500 text-right">
+			<div className="text-right text-xs text-slate-500">
 				{date.getDate()}
 				{sameDay(date, today) && (
-					<span className="ml-2 inline-flex items-center rounded px-1 text-[10px] bg-blue-100 text-blue-800">
+					<span className="ml-2 inline-flex items-center rounded bg-blue-100 px-1 text-[10px] text-blue-800">
 						today
 					</span>
 				)}
 			</div>
 
-			<ul className="space-y-1 mt-1 max-h-[5.7em] overflow-hidden pr-1">
+			<ul className="mt-1 max-h-[5.7em] space-y-1 overflow-hidden pr-1">
 				{dayItems.length === 0
 					? null
 					: dayItems.map((item, i) => (
