@@ -1,14 +1,13 @@
 import * as React from "react";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
 import { ProcedureChecklistApi } from "@api/ProcedureChecklist";
-import {
-	ProcedureChecklistItem,
-	ProcedureChecklistParsedJSON,
-} from "@type/ProcedureChecklist";
+import { ProcedureChecklistItem } from "@type/ProcedureChecklist";
 import * as Utils from "@utils";
 import { ProcedureChecklistCompactView } from "@components/procedureChecklist/ProcedureChecklistCompactView";
 import { ProcedureChecklistListItem } from "@components/procedureChecklist/ProcedureChecklistListItem";
 import ClearableInput from "@components/ClearableInput";
+import { ProcedureStepItem } from "@type/ProcedureSteps";
+import { ProcedureStepsApi } from "@api/ProcedureChecklist/ProcedureStepsApi";
 
 export function ProcedureChecklist({
 	userGroupNames,
@@ -21,17 +20,26 @@ export function ProcedureChecklist({
 	>([]);
 	const [search, setSearch] = React.useState("");
 	const [isLoading, setIsLoading] = React.useState<boolean>(true);
+
 	const [selectedProcedure, setSelectedProcedure] = React.useState<
 		ProcedureChecklistItem | undefined
 	>(undefined);
-	const [currentStep, setCurrentStep] = React.useState<number>(1);
+
+	// NEW
+	const [steps, setSteps] = React.useState<ProcedureStepItem[] | undefined>(
+		undefined,
+	);
+	const [stepIndex, setStepIndex] = React.useState<number>(0); // 0..steps.length (steps.length = final slide)
 
 	const procedureChecklistApi = new ProcedureChecklistApi(pnpWrapper);
+	const procedureStepsApi = new ProcedureStepsApi(pnpWrapper);
+
 	const load: () => Promise<void> = async () => {
 		const rows = await procedureChecklistApi.get(150);
 		const mapped = (rows || []).map((item: ProcedureChecklistItem) => ({
 			id: item.id,
 			title: item.title,
+			purpose: item.purpose,
 			category: item.category,
 			filename: item.filename,
 			effectiveDate: item.effectiveDate,
@@ -47,6 +55,18 @@ export function ProcedureChecklist({
 		Utils.loadCachedThenFresh(load);
 	}, []);
 
+	const onProcedureSelected = async (
+		proc: ProcedureChecklistItem,
+	): Promise<void> => {
+		setSelectedProcedure(proc);
+		setSteps(undefined);
+		setStepIndex(0);
+		const s = await procedureStepsApi.get(999, {
+			procedureChecklistId: proc.id,
+		});
+		setSteps(s || []);
+	};
+
 	const filtered = React.useMemo(() => {
 		const term = search.trim().toLowerCase();
 		if (!term) return procedures;
@@ -58,24 +78,6 @@ export function ProcedureChecklist({
 			return haystack.includes(term);
 		});
 	}, [search, procedures]);
-
-	const onProcedureSelected = (proc: ProcedureChecklistItem): void => {
-		setSelectedProcedure(proc);
-		setCurrentStep(1);
-		if (!proc.obj)
-			Utils.loadJSON<ProcedureChecklistParsedJSON>(
-				pnpWrapper.ctx,
-				proc.json,
-				(data) => {
-					const i = procedures.indexOf(proc);
-					proc.obj = data;
-					procedures[i] = proc;
-					setProcedures(procedures);
-					setSelectedProcedure(undefined);
-					setSelectedProcedure(procedures[i]);
-				},
-			);
-	};
 
 	return (
 		<section className="p-4 text-sm">
@@ -114,7 +116,7 @@ export function ProcedureChecklist({
 									No procedures match this search.
 								</div>
 							) : (
-								<ul className="mt-3 h-[15em] divide-y divide-slate-400 overflow-x-hidden overflow-y-scroll rounded-md border border-slate-400 bg-white">
+								<ul className="mt-3 h-[30em] divide-y divide-slate-400 overflow-x-hidden overflow-y-scroll rounded-md border border-slate-400 bg-white">
 									{filtered.map((proc) => (
 										<ProcedureChecklistListItem
 											key={proc.id}
@@ -131,8 +133,9 @@ export function ProcedureChecklist({
 						<ProcedureChecklistCompactView
 							selectedProcedure={selectedProcedure}
 							setSelectedProcedure={setSelectedProcedure}
-							currentStep={currentStep}
-							setCurrentStep={setCurrentStep}
+							steps={steps}
+							stepIndex={stepIndex}
+							setStepIndex={setStepIndex}
 							editorMode={editorMode}
 						/>
 					)}

@@ -1,86 +1,62 @@
 import * as React from "react";
 import { ProcedureChecklistItem } from "@type/ProcedureChecklist";
-import { ProcedureChecklistOverlay } from "./ProcedureChecklistOverlay";
+import { ProcedureStepItem } from "@type/ProcedureSteps";
+import { ProcedureChecklistOverlay } from "@components/procedureChecklist/ProcedureChecklistOverlay";
+
+const normalizeFirstUrl = (raw: string | undefined): string => {
+	if (!raw) return "";
+	// since Images is multiline text, take first non-empty line
+	const first = raw
+		.split(/\r?\n/)
+		.map((s) => s.trim())
+		.find(Boolean);
+	return first || "";
+};
+
+const resolveImageUrlCarryForward = (
+	steps: ProcedureStepItem[],
+	idx: number,
+): string => {
+	// If we’re on final slide (idx === steps.length), carry forward from last step
+	const start = Math.min(idx, steps.length - 1);
+	for (let i = start; i >= 0; i--) {
+		const url = normalizeFirstUrl(steps[i]?.images);
+		if (url) return url;
+	}
+	return "";
+};
 
 export const ProcedureChecklistCompactView = ({
 	selectedProcedure,
 	setSelectedProcedure,
-	currentStep,
-	setCurrentStep,
+	steps,
+	stepIndex,
+	setStepIndex,
 	editorMode = false,
 }: {
 	selectedProcedure: ProcedureChecklistItem;
 	setSelectedProcedure: React.Dispatch<
 		React.SetStateAction<ProcedureChecklistItem | undefined>
 	>;
-	currentStep: number;
-	setCurrentStep: (value: ((prevState: number) => number) | number) => void;
+	steps: undefined | ProcedureStepItem[];
+	stepIndex: number; // 0..steps.length (steps.length is final slide)
+	setStepIndex: React.Dispatch<React.SetStateAction<number>>;
 	editorMode?: boolean;
 }): JSX.Element => {
-	React.useEffect(() => {
-		// setSteps([]); //todo: <-------------------
-	}, []);
-
 	const [maximizePurpose, setMaximizePurpose] = React.useState(false);
-	if (!selectedProcedure.obj) return <div>loading...</div>;
-
-	const [sublistIndex, setSublistIndex] = React.useState<number>(0);
-	const getSublist: (
-		proc: ProcedureChecklistItem,
-		i: number,
-	) => [string] | string[] = (proc: ProcedureChecklistItem, i: number) => {
-		console.log(proc.obj); //cdd ready referral form has no list_txt!???
-		if (!proc.obj!.lists.length) {
-			proc.obj!.lists[0] = {
-				list_txt: "",
-				associated_images: [],
-				list_page_range: [0, 0],
-			};
-			return [""];
-		}
-		return proc
-			.obj!.lists[i].list_txt.split("\n")
-			.filter((str: string) => str.trim() !== "");
-	};
-	const sublist = getSublist(selectedProcedure, sublistIndex);
-
 	const [showOverlay, setShowOverlay] = React.useState<boolean | string>(
 		false,
 	);
+	if (steps === undefined) return <div>loading...</div>;
 
-	const goToPreviousStep: () => void = () => {
-		if (sublistIndex > 0) setSublistIndex(sublistIndex - 1);
-		else {
-			setSublistIndex(selectedProcedure.obj!.lists.length - 1);
-			console.log(`prev list`);
-		}
-		setCurrentStep(1);
-		// if (currentStep > 1) setCurrentStep(currentStep - 1);
-		// else if (sublistIndex > 0) {
-		// 	setSublistIndex(sublistIndex - 1);
-		// 	setCurrentStep(-1);
-		// 	console.log(`prev list`);
-		// }
-	};
-	React.useEffect(() => {
-		if (currentStep === -1) setCurrentStep(sublist.length);
-	}, [currentStep]);
+	const isFinal = stepIndex >= steps.length; // final black slide
+	const goNext = (): void =>
+		setStepIndex((prev) => (prev >= steps.length ? 0 : prev + 1));
+	const goPrev = (): void =>
+		setStepIndex((prev) => (prev <= 0 ? steps.length : prev - 1));
 
-	const goToNextStep: () => void = () => {
-		if (sublistIndex < selectedProcedure.obj!.lists.length - 1)
-			setSublistIndex(sublistIndex + 1);
-		else {
-			setSublistIndex(0);
-			console.log(`next list`);
-		}
-		setCurrentStep(1);
-		// if (currentStep < sublist.length) setCurrentStep(currentStep + 1);
-		// else if (sublistIndex < selectedProcedure.obj!.lists.length - 1) {
-		// 	setSublistIndex(sublistIndex + 1);
-		// 	setCurrentStep(1);
-		// 	console.log(`next list`);
-		// }
-	};
+	const current = !isFinal ? steps[stepIndex] : undefined;
+	const imageUrl = resolveImageUrlCarryForward(steps, stepIndex);
 
 	return (
 		<div className="">
@@ -110,15 +86,15 @@ export const ProcedureChecklistCompactView = ({
 			<h2 className="mt-0">
 				{selectedProcedure.title || selectedProcedure.filename}
 			</h2>
-			{selectedProcedure.obj.effectiveDate ? (
+			{selectedProcedure.effectiveDate ? (
 				<>
-					<b>Effective Date:</b> {selectedProcedure.obj.effectiveDate}
+					<b>Effective Date:</b> {selectedProcedure.effectiveDate}
 				</>
 			) : (
 				<></>
 			)}
 			<br />
-			{selectedProcedure.obj.purpose ? (
+			{selectedProcedure.purpose ? (
 				<>
 					<b>Purpose:</b>
 					<div
@@ -131,15 +107,6 @@ export const ProcedureChecklistCompactView = ({
 			) : (
 				<></>
 			)}
-			<div
-				className="relative"
-				style={{
-					overflow: maximizePurpose ? "auto" : "hidden",
-					maxHeight: maximizePurpose ? "inherit" : "2.5em",
-				}}
-			>
-				{selectedProcedure.obj.purpose}
-			</div>
 			{showOverlay ? (
 				<ProcedureChecklistOverlay
 					proc={selectedProcedure}
@@ -179,66 +146,77 @@ export const ProcedureChecklistCompactView = ({
 					⤓
 				</span>
 			</div>
+
+			<div
+				className="relative"
+				style={{
+					overflow: maximizePurpose ? "auto" : "hidden",
+					maxHeight: maximizePurpose ? "inherit" : "2.5em",
+				}}
+			>
+				{selectedProcedure.purpose}
+			</div>
 			<div className="overflow-hidden rounded-md border border-slate-400 bg-white">
 				<div className="min-h-64 w-full items-center justify-center bg-slate-100">
 					<div className="w-full p-6 text-center">
 						<div className="scrollbar-thin flex min-h-48 w-full items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-gradient-to-br from-blue-50 to-slate-100">
-							{selectedProcedure.obj.lists[
-								sublistIndex
-							].associated_images.map((src, i) => (
-								<div
-									key={i}
-									className="mr-2 inline-block w-[75%] cursor-pointer bg-black outline-1 outline-white"
-									style={{
-										width: i === 0 ? "200%" : "75%",
-									}}
-								>
+							{imageUrl ? (
+								<div className="inline-block w-[75%] cursor-pointer bg-black outline-1 outline-white">
 									<img
-										key={i}
-										src={src}
+										src={imageUrl}
 										className="w-full"
-										onClick={() => setShowOverlay(src)}
+										onClick={() => setShowOverlay(imageUrl)}
 									/>
 								</div>
-							))}
+							) : (
+								<div className="text-xs text-slate-500">
+									No image available yet.
+								</div>
+							)}
 						</div>
 					</div>
 				</div>
+
 				<div className="mt-[-1em] border-t border-slate-300 bg-slate-50 px-4 py-3">
 					<div className="mb-2 flex items-center justify-between">
 						<button
-							onClick={goToPreviousStep}
-							// disabled={currentStep === 1 && sublistIndex === 0}
-							className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+							onClick={goPrev}
+							className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
 						>
 							← Back
 						</button>
+
 						<span className="text-sm font-medium text-slate-600">
-							{`Sub-list ${sublistIndex + 1} / ${selectedProcedure.obj.lists.length}`}
+							{isFinal
+								? "Complete"
+								: `Step ${current?.step ?? stepIndex + 1} / ${steps.length}`}
 						</span>
+
 						<button
-							onClick={goToNextStep}
-							// disabled={
-							// 	currentStep === sublist.length &&
-							// 	sublistIndex ===
-							// 		selectedProcedure.obj!.lists.length - 1
-							//}
-							className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+							onClick={goNext}
+							className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
 						>
 							Next →
 						</button>
 					</div>
 				</div>
+
+				{/* Text panel */}
 				<div className="w-full justify-center rounded-lg border-2 border-dashed border-slate-300 bg-gradient-to-br from-blue-50 to-slate-100">
 					<div className="px-4 py-4 text-center">
-						{/*<p className="text-sm font-semibold text-slate-500">*/}
-						{/*	Sub-Step {currentStep} / {sublist.length}*/}
-						{/*</p>*/}
-						<p className="mx-auto max-w-md text-xs font-semibold text-slate-900">
-							{sublist.map((sub, i) => (
-								<div key={i}>{sub}</div>
-							))}
-						</p>
+						{isFinal ? (
+							<div className="mx-auto max-w-md rounded-md bg-black px-4 py-6 text-xs font-semibold text-white">
+								Procedure complete.
+								<div className="mt-2 text-[11px] font-normal opacity-80">
+									Press Next to restart at Step 1.
+								</div>
+							</div>
+						) : (
+							<div className="mx-auto max-w-md text-xs font-semibold whitespace-pre-wrap text-slate-900">
+								{/* If SharePoint returns HTML here, you can strip tags or render HTML safely later */}
+								{current?.text || "(No step text)"}
+							</div>
+						)}
 					</div>
 				</div>
 			</div>

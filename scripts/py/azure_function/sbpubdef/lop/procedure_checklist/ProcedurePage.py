@@ -1,6 +1,30 @@
 import re
 from .ProcedurePageRootBlock import ProcedurePageRootBlock
 
+def block_text(block):
+    """Extract plain text from a type-0 (text) block dict."""
+    if block.get("type") != 0 or "lines" not in block:
+        return ""
+    return "\n".join(
+        "".join(span.get("text", "") for span in line.get("spans", []))
+        for line in block["lines"]
+    )
+
+# Ordered (1. 2. 1) 2)) / unordered (• - *) / roman (i. I. ii.) at line start
+_LIST_ITEM_RE = re.compile(
+    r"^\s*(?:\d+[.)]|[•\-*]|[iIvVxX]+\.|[a-zA-Z][.)])\s*",
+    re.MULTILINE,
+)
+
+def block_is_list_item(block):
+    """True if block looks like the start of or part of a list (first line matches list pattern)."""
+    text = block_text(block).strip()
+    if not text:
+        return False
+    first_line = text.split("\n")[0]
+    return bool(_LIST_ITEM_RE.match(first_line))
+
+
 class ProcedurePage:
     def __init__(self, doc_filename, page_index, pymupdf_page): # dict keys: {width, height, blocks: [...]} ——always ~612x792, so only 'blocks' differs
         self.txt = pymupdf_page.get_text()

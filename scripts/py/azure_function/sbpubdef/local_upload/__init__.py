@@ -1,5 +1,7 @@
 import os
 from pathlib import Path
+from typing import Any
+
 from dotenv import load_dotenv
 import requests
 import msal
@@ -12,6 +14,9 @@ session_headers = {}
 """
 utils
 """
+def odata_escape(s: str) -> str: # OData (REST) is single quote only (and escapes with '' (instead of \'))
+    return (s or "").replace("'", "''")
+
 def authenticate():
     global session_headers
     print("authenticating...")
@@ -41,27 +46,6 @@ def get_drive_id(site_id, doc_lib_name):
     for drive in get_site_drives(site_id):
         if drive["name"] == doc_lib_name: return drive["id"]
     return ""
-
-# lists
-def get_site_lists(site_id):
-    resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists", headers=session_headers)
-    return resp.json()["value"]
-
-def get_list_id(site_id, list_name):
-    for lst in get_site_lists(site_id):
-        if lst["name"] == list_name: return lst["id"]
-    return ""
-
-def get_list_columns(site_id, list_id):
-    resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/columns", headers=session_headers)
-    return resp.json().get('value', [])
-
-def get_list_column_names(site_id, list_id, include_sp_cols=False):
-    cols = []
-    for col in get_list_columns(site_id, list_id):
-        if include_sp_cols or not(col['name'] in SHAREPOINT_LIST_COLUMNS):
-            cols.append(col['name'])
-    return cols
 
 # email
 """ App-only Graph sendMail: POST https://graph.microsoft.com/v1.0/users/{sender_upn}/sendMail sender_upn should be a licensed mailbox (often a service account). """
@@ -100,15 +84,55 @@ def add_list_item(site_id, list_id, field_data: dict):
         headers={**session_headers, "Content-Type": "application/json"},
         json={"fields": field_data}
     )
-    return resp.json().get("webUrl")
+    return resp.json()
 
 """
 CRUD: Read
 """
+# lists
+def get_site_lists(site_id):
+    resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists", headers=session_headers)
+    return resp.json()["value"]
+
+def get_list_id(site_id, list_name):
+    for lst in get_site_lists(site_id):
+        if lst["name"] == list_name: return lst["id"]
+    return ""
+
+def get_list_columns(site_id, list_id):
+    resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/columns", headers=session_headers)
+    return resp.json().get('value', [])
+
+def get_list_column_names(site_id, list_id, include_sp_cols=False):
+    cols = []
+    for col in get_list_columns(site_id, list_id):
+        if include_sp_cols or not(col['name'] in SHAREPOINT_LIST_COLUMNS):
+            cols.append(col['name'])
+    return cols
+
+def get_list_items(site_id: str, list_id: str, *, fields_filter: str = "", top: int = 50, fields_select: list[str] | None = None):
+    """
+    fields_filter examples: "fields/Filename eq 'abc'"   "startswith(fields/Filename,'2024-')"    (List Settings -> Indexed Columns)
+    fields_select example: ["Filename","Title","Category"]
+    """
+    url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items"
+    if fields_select and len(fields_select): expand = "fields($select=" + ",".join(fields_select) + ")" # IMPORTANT: use fields($select=...) not just fields
+    else: expand = "fields"  # ok, but less predictable for filtering
+    params = {
+        "$expand": expand,
+        "$top": str(top),
+    }
+    if fields_filter: params["$filter"] = fields_filter
+    resp = requests.get(url, headers=session_headers, params=params)
+    if resp.status_code >= 300: raise Exception(f"Graph get_list_items failed: {resp.status_code} {resp.text}")
+    return resp.json().get("value", [])
 
 """
 CRUD: Update
 """
+def update_list_item(site_id: str, list_id: str, item_id: str | int, field_data: dict):
+    requests.patch(f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/{item_id}/fields", headers={**session_headers, "Content-Type": "application/json"}, json=field_data)
+    return True
 
 """
 CRUD: Delete

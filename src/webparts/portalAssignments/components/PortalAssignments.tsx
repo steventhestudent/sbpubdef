@@ -37,7 +37,7 @@ function PDIntranetView({
 		// 	title: el.title ?? "(untitled)",
 		// 	PDDepartment: el.PDDepartment,
 		// }));
-		console.log("xxx", rows);
+		console.log("assignments", rows);
 		const mapped = rows;
 		setItems(mapped.length ? mapped : defaultItems);
 	};
@@ -53,7 +53,7 @@ function PDIntranetView({
 					No assignments found.
 				</p>
 			) : (
-				<table className="divide-y divide-slater-800 table-fixed border-collapse w-[100%]">
+				<table className="divide-slater-800 w-[100%] table-fixed border-collapse divide-y">
 					<thead className="bg-slate-50">
 						<tr>
 							{[
@@ -67,13 +67,11 @@ function PDIntranetView({
 									key={i}
 									scope="col"
 									data-i={i + ""}
-									className="relative p-1 text-xs font-semibold uppercase tracking-wide text-slate-600 text-center
-										data-[i=0]:multi-['w-[2em];top-[-0.15em];left-[-0.233em]']
-									"
+									className="data-[i=0]:multi-['w-[2em];top-[-0.15em];left-[-0.233em]'] relative p-1 text-center text-xs font-semibold tracking-wide text-slate-600 uppercase"
 								>
 									{i === 0 ? "Case" : header}
 									{i === 0 ? (
-										<div className="absolute ml-2 mt-[-0.2em] w-0 font-semibold">
+										<div className="absolute mt-[-0.2em] ml-2 w-0 font-semibold">
 											#
 										</div>
 									) : null}
@@ -81,16 +79,16 @@ function PDIntranetView({
 							))}
 						</tr>
 					</thead>
-					<tbody className="divide-y divide-slater-800 bg-white">
+					<tbody className="divide-slater-800 divide-y bg-white">
 						{items.map((item) => (
 							<tr key={item.id} className="hover:bg-slate-50">
-								<td className="p-1 text-sm text-slate-800 text-center">
+								<td className="p-1 text-center text-sm text-slate-800">
 									{item.link ? (
 										<a
 											href={item.link}
 											target="_blank"
 											rel="noopener noreferrer"
-											className="text-blue-600 hover:decoration-orange-400 font-semibold text-shadow-black underline"
+											className="font-semibold text-blue-600 underline text-shadow-black hover:decoration-orange-400"
 										>
 											{item.caseNumber}
 										</a>
@@ -120,13 +118,7 @@ function PDIntranetView({
 											/ /g,
 											"",
 										)}
-										className="rounded-2xl text-xs text-blue-700 hover:underline  bg-[#f1f5f9] text-[#334155] border border-[#cbd5e1]
-														data-[status=AwaitingDocs]:multi-['bg-[#dbeafe];text-[#1e40af];border-[#3b82f6]']
-														data-[status=Closed]:multi-['bg-[#fee2e2];text-[#991b1b];border-[#ef4444]']
-														data-[status=Pending]:multi-['bg-[#fef3c7];text-[#92400e];border-[#fbbf24]']
-														data-[status=Open]:multi-['bg-[#dcfce7];text-[#14532d];border-[#22c55e]']
-
-													border border-black border-1 inline-flex items-center rounded-full px-1 py-0.25 text-xs font-medium"
+										className="data-[status=AwaitingDocs]:multi-['bg-[#dbeafe];text-[#1e40af];border-[#3b82f6]'] data-[status=Closed]:multi-['bg-[#fee2e2];text-[#991b1b];border-[#ef4444]'] data-[status=Pending]:multi-['bg-[#fef3c7];text-[#92400e];border-[#fbbf24]'] data-[status=Open]:multi-['bg-[#dcfce7];text-[#14532d];border-[#22c55e]'] inline-flex items-center rounded-2xl rounded-full border border-1 border-[#cbd5e1] border-black bg-[#f1f5f9] px-1 py-0.25 text-xs font-medium text-[#334155] text-blue-700 hover:underline"
 									>
 										{item.status || "Pending"}
 									</span>

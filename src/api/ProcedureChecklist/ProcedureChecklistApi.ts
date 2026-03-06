@@ -21,6 +21,7 @@ export class ProcedureChecklistApi extends ListApi<
 			.select(
 				"Id",
 				"Title",
+				"Purpose",
 				"Category",
 				"Filename",
 				"EffectiveDate",
@@ -31,11 +32,12 @@ export class ProcedureChecklistApi extends ListApi<
 			.filter(this.odata)
 			.orderBy("Id", false)
 			.top(limitPerSite)();
-
+		console.log("procedures", rows);
 		return rows.map(
 			(item: ListResult): ProcedureChecklistItem => ({
 				id: item.Id,
 				title: item.Title || "",
+				purpose: item.Purpose || "",
 				category: item.Category || "",
 				filename: item.Filename || "",
 				effectiveDate: item.EffectiveDate || "",

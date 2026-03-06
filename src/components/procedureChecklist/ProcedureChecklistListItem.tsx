@@ -21,8 +21,7 @@ export const ProcedureChecklistListItem = ({
 						{procedure.title || procedure.filename}
 					</p>
 					<p className="mt-0.5 text-xs text-slate-600">
-						Category: {procedure.category} • {procedure.pageCount}{" "}
-						pages
+						{procedure.category} • {procedure.pageCount} pages
 					</p>
 				</div>
 				<span className="m-[-2em] mr-[-0.5em] rounded border-1 p-1 text-xs font-medium whitespace-pre text-blue-800">
