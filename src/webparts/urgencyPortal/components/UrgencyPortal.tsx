@@ -1,427 +1,464 @@
 import * as React from "react";
 import * as pbi from "powerbi-client";
 import {
-	IUrgencyPortalProps,
-	IPowerBiLinkConfig,
-	IPowerBiParsedLink,
+  IUrgencyPortalProps,
+  IPowerBiLinkConfig,
+  IPowerBiParsedLink,
 } from "./IUrgencyPortalProps";
 import { Collapsible } from "@components/Collapsible";
 
 type PBIEventResponseType =
-	| { message?: string; error?: { message?: string } }
-	| undefined;
+  | { message?: string; error?: { message?: string } }
+  | undefined;
 
 const powerbiService = new pbi.service.Service(
-	pbi.factories.hpmFactory,
-	pbi.factories.wpmpFactory,
-	pbi.factories.routerFactory,
+  pbi.factories.hpmFactory,
+  pbi.factories.wpmpFactory,
+  pbi.factories.routerFactory,
 );
 
 async function getPowerBiToken(
-	context: IUrgencyPortalProps["context"],
+  context: IUrgencyPortalProps["context"],
 ): Promise<string> {
-	const provider = await context.aadTokenProviderFactory.getTokenProvider();
-	return provider.getToken("https://analysis.windows.net/powerbi/api");
+  const provider = await context.aadTokenProviderFactory.getTokenProvider();
+  return provider.getToken("https://analysis.windows.net/powerbi/api");
 }
 
 async function getEmbedUrl(
-	accessToken: string,
-	reportId: string,
+  accessToken: string,
+  reportId: string,
 ): Promise<string> {
-	const response = await fetch(
-		`https://api.powerbi.com/v1.0/myorg/reports/${reportId}`,
-		{
-			headers: { Authorization: `Bearer ${accessToken}` },
-		},
-	);
+  const response = await fetch(
+    `https://api.powerbi.com/v1.0/myorg/reports/${reportId}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
 
-	if (!response.ok) {
-		const body = await response.text().catch((): string => "");
-		throw new Error(`Failed to get report (${response.status}). ${body}`);
-	}
+  if (!response.ok) {
+    const body = await response.text().catch((): string => "");
+    throw new Error(`Failed to get report (${response.status}). ${body}`);
+  }
 
-	const json: { embedUrl: string } = (await response.json()) as {
-		embedUrl: string;
-	};
-	return json.embedUrl;
+  const json = (await response.json()) as { embedUrl: string };
+  return json.embedUrl;
 }
 
 interface IParsedItemWithUrl extends IPowerBiParsedLink {
-	originalUrl: string;
+  originalUrl: string;
 }
 
 function parseLink(cfg: IPowerBiLinkConfig): {
-	item?: IParsedItemWithUrl;
-	error?: string;
+  item?: IParsedItemWithUrl;
+  error?: string;
 } {
-	const title = (cfg.title || "").trim();
-	const urlText = (cfg.url || "").trim();
+  const title = (cfg.title || "").trim();
+  const urlText = (cfg.url || "").trim();
 
-	if (!title) return { error: "Missing title" };
-	if (!urlText) return { error: `Missing URL for "${title}"` };
-	if (cfg.kind !== "report" && cfg.kind !== "visual")
-		return { error: `Invalid kind for "${title}"` };
+  if (!title) return { error: "Missing title" };
+  if (!urlText) return { error: `Missing URL for "${title}"` };
+  if (cfg.kind !== "report" && cfg.kind !== "visual") {
+    return { error: `Invalid kind for "${title}"` };
+  }
 
-	let url: URL;
-	try {
-		url = new URL(urlText);
-	} catch {
-		return { error: `Invalid URL for "${title}"` };
-	}
+  let url: URL;
+  try {
+    url = new URL(urlText);
+  } catch {
+    return { error: `Invalid URL for "${title}"` };
+  }
 
-	const path = url.pathname || "";
-	const isReportEmbed = path.toLowerCase() === "/reportembed";
+  const bookmarkName =
+    cfg.bookmarkName && cfg.bookmarkName.trim()
+      ? cfg.bookmarkName.trim()
+      : undefined;
 
-	if (cfg.kind === "report") {
-		if (isReportEmbed) {
-			const reportId = url.searchParams.get("reportId") || "";
-			if (!reportId)
-				return {
-					error: `reportEmbed URL missing reportId for "${title}"`,
-				};
-			return {
-				item: { title, kind: "report", reportId, originalUrl: urlText },
-			};
-		}
+  const path = url.pathname || "";
+  const isReportEmbed = path.toLowerCase() === "/reportembed";
 
-		const parts = path.split("/").filter(Boolean);
-		const idx = parts.indexOf("reports");
-		if (idx >= 0 && parts[idx + 1]) {
-			const reportId = parts[idx + 1];
-			const pageName = parts[idx + 2];
-			return {
-				item: {
-					title,
-					kind: "report",
-					reportId,
-					pageName,
-					originalUrl: urlText,
-				},
-			};
-		}
+  if (cfg.kind === "report") {
+    if (isReportEmbed) {
+      const reportId = url.searchParams.get("reportId") || "";
+      if (!reportId) {
+        return {
+          error: `reportEmbed URL missing reportId for "${title}"`,
+        };
+      }
+      return {
+        item: {
+          title,
+          kind: "report",
+          reportId,
+          bookmarkName,
+          originalUrl: urlText,
+        },
+      };
+    }
 
-		return { error: `Unsupported report URL for "${title}"` };
-	}
+    const parts = path.split("/").filter(Boolean);
+    const idx = parts.indexOf("reports");
+    if (idx >= 0 && parts[idx + 1]) {
+      const reportId = parts[idx + 1];
+      const pageName = parts[idx + 2];
+      return {
+        item: {
+          title,
+          kind: "report",
+          reportId,
+          pageName,
+          bookmarkName,
+          originalUrl: urlText,
+        },
+      };
+    }
 
-	const parts = path.split("/").filter(Boolean);
-	const idx = parts.indexOf("reports");
-	if (idx < 0 || !parts[idx + 1] || !parts[idx + 2]) {
-		return {
-			error: `Visual URL must be /reports/{reportId}/{pageName} for "${title}"`,
-		};
-	}
+    return { error: `Unsupported report URL for "${title}"` };
+  }
 
-	const reportId = parts[idx + 1];
-	const pageName = parts[idx + 2];
-	const visualName = url.searchParams.get("visual") || "";
-	if (!visualName)
-		return { error: `Visual URL missing visual=... for "${title}"` };
+  const parts = path.split("/").filter(Boolean);
+  const idx = parts.indexOf("reports");
+  if (idx < 0 || !parts[idx + 1] || !parts[idx + 2]) {
+    return {
+      error: `Visual URL must be /reports/{reportId}/{pageName} for "${title}"`,
+    };
+  }
 
-	return {
-		item: {
-			title,
-			kind: "visual",
-			reportId,
-			pageName,
-			visualName,
-			originalUrl: urlText,
-		},
-	};
+  const reportId = parts[idx + 1];
+  const pageName = parts[idx + 2];
+  const visualName = url.searchParams.get("visual") || "";
+  if (!visualName) {
+    return { error: `Visual URL missing visual=... for "${title}"` };
+  }
+
+  return {
+    item: {
+      title,
+      kind: "visual",
+      reportId,
+      pageName,
+      visualName,
+      bookmarkName,
+      originalUrl: urlText,
+    },
+  };
 }
 
 function parseAll(links: IPowerBiLinkConfig[]): {
-	items: IParsedItemWithUrl[];
-	errors: string[];
+  items: IParsedItemWithUrl[];
+  errors: string[];
 } {
-	const items: IParsedItemWithUrl[] = [];
-	const errors: string[] = [];
+  const items: IParsedItemWithUrl[] = [];
+  const errors: string[] = [];
 
-	(links || []).forEach((cfg: IPowerBiLinkConfig) => {
-		const res = parseLink(cfg);
-		if (res.error) errors.push(res.error);
-		if (res.item) items.push(res.item);
-	});
+  (links || []).forEach((cfg: IPowerBiLinkConfig) => {
+    const res = parseLink(cfg);
+    if (res.error) errors.push(res.error);
+    if (res.item) items.push(res.item);
+  });
 
-	return { items, errors };
+  return { items, errors };
 }
 
 function getItemKey(item: IParsedItemWithUrl): string {
-	return item.originalUrl;
+  return item.originalUrl;
 }
 
 export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
-	const [selectedKey, setSelectedKey] = React.useState<string>(
-		props.defaultUrl || "",
-	);
-	const [selection, setSelection] = React.useState<IParsedItemWithUrl | null>(
-		null,
-	);
-	const [isLoading, setIsLoading] = React.useState<boolean>(false);
-	const [error, setError] = React.useState<string | null>(null);
-	const [openInNewTabUrl, setOpenInNewTabUrl] = React.useState<string | null>(
-		null,
-	);
+  const [selectedKey, setSelectedKey] = React.useState<string>(
+    props.defaultUrl || "",
+  );
+  const [selection, setSelection] = React.useState<IParsedItemWithUrl | null>(
+    null,
+  );
+  const [isLoading, setIsLoading] = React.useState<boolean>(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [openInNewTabUrl, setOpenInNewTabUrl] = React.useState<string | null>(
+    null,
+  );
 
-	const containerRef = React.useRef<HTMLDivElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
-	const { items, errors } = React.useMemo(
-		(): { items: IParsedItemWithUrl[]; errors: string[] } =>
-			parseAll(props.links),
-		[props.links],
-	);
+  const { items, errors } = React.useMemo(
+    (): { items: IParsedItemWithUrl[]; errors: string[] } =>
+      parseAll(props.links),
+    [props.links],
+  );
 
-	React.useEffect(() => {
-		const configured = (props.defaultUrl || "").trim();
-		if (configured && items.some((i: IParsedItemWithUrl) => i.originalUrl === configured)) {
-			setSelectedKey(configured);
-			return;
-		}
-		if (configured && !items.some((i: IParsedItemWithUrl) => i.originalUrl === configured)) {
-			setSelectedKey("");
-		}
-	}, [props.defaultUrl, items]);
+  React.useEffect(() => {
+    const configured = (props.defaultUrl || "").trim();
+    const exists = items.some(
+      (i: IParsedItemWithUrl) => i.originalUrl === configured,
+    );
 
-	React.useEffect(() => {
-		if (!selectedKey) {
-			setSelection(null);
-			setIsLoading(false);
-			setError(null);
-			setOpenInNewTabUrl(null);
-			if (containerRef.current) powerbiService.reset(containerRef.current);
-			return;
-		}
+    if (configured && exists) {
+      setSelectedKey(configured);
+      return;
+    }
 
-		const found =
-			items.find((i: IParsedItemWithUrl) => getItemKey(i) === selectedKey) ||
-			null;
-		setSelection(found);
-		setError(null);
-	}, [selectedKey, items]);
+    if (configured && !exists) {
+      setSelectedKey("");
+    }
+  }, [props.defaultUrl, items]);
 
-	React.useEffect(() => {
-		let cancelled = false;
+  React.useEffect(() => {
+    if (!selectedKey) {
+      setSelection(null);
+      setIsLoading(false);
+      setError(null);
+      setOpenInNewTabUrl(null);
+      if (containerRef.current) powerbiService.reset(containerRef.current);
+      return;
+    }
 
-		const run = async (): Promise<void> => {
-			if (!selection) return;
-			if (!containerRef.current) return;
+    const found =
+      items.find((i: IParsedItemWithUrl) => getItemKey(i) === selectedKey) ||
+      null;
 
-			setIsLoading(true);
-			setError(null);
-			setOpenInNewTabUrl(null);
+    setSelection(found);
+    setError(null);
+  }, [selectedKey, items]);
 
-			try {
-				const token = await getPowerBiToken(props.context);
-				const embedUrl = await getEmbedUrl(token, selection.reportId);
+  React.useEffect(() => {
+    let cancelled = false;
 
-				if (cancelled || !containerRef.current) return;
+    const run = async (): Promise<void> => {
+      if (!selection) return;
+      if (!containerRef.current) return;
 
-				const hasQuery = embedUrl.indexOf("?") >= 0;
-				const urlWithAutoAuth = `${embedUrl}${hasQuery ? "&" : "?"}autoAuth=true`;
-				setOpenInNewTabUrl(urlWithAutoAuth);
+      setIsLoading(true);
+      setError(null);
+      setOpenInNewTabUrl(null);
 
-				powerbiService.reset(containerRef.current);
+      try {
+        const token = await getPowerBiToken(props.context);
+        const embedUrl = await getEmbedUrl(token, selection.reportId);
 
-				if (selection.kind === "report") {
-					const config: pbi.IReportEmbedConfiguration = {
-						type: "report",
-						id: selection.reportId,
-						embedUrl,
-						accessToken: token,
-						tokenType: pbi.models.TokenType.Aad,
-						pageName: selection.pageName,
-						settings: {
-							navContentPaneEnabled: false,
-							panes: { filters: { visible: false } },
-						},
-					};
+        if (cancelled || !containerRef.current) return;
 
-					const report = powerbiService.embed(
-						containerRef.current,
-						config,
-					) as pbi.Report;
+        const hasQuery = embedUrl.indexOf("?") >= 0;
+        const urlWithAutoAuth = `${embedUrl}${hasQuery ? "&" : "?"}autoAuth=true`;
+        setOpenInNewTabUrl(urlWithAutoAuth);
 
-					report.off("loaded");
-					report.on("loaded", () => {
-						if (!cancelled) setIsLoading(false);
-					});
+        powerbiService.reset(containerRef.current);
 
-					report.off("error");
-					report.on(
-						"error",
-						(event: pbi.service.ICustomEvent<unknown>) => {
-							const detail = event.detail as PBIEventResponseType;
-							const message =
-								detail?.message ??
-								detail?.error?.message ??
-								"Unknown Power BI error";
-							if (!cancelled) {
-								setError(message);
-								setIsLoading(false);
-							}
-						},
-					);
+        if (selection.kind === "report") {
+          const config: pbi.IReportEmbedConfiguration = {
+            type: "report",
+            id: selection.reportId,
+            embedUrl,
+            accessToken: token,
+            tokenType: pbi.models.TokenType.Aad,
+            pageName: selection.pageName,
+            settings: {
+              navContentPaneEnabled: false,
+              panes: { filters: { visible: false } },
+            },
+          };
 
-					return;
-				}
+          const report = powerbiService.embed(
+            containerRef.current,
+            config,
+          ) as pbi.Report;
 
-				const pageName = selection.pageName;
-				const visualName = selection.visualName;
+          report.off("rendered");
+          report.on("rendered", () => {
+            if (cancelled) return;
+            if (selection.bookmarkName) {
+              report.bookmarksManager
+                .getBookmarks()
+                .then((bookmarks) => {
+                  const match = bookmarks.find(
+                    (b) =>
+                      b.name === selection.bookmarkName ||
+                      b.displayName === selection.bookmarkName,
+                  );
+                  if (match) {
+                    return report.bookmarksManager.apply(match.name);
+                  }
+                  return undefined;
+                })
+                .catch(() => {});
+            }
+            setIsLoading(false);
+          });
 
-				if (!pageName || !visualName) {
-					setError("Visual requires pageName and visualName");
-					setIsLoading(false);
-					return;
-				}
+          report.off("error");
+          report.on(
+            "error",
+            (event: pbi.service.ICustomEvent<unknown>) => {
+              const detail = event.detail as PBIEventResponseType;
+              const message =
+                detail?.message ??
+                detail?.error?.message ??
+                "Unknown Power BI error";
+              if (!cancelled) {
+                setError(message);
+                setIsLoading(false);
+              }
+            },
+          );
 
-				const config: pbi.IVisualEmbedConfiguration = {
-					type: "visual",
-					id: selection.reportId,
-					embedUrl,
-					accessToken: token,
-					tokenType: pbi.models.TokenType.Aad,
-					pageName,
-					visualName,
-					settings: {
-						panes: {
-							filters: { visible: false },
-							pageNavigation: { visible: false },
-						},
-					},
-				};
+          return;
+        }
 
-				const visual = powerbiService.embed(
-					containerRef.current,
-					config,
-				) as pbi.Visual;
+        const pageName = selection.pageName;
+        const visualName = selection.visualName;
 
-				visual.off("loaded");
-				visual.on("loaded", () => {
-					if (!cancelled) setIsLoading(false);
-				});
+        if (!pageName || !visualName) {
+          setError("Visual requires pageName and visualName");
+          setIsLoading(false);
+          return;
+        }
 
-				visual.off("error");
-				visual.on(
-					"error",
-					(event: pbi.service.ICustomEvent<unknown>) => {
-						const detail = event.detail as PBIEventResponseType;
-						const message =
-							detail?.message ??
-							detail?.error?.message ??
-							"Power BI error";
-						if (!cancelled) {
-							setError(message);
-							setIsLoading(false);
-						}
-					},
-				);
-			} catch (e: unknown) {
-				if (!cancelled) {
-					setError(e instanceof Error ? e.message : String(e));
-					setIsLoading(false);
-				}
-			}
-		};
+        const config: pbi.IVisualEmbedConfiguration = {
+          type: "visual",
+          id: selection.reportId,
+          embedUrl,
+          accessToken: token,
+          tokenType: pbi.models.TokenType.Aad,
+          pageName,
+          visualName,
+          settings: {
+            panes: {
+              filters: { visible: false },
+              pageNavigation: { visible: false },
+            },
+          },
+        };
 
-		run().catch((e: unknown) => {
-			if (!cancelled) {
-				setError(e instanceof Error ? e.message : String(e));
-				setIsLoading(false);
-			}
-		});
+        const visual = powerbiService.embed(
+          containerRef.current,
+          config,
+        ) as pbi.Visual;
 
-		return () => {
-			cancelled = true;
-			if (containerRef.current) powerbiService.reset(containerRef.current);
-		};
-	}, [selection, props.context]);
+        visual.off("rendered");
+        visual.on("rendered", () => {
+          if (!cancelled) setIsLoading(false);
+        });
 
-	const wrapperStyle: React.CSSProperties = {
-		fontFamily: "Segoe UI, Arial, sans-serif",
-	};
+        visual.off("error");
+        visual.on(
+          "error",
+          (event: pbi.service.ICustomEvent<unknown>) => {
+            const detail = event.detail as PBIEventResponseType;
+            const message =
+              detail?.message ?? detail?.error?.message ?? "Power BI error";
+            if (!cancelled) {
+              setError(message);
+              setIsLoading(false);
+            }
+          },
+        );
+      } catch (e: unknown) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : String(e));
+          setIsLoading(false);
+        }
+      }
+    };
 
-	const selectStyle: React.CSSProperties = {
-		width: "100%",
-		maxWidth: 520,
-		padding: 8,
-		borderRadius: 6,
-		border: "1px solid #ccc",
-		font: "inherit",
-	};
+    run().catch((e: unknown) => {
+      if (!cancelled) {
+        setError(e instanceof Error ? e.message : String(e));
+        setIsLoading(false);
+      }
+    });
 
-	return (
-		<Collapsible
-			instanceId={props.context.instanceId}
-			title="PowerBI - Urgency Portal"
-		>
-			<div style={{ ...wrapperStyle, marginTop: 8 }}>
-				<div style={{ paddingLeft: 5, paddingRight: 5 }}>
-					<select
-						style={selectStyle}
-						value={selectedKey}
-						onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-							setSelectedKey(e.currentTarget.value)
-						}
-						disabled={items.length === 0}
-					>
-						<option value="">-- Select --</option>
-						{items.map((item: IParsedItemWithUrl) => {
-							const key = getItemKey(item);
-							return (
-								<option key={key} value={key}>
-									{item.title}
-								</option>
-							);
-						})}
-					</select>
+    return () => {
+      cancelled = true;
+      if (containerRef.current) powerbiService.reset(containerRef.current);
+    };
+  }, [selection, props.context]);
 
-					{selection && (
-						<a
-							href={openInNewTabUrl || selection.originalUrl}
-							target="_blank"
-							rel="noopener noreferrer"
-							style={{
-								display: "block",
-								marginTop: 10,
-								fontSize: 16,
-								fontWeight: 600,
-								color: "#0f6cbd",
-								textDecoration: "underline",
-							}}
-						>
-							{selection.title}
-						</a>
-					)}
-				</div>
+  const wrapperStyle: React.CSSProperties = {
+    fontFamily: "Segoe UI, Arial, sans-serif",
+  };
 
-				{errors.length > 0 && (
-					<p
-						style={{
-							color: "darkred",
-							whiteSpace: "pre-wrap",
-							marginTop: 10,
-						}}
-					>
-						{errors.join("\n")}
-					</p>
-				)}
+  const selectStyle: React.CSSProperties = {
+    width: "100%",
+    maxWidth: 520,
+    padding: 8,
+    borderRadius: 6,
+    border: "1px solid #ccc",
+    font: "inherit",
+  };
 
-				{isLoading && <p>Loading…</p>}
+  return (
+    <Collapsible
+      instanceId={props.context.instanceId}
+      title="PowerBI - Urgency Portal"
+    >
+      <div style={{ ...wrapperStyle, marginTop: 8 }}>
+        <div style={{ paddingLeft: 5, paddingRight: 5 }}>
+          <select
+            style={selectStyle}
+            value={selectedKey}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+              setSelectedKey(e.currentTarget.value)
+            }
+            disabled={items.length === 0}
+          >
+            <option value="">-- Select --</option>
+            {items.map((item: IParsedItemWithUrl) => {
+              const key = getItemKey(item);
+              return (
+                <option key={key} value={key}>
+                  {item.title}
+                </option>
+              );
+            })}
+          </select>
 
-				{error && <p style={{ color: "darkred", whiteSpace: "pre-wrap" }}>{error}</p>}
+          {selection && (
+            <a
+              href={openInNewTabUrl || selection.originalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "block",
+                marginTop: 10,
+                fontSize: 16,
+                fontWeight: 600,
+                color: "#0f6cbd",
+                textDecoration: "underline",
+              }}
+            >
+              {selection.title}
+            </a>
+          )}
+        </div>
 
-				{selection && (
-					<div
-						ref={containerRef}
-						style={{
-							height: "650px",
-							width: "100%",
-							border: "1px solid #ddd",
-							borderRadius: 6,
-							marginTop: 12,
-						}}
-					/>
-				)}
-			</div>
-		</Collapsible>
-	);
+        {errors.length > 0 && (
+          <p
+            style={{
+              color: "darkred",
+              whiteSpace: "pre-wrap",
+              marginTop: 10,
+            }}
+          >
+            {errors.join("\n")}
+          </p>
+        )}
+
+        {isLoading && <p>Loading…</p>}
+
+        {error && (
+          <p style={{ color: "darkred", whiteSpace: "pre-wrap" }}>{error}</p>
+        )}
+
+        {selection && (
+          <div
+            ref={containerRef}
+            style={{
+              height: "650px",
+              width: "100%",
+              border: "1px solid #ddd",
+              borderRadius: 6,
+              marginTop: 12,
+            }}
+          />
+        )}
+      </div>
+    </Collapsible>
+  );
 }

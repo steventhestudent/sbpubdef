@@ -99,6 +99,12 @@ export default class UrgencyPortalWebPart extends BaseClientSideWebPart<IUrgency
 											type: CustomCollectionFieldType.string,
 											required: true,
 										},
+										{
+											id: "bookmarkName",
+											title: "Bookmark Name (optional)",
+											type: CustomCollectionFieldType.string,
+											required: false,
+										},
 									],
 								}),
 							],

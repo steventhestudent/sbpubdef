@@ -3,21 +3,23 @@ import { WebPartContext } from "@microsoft/sp-webpart-base";
 export type EmbedKind = "report" | "visual";
 
 export interface IPowerBiLinkConfig {
-	title: string;
-	kind: EmbedKind;
-	url: string;
+  title: string;
+  kind: EmbedKind;
+  url: string;
+  bookmarkName?: string;
 }
 
 export interface IPowerBiParsedLink {
-	title: string;
-	kind: EmbedKind;
-	reportId: string;
-	pageName?: string;
-	visualName?: string;
+  title: string;
+  kind: EmbedKind;
+  reportId: string;
+  pageName?: string;
+  visualName?: string;
+  bookmarkName?: string;
 }
 
 export interface IUrgencyPortalProps {
-	context: WebPartContext;
-	links: IPowerBiLinkConfig[];
-	defaultUrl?: string;
+  context: WebPartContext;
+  links: IPowerBiLinkConfig[];
+  defaultUrl?: string;
 }
