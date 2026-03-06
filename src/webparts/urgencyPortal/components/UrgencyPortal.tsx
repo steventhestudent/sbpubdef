@@ -24,11 +24,11 @@ async function getPowerBiToken(
   return provider.getToken("https://analysis.windows.net/powerbi/api");
 }
 
-async function getEmbedUrl(
+async function getReportInfo(
   accessToken: string,
   reportId: string,
-): Promise<string> {
-  const response = await fetch(
+): Promise<{ embedUrl: string; webUrl: string }> {
+  const response: Response = await fetch(
     `https://api.powerbi.com/v1.0/myorg/reports/${reportId}`,
     {
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -36,24 +36,32 @@ async function getEmbedUrl(
   );
 
   if (!response.ok) {
-    const body = await response.text().catch((): string => "");
+    const body: string = await response.text().catch((): string => "");
     throw new Error(`Failed to get report (${response.status}). ${body}`);
   }
 
-  const json = (await response.json()) as { embedUrl: string };
-  return json.embedUrl;
+  const json = (await response.json()) as { embedUrl: string; webUrl: string };
+  return { embedUrl: json.embedUrl, webUrl: json.webUrl };
 }
 
 interface IParsedItemWithUrl extends IPowerBiParsedLink {
   originalUrl: string;
 }
 
+function normalizeBookmarkName(bookmarkName?: string): string {
+  return (bookmarkName || "").trim().toLowerCase();
+}
+
+function normalizePageName(pageName?: string): string {
+  return (pageName || "").trim();
+}
+
 function parseLink(cfg: IPowerBiLinkConfig): {
   item?: IParsedItemWithUrl;
   error?: string;
 } {
-  const title = (cfg.title || "").trim();
-  const urlText = (cfg.url || "").trim();
+  const title: string = (cfg.title || "").trim();
+  const urlText: string = (cfg.url || "").trim();
 
   if (!title) return { error: "Missing title" };
   if (!urlText) return { error: `Missing URL for "${title}"` };
@@ -68,44 +76,50 @@ function parseLink(cfg: IPowerBiLinkConfig): {
     return { error: `Invalid URL for "${title}"` };
   }
 
-  const bookmarkName =
-    cfg.bookmarkName && cfg.bookmarkName.trim()
-      ? cfg.bookmarkName.trim()
-      : undefined;
+  const bookmarkNameRaw: string = (cfg.bookmarkName || "").trim();
+  const bookmarkName: string | undefined = bookmarkNameRaw
+    ? bookmarkNameRaw
+    : undefined;
 
-  const path = url.pathname || "";
-  const isReportEmbed = path.toLowerCase() === "/reportembed";
+  const cfgPageName: string = normalizePageName(cfg.pageName);
+  const pageNameFromCfg: string | undefined = cfgPageName ? cfgPageName : undefined;
+
+  const path: string = url.pathname || "";
+  const isReportEmbed: boolean = path.toLowerCase() === "/reportembed";
 
   if (cfg.kind === "report") {
     if (isReportEmbed) {
-      const reportId = url.searchParams.get("reportId") || "";
+      const reportId: string = url.searchParams.get("reportId") || "";
       if (!reportId) {
-        return {
-          error: `reportEmbed URL missing reportId for "${title}"`,
-        };
+        return { error: `reportEmbed URL missing reportId for "${title}"` };
       }
+
       return {
         item: {
           title,
           kind: "report",
           reportId,
+          pageName: pageNameFromCfg,
           bookmarkName,
           originalUrl: urlText,
         },
       };
     }
 
-    const parts = path.split("/").filter(Boolean);
-    const idx = parts.indexOf("reports");
+    const parts: string[] = path.split("/").filter(Boolean);
+    const idx: number = parts.indexOf("reports");
     if (idx >= 0 && parts[idx + 1]) {
-      const reportId = parts[idx + 1];
-      const pageName = parts[idx + 2];
+      const reportId: string = parts[idx + 1];
+      const pageNameFromUrl: string | undefined = parts[idx + 2]
+        ? parts[idx + 2]
+        : undefined;
+
       return {
         item: {
           title,
           kind: "report",
           reportId,
-          pageName,
+          pageName: pageNameFromUrl || pageNameFromCfg,
           bookmarkName,
           originalUrl: urlText,
         },
@@ -115,17 +129,17 @@ function parseLink(cfg: IPowerBiLinkConfig): {
     return { error: `Unsupported report URL for "${title}"` };
   }
 
-  const parts = path.split("/").filter(Boolean);
-  const idx = parts.indexOf("reports");
+  const parts: string[] = path.split("/").filter(Boolean);
+  const idx: number = parts.indexOf("reports");
   if (idx < 0 || !parts[idx + 1] || !parts[idx + 2]) {
     return {
       error: `Visual URL must be /reports/{reportId}/{pageName} for "${title}"`,
     };
   }
 
-  const reportId = parts[idx + 1];
-  const pageName = parts[idx + 2];
-  const visualName = url.searchParams.get("visual") || "";
+  const reportId: string = parts[idx + 1];
+  const pageName: string = parts[idx + 2];
+  const visualName: string = url.searchParams.get("visual") || "";
   if (!visualName) {
     return { error: `Visual URL missing visual=... for "${title}"` };
   }
@@ -160,23 +174,106 @@ function parseAll(links: IPowerBiLinkConfig[]): {
 }
 
 function getItemKey(item: IParsedItemWithUrl): string {
-  return item.originalUrl;
+  const url: string = (item.originalUrl || "").trim();
+  const page: string = normalizePageName(item.pageName);
+  const bookmark: string = normalizeBookmarkName(item.bookmarkName);
+
+  const parts: string[] = [url];
+  if (page) parts.push(`page:${page}`);
+  if (bookmark) parts.push(`bookmark:${bookmark}`);
+
+  return parts.join("||");
+}
+
+function resolveDefaultKey(
+  configuredRaw: string,
+  items: IParsedItemWithUrl[],
+): string {
+  const configured: string = (configuredRaw || "").trim();
+  if (!configured) return "";
+
+  const exact: IParsedItemWithUrl | undefined = items.find(
+    (i: IParsedItemWithUrl) => getItemKey(i) === configured,
+  );
+  if (exact) return getItemKey(exact);
+
+  const byUrl: IParsedItemWithUrl | undefined = items.find(
+    (i: IParsedItemWithUrl) => (i.originalUrl || "").trim() === configured,
+  );
+  if (byUrl) return getItemKey(byUrl);
+
+  return "";
+}
+
+function hasKey(items: IParsedItemWithUrl[], key: string): boolean {
+  return items.some((i: IParsedItemWithUrl) => getItemKey(i) === key);
+}
+
+function reconcileSelectedKey(
+  items: IParsedItemWithUrl[],
+  selectedKey: string,
+  selection: IParsedItemWithUrl | undefined,
+): string {
+  const key: string = (selectedKey || "").trim();
+  if (!key) return "";
+  if (hasKey(items, key)) return key;
+  if (!selection) return "";
+
+  const match: IParsedItemWithUrl | undefined = items.find(
+    (i: IParsedItemWithUrl) =>
+      (i.originalUrl || "").trim() === (selection.originalUrl || "").trim() &&
+      normalizePageName(i.pageName) === normalizePageName(selection.pageName) &&
+      (i.title || "").trim() === (selection.title || "").trim(),
+  );
+
+  if (match) return getItemKey(match);
+
+  return "";
+}
+
+function stripQuery(url: string): string {
+  const idx: number = url.indexOf("?");
+  if (idx < 0) return url;
+  return url.slice(0, idx);
+}
+
+function buildServiceFullscreenUrl(
+  webUrl: string,
+  pageName: string | undefined,
+  bookmarkGuid: string | undefined,
+): string {
+  const base: string = stripQuery((webUrl || "").trim());
+  const page: string = normalizePageName(pageName);
+  const path: string = page ? `${base}/${encodeURIComponent(page)}` : base;
+
+  const params: URLSearchParams = new URLSearchParams();
+  params.set("experience", "power-bi");
+  if (bookmarkGuid) params.set("bookmarkGuid", bookmarkGuid);
+
+  return `${path}?${params.toString()}`;
+}
+
+function buildEmbedNewTabUrl(embedUrl: string): string {
+  const base: string = (embedUrl || "").trim();
+  const hasQuery: boolean = base.indexOf("?") >= 0;
+  return `${base}${hasQuery ? "&" : "?"}autoAuth=true`;
 }
 
 export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
   const [selectedKey, setSelectedKey] = React.useState<string>(
-    props.defaultUrl || "",
+    (props.defaultUrl || "").trim(),
   );
-  const [selection, setSelection] = React.useState<IParsedItemWithUrl | null>(
-    null,
-  );
+  const [selection, setSelection] = React.useState<
+    IParsedItemWithUrl | undefined
+  >(undefined);
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [openInNewTabUrl, setOpenInNewTabUrl] = React.useState<string | null>(
-    null,
-  );
+  const [error, setError] = React.useState<string | undefined>(undefined);
+  const [openInNewTabUrl, setOpenInNewTabUrl] = React.useState<
+    string | undefined
+  >(undefined);
 
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const bookmarkAppliedForKeyRef = React.useRef<string>("");
 
   const { items, errors } = React.useMemo(
     (): { items: IParsedItemWithUrl[]; errors: string[] } =>
@@ -185,38 +282,45 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
   );
 
   React.useEffect(() => {
-    const configured = (props.defaultUrl || "").trim();
-    const exists = items.some(
-      (i: IParsedItemWithUrl) => i.originalUrl === configured,
-    );
-
-    if (configured && exists) {
-      setSelectedKey(configured);
+    const nextKey: string = resolveDefaultKey(props.defaultUrl || "", items);
+    if (nextKey) {
+      setSelectedKey(nextKey);
       return;
     }
 
-    if (configured && !exists) {
+    const configured: string = (props.defaultUrl || "").trim();
+    if (configured) {
       setSelectedKey("");
     }
   }, [props.defaultUrl, items]);
 
   React.useEffect(() => {
     if (!selectedKey) {
-      setSelection(null);
+      setSelection(undefined);
       setIsLoading(false);
-      setError(null);
-      setOpenInNewTabUrl(null);
+      setError(undefined);
+      setOpenInNewTabUrl(undefined);
+      bookmarkAppliedForKeyRef.current = "";
       if (containerRef.current) powerbiService.reset(containerRef.current);
       return;
     }
 
-    const found =
-      items.find((i: IParsedItemWithUrl) => getItemKey(i) === selectedKey) ||
-      null;
+    const found: IParsedItemWithUrl | undefined = items.find(
+      (i: IParsedItemWithUrl) => getItemKey(i) === selectedKey,
+    );
 
     setSelection(found);
-    setError(null);
+    setError(undefined);
   }, [selectedKey, items]);
+
+  React.useEffect(() => {
+    const nextKey: string = reconcileSelectedKey(items, selectedKey, selection);
+    if (nextKey !== selectedKey) setSelectedKey(nextKey);
+  }, [items, selectedKey, selection]);
+
+  React.useEffect(() => {
+    bookmarkAppliedForKeyRef.current = "";
+  }, [selection?.originalUrl, selection?.pageName, selection?.bookmarkName]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -226,18 +330,15 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
       if (!containerRef.current) return;
 
       setIsLoading(true);
-      setError(null);
-      setOpenInNewTabUrl(null);
+      setError(undefined);
+      setOpenInNewTabUrl(undefined);
 
       try {
-        const token = await getPowerBiToken(props.context);
-        const embedUrl = await getEmbedUrl(token, selection.reportId);
+        const token: string = await getPowerBiToken(props.context);
+        const reportInfo: { embedUrl: string; webUrl: string } =
+          await getReportInfo(token, selection.reportId);
 
         if (cancelled || !containerRef.current) return;
-
-        const hasQuery = embedUrl.indexOf("?") >= 0;
-        const urlWithAutoAuth = `${embedUrl}${hasQuery ? "&" : "?"}autoAuth=true`;
-        setOpenInNewTabUrl(urlWithAutoAuth);
 
         powerbiService.reset(containerRef.current);
 
@@ -245,7 +346,7 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
           const config: pbi.IReportEmbedConfiguration = {
             type: "report",
             id: selection.reportId,
-            embedUrl,
+            embedUrl: reportInfo.embedUrl,
             accessToken: token,
             tokenType: pbi.models.TokenType.Aad,
             pageName: selection.pageName,
@@ -260,49 +361,77 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
             config,
           ) as pbi.Report;
 
-          report.off("rendered");
-          report.on("rendered", () => {
+          const selectionKey: string = getItemKey(selection);
+          setOpenInNewTabUrl(buildEmbedNewTabUrl(reportInfo.embedUrl));
+
+          const onLoaded = (): void => {
             if (cancelled) return;
-            if (selection.bookmarkName) {
-              report.bookmarksManager
-                .getBookmarks()
-                .then((bookmarks) => {
-                  const match = bookmarks.find(
-                    (b) =>
-                      b.name === selection.bookmarkName ||
-                      b.displayName === selection.bookmarkName,
-                  );
-                  if (match) {
-                    return report.bookmarksManager.apply(match.name);
-                  }
-                  return undefined;
-                })
-                .catch(() => {});
+
+            const desiredDisplay: string = (selection.bookmarkName || "").trim();
+            const desiredNorm: string = normalizeBookmarkName(desiredDisplay);
+
+            report.bookmarksManager
+              .getBookmarks()
+              .then((bookmarks: pbi.models.IReportBookmark[]) => {
+                const match: pbi.models.IReportBookmark | undefined =
+                  desiredNorm
+                    ? bookmarks.find((b: pbi.models.IReportBookmark) => {
+                        const n: string = normalizeBookmarkName(b.name);
+                        const d: string = normalizeBookmarkName(b.displayName);
+                        return n === desiredNorm || d === desiredNorm;
+                      })
+                    : undefined;
+
+                const bookmarkGuid: string | undefined = match ? match.name : undefined;
+
+                const fullscreenUrl: string = buildServiceFullscreenUrl(
+                  reportInfo.webUrl,
+                  selection.pageName,
+                  bookmarkGuid,
+                );
+                setOpenInNewTabUrl(fullscreenUrl);
+
+                if (!desiredNorm) return undefined;
+                if (bookmarkAppliedForKeyRef.current === selectionKey) return undefined;
+
+                bookmarkAppliedForKeyRef.current = selectionKey;
+
+                if (match) return report.bookmarksManager.apply(match.name);
+                return undefined;
+              })
+              .catch((): void => undefined);
+          };
+
+          const onRendered = (): void => {
+            if (!cancelled) setIsLoading(false);
+          };
+
+          const onError = (event: pbi.service.ICustomEvent<unknown>): void => {
+            const detail = event.detail as PBIEventResponseType;
+            const message: string =
+              detail?.message ??
+              detail?.error?.message ??
+              "Unknown Power BI error";
+            if (!cancelled) {
+              setError(message);
+              setIsLoading(false);
             }
-            setIsLoading(false);
-          });
+          };
+
+          report.off("loaded");
+          report.on("loaded", onLoaded);
+
+          report.off("rendered");
+          report.on("rendered", onRendered);
 
           report.off("error");
-          report.on(
-            "error",
-            (event: pbi.service.ICustomEvent<unknown>) => {
-              const detail = event.detail as PBIEventResponseType;
-              const message =
-                detail?.message ??
-                detail?.error?.message ??
-                "Unknown Power BI error";
-              if (!cancelled) {
-                setError(message);
-                setIsLoading(false);
-              }
-            },
-          );
+          report.on("error", onError);
 
           return;
         }
 
-        const pageName = selection.pageName;
-        const visualName = selection.visualName;
+        const pageName: string | undefined = selection.pageName;
+        const visualName: string | undefined = selection.visualName;
 
         if (!pageName || !visualName) {
           setError("Visual requires pageName and visualName");
@@ -310,10 +439,12 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
           return;
         }
 
+        setOpenInNewTabUrl(buildEmbedNewTabUrl(reportInfo.embedUrl));
+
         const config: pbi.IVisualEmbedConfiguration = {
           type: "visual",
           id: selection.reportId,
-          embedUrl,
+          embedUrl: reportInfo.embedUrl,
           accessToken: token,
           tokenType: pbi.models.TokenType.Aad,
           pageName,
@@ -331,24 +462,25 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
           config,
         ) as pbi.Visual;
 
-        visual.off("rendered");
-        visual.on("rendered", () => {
+        const onRendered = (): void => {
           if (!cancelled) setIsLoading(false);
-        });
+        };
+
+        const onError = (event: pbi.service.ICustomEvent<unknown>): void => {
+          const detail = event.detail as PBIEventResponseType;
+          const message: string =
+            detail?.message ?? detail?.error?.message ?? "Power BI error";
+          if (!cancelled) {
+            setError(message);
+            setIsLoading(false);
+          }
+        };
+
+        visual.off("rendered");
+        visual.on("rendered", onRendered);
 
         visual.off("error");
-        visual.on(
-          "error",
-          (event: pbi.service.ICustomEvent<unknown>) => {
-            const detail = event.detail as PBIEventResponseType;
-            const message =
-              detail?.message ?? detail?.error?.message ?? "Power BI error";
-            if (!cancelled) {
-              setError(message);
-              setIsLoading(false);
-            }
-          },
-        );
+        visual.on("error", onError);
       } catch (e: unknown) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : String(e));
@@ -400,7 +532,7 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
           >
             <option value="">-- Select --</option>
             {items.map((item: IParsedItemWithUrl) => {
-              const key = getItemKey(item);
+              const key: string = getItemKey(item);
               return (
                 <option key={key} value={key}>
                   {item.title}

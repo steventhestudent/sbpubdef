@@ -6,6 +6,7 @@ export interface IPowerBiLinkConfig {
   title: string;
   kind: EmbedKind;
   url: string;
+  pageName?: string;
   bookmarkName?: string;
 }
 
