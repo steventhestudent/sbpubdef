@@ -3,8 +3,9 @@ import RoleBasedViewProps from "@type/RoleBasedViewProps";
 import { ProcedureChecklistApi } from "@api/ProcedureChecklist";
 import { ProcedureChecklistItem } from "@type/ProcedureChecklist";
 import * as Utils from "@utils";
-import { ProcedureChecklistCompactView } from "@components/procedureChecklist/ProcedureChecklistCompactView";
+import { ProcedureFilters } from "@components/procedureChecklist/ProcedureFilters";
 import { ProcedureChecklistListItem } from "@components/procedureChecklist/ProcedureChecklistListItem";
+import { ProcedureChecklistCompactView } from "@components/procedureChecklist/ProcedureChecklistCompactView";
 import ClearableInput from "@components/ClearableInput";
 import { ProcedureStepItem } from "@type/ProcedureSteps";
 import { ProcedureStepsApi } from "@api/ProcedureChecklist/ProcedureStepsApi";
@@ -95,11 +96,13 @@ export function ProcedureChecklist({
 					/>
 				</div>
 			)}
+
 			{isLoading ? (
 				"Loading procedures…"
 			) : !selectedProcedure ? (
 				<p className="mt-2 text-xs text-slate-500">
 					{`${filtered.length} procedures available`}
+					<ProcedureFilters procedures={procedures} />
 					<span className="float-right cursor-pointer hover:text-blue-500">
 						{editorMode ? "➕" : ""}
 					</span>
@@ -107,6 +110,7 @@ export function ProcedureChecklist({
 			) : (
 				<></>
 			)}
+
 			{!isLoading && (
 				<>
 					{!selectedProcedure ? (

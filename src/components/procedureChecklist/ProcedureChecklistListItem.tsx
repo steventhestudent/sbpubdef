@@ -21,7 +21,16 @@ export const ProcedureChecklistListItem = ({
 						{procedure.title || procedure.filename}
 					</p>
 					<p className="mt-0.5 text-xs text-slate-600">
-						{procedure.category} • {procedure.pageCount} pages
+						{procedure.category} • {procedure.pageCount} pages{" "}
+						{procedure.effectiveDate ? (
+							<span
+								title={`Effective: ${procedure.effectiveDate}`}
+							>
+								{`• ${procedure.effectiveDate.slice(-4)}`}
+							</span>
+						) : (
+							<></>
+						)}
 					</p>
 				</div>
 				<span className="m-[-2em] mr-[-0.5em] rounded border-1 p-1 text-xs font-medium whitespace-pre text-blue-800">
