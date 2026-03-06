@@ -1,5 +1,6 @@
 import { WebPartContext } from "@microsoft/sp-webpart-base";
-import { spfi, SPFx } from "@pnp/sp";
+import { spfi, SPFI, SPFx } from "@pnp/sp";
+
 import "@pnp/sp/webs";
 import "@pnp/sp/lists";
 import "@pnp/sp/items";
@@ -11,20 +12,18 @@ export interface IReservation {
 	Location: string;
 	Desk: string;
 	ReservationDate: Date;
-	TimeBlock: string;
-	UserEmail: string;
+	TimeBlock: string; // "Morning" | "Afternoon"
+	UserEmail: string; // email string
 }
 
 export class HotelingService {
-	private sp: ReturnType<typeof spfi>;
+	private sp: SPFI;
 
 	constructor(context: WebPartContext) {
 		this.sp = spfi().using(SPFx(context));
 	}
 
-	// Create a new reservation
 	public async createReservation(reservation: IReservation): Promise<number> {
-		// Get the user ID first
 		const user = await this.sp.web.ensureUser(reservation.UserEmail);
 
 		const result = await this.sp.web.lists
@@ -35,7 +34,7 @@ export class HotelingService {
 				Desk: reservation.Desk,
 				ReservationDate: reservation.ReservationDate.toISOString(),
 				TimeBlock: reservation.TimeBlock,
-				UserEmailId: user.Id,
+				UserEmailId: user.Id, // Person/Group lookup field
 			});
 
 		return result.Id;
@@ -102,19 +101,26 @@ export class HotelingService {
 		}));
 	}
 
-	// Check if a specific slot is available
 	public async isSlotAvailable(
 		location: string,
 		desk: string,
 		date: Date,
 		timeBlock: string,
 	): Promise<boolean> {
-		const dateStr = date.toISOString().split("T")[0]; // YYYY-MM-DD
+		// SharePoint filtering on DateTime -> this assumes ReservationDate is stored consistently
+		//  use a day range filter to be safer.
+		const start = new Date(date);
+		start.setHours(0, 0, 0, 0);
+		const end = new Date(date);
+		end.setHours(23, 59, 59, 999);
+
+		const startIso = start.toISOString();
+		const endIso = end.toISOString();
 
 		const items = await this.sp.web.lists
 			.getByTitle(ENV.LIST_HOTELINGRESERVATIONS)
 			.items.filter(
-				`Location eq '${location}' and Desk eq '${desk}' and ReservationDate eq datetime'${dateStr}' and TimeBlock eq '${timeBlock}'`,
+				`Location eq '${location}' and Desk eq '${desk}' and TimeBlock eq '${timeBlock}' and ReservationDate ge datetime'${startIso}' and ReservationDate le datetime'${endIso}'`,
 			)();
 
 		return items.length === 0;
