@@ -68,17 +68,23 @@ export function ProcedureChecklist({
 		setSteps(s || []);
 	};
 
+	const [filterCategory, setFilterCategory] = React.useState<
+		string | undefined
+	>(undefined);
 	const filtered = React.useMemo(() => {
 		const term = search.trim().toLowerCase();
-		if (!term) return procedures;
+		if (!term && !filterCategory) return procedures;
 		return procedures.filter((proc) => {
-			const haystack = [proc.title, proc.category]
+			if (filterCategory && proc.category !== filterCategory)
+				return false;
+			const haystack = [proc.title, proc.filename, proc.category];
+			return haystack
 				.filter(Boolean)
 				.join(" ")
-				.toLowerCase();
-			return haystack.includes(term);
+				.toLowerCase()
+				.includes(term);
 		});
-	}, [search, procedures]);
+	}, [search, procedures, filterCategory]);
 
 	return (
 		<section className="p-4 text-sm">
@@ -102,7 +108,12 @@ export function ProcedureChecklist({
 			) : !selectedProcedure ? (
 				<p className="mt-2 text-xs text-slate-500">
 					{`${filtered.length} procedures available`}
-					<ProcedureFilters procedures={procedures} />
+					<ProcedureFilters
+						procedures={procedures}
+						onCategoryChange={(category) => {
+							setFilterCategory(category ? category : undefined);
+						}}
+					/>
 					<span className="float-right cursor-pointer hover:text-blue-500">
 						{editorMode ? "➕" : ""}
 					</span>

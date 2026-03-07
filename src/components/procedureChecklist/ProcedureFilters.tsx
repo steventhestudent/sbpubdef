@@ -3,8 +3,10 @@ import { ProcedureChecklistItem } from "@type/ProcedureChecklist";
 
 export function ProcedureFiltersFloating({
 	procedures,
+	onCategoryChange,
 }: {
 	procedures: ProcedureChecklistItem[];
+	onCategoryChange: (category: string) => void;
 }) {
 	const [categories, setCategories] = React.useState<{
 		[key: string]: number;
@@ -19,8 +21,13 @@ export function ProcedureFiltersFloating({
 	}, [procedures]);
 	return (
 		<div className="absolute left-0 hidden w-[10em] group-focus-within:block group-hover:block">
-			<select className="focus:ring-opacity-50 mt-1 block w-full rounded-md border border-gray-300 bg-white p-2 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200">
-				<option value="">Category</option>
+			<select
+				onChange={(e) => {
+					onCategoryChange(e.target.value);
+				}}
+				className="focus:ring-opacity-50 mt-1 block w-full rounded-md border border-gray-300 bg-white p-2 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
+			>
+				<option value="">All Categories</option>
 				{Object.keys(categories).map(($0, i) => (
 					<option
 						key={i}
@@ -34,8 +41,10 @@ export function ProcedureFiltersFloating({
 
 export function ProcedureFilters({
 	procedures,
+	onCategoryChange,
 }: {
 	procedures: ProcedureChecklistItem[];
+	onCategoryChange: (category: string) => void;
 }) {
 	return (
 		<span className="group relative ml-[1.5em]">
@@ -55,7 +64,10 @@ export function ProcedureFilters({
 					</svg>
 				</span>
 			</button>
-			<ProcedureFiltersFloating procedures={procedures} />
+			<ProcedureFiltersFloating
+				procedures={procedures}
+				onCategoryChange={onCategoryChange}
+			/>
 		</span>
 	);
 }
