@@ -213,8 +213,12 @@ export const ProcedureChecklistCompactView = ({
 							</div>
 						) : (
 							<div className="mx-auto max-w-md text-xs font-semibold whitespace-pre-wrap text-slate-900">
-								{/* If SharePoint returns HTML here, you can strip tags or render HTML safely later */}
-								{current?.text || "(No step text)"}
+								<div
+									dangerouslySetInnerHTML={{
+										__html:
+											current?.text || "(No step text)",
+									}}
+								/>
 							</div>
 						)}
 					</div>
