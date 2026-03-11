@@ -10,7 +10,7 @@ class UPDATE_MODES(Enum):
     ALL = 2
 
 # config
-UPDATE_MODE = UPDATE_MODES.NO_API_REQUESTS
+UPDATE_MODE = UPDATE_MODES.ALL
 
 if not(UPDATE_MODE == UPDATE_MODES.NO_API_REQUESTS):
     authenticate()
@@ -19,7 +19,7 @@ if not(UPDATE_MODE == UPDATE_MODES.NO_API_REQUESTS):
     procedures_list_id = get_list_id(site_id, os.getenv("LIST_PROCEDURECHECKLIST"))
     steps_list_id = get_list_id(site_id, os.getenv("LIST_PROCEDURESTEPS"))
 
-def upload_file(file_path, skip=True): # todo: remove skip=True, add UPDATE_MODES to accomodate skipping all file uploads / IMAGE_ONLY / NO_IMAGE / PDF_ONLY
+def upload_file(file_path, skip=False): # todo: remove skip=True, add UPDATE_MODES to accomodate skipping all file uploads / IMAGE_ONLY / NO_IMAGE / PDF_ONLY
     if skip or UPDATE_MODE == UPDATE_MODES.NO_API_REQUESTS or (UPDATE_MODE == UPDATE_MODES.JSON_ONLY and not(file_path.endswith('.json'))): return "https://csproject25.sharepoint.com/sites/PD-Intranet/user_uploads/resource/LOP/ProcedureChecklist/" + os.path.basename(file_path)
     return _upload_file(site_id, drive_id, file_path, "resource/LOP/ProcedureChecklist")
 
@@ -54,10 +54,11 @@ def update_list_item(procedure: ProcedureChecklist, procedure_id): # must use in
 def add_or_update_lists(procedure: ProcedureChecklist):
     if UPDATE_MODE.value < UPDATE_MODES.ALL.value: return True
     rows = get_list_items(site_id, procedures_list_id, fields_filter=f"fields/Filename eq '{odata_escape(procedure.filename)}'")
-    procedure_id = rows[0].get("id") if rows[0] else -1
     if (len(rows)) == 0:
         procedure_id = add_list_item(procedure).get('id')
-    else: update_list_item(procedure, procedure_id)
+    else:
+        procedure_id = rows[0].get("id") if rows[0] else -1
+        update_list_item(procedure, procedure_id)
 
     # add / update ProcedureSteps
     existing_steps_rows = get_list_items(site_id, steps_list_id, fields_filter=f"fields/ProcedureIdLookupId eq {procedure_id}", top=999)
