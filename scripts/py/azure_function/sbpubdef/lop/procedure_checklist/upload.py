@@ -10,7 +10,7 @@ class UPDATE_MODES(Enum):
     ALL = 2
 
 # config
-UPDATE_MODE = UPDATE_MODES.ALL
+UPDATE_MODE = UPDATE_MODES.NO_API_REQUESTS
 
 if not(UPDATE_MODE == UPDATE_MODES.NO_API_REQUESTS):
     authenticate()
@@ -52,6 +52,7 @@ def update_list_item(procedure: ProcedureChecklist, procedure_id): # must use in
     })
 
 def add_or_update_lists(procedure: ProcedureChecklist):
+    if UPDATE_MODE.value < UPDATE_MODES.ALL.value: return True
     rows = get_list_items(site_id, procedures_list_id, fields_filter=f"fields/Filename eq '{odata_escape(procedure.filename)}'")
     procedure_id = rows[0].get("id") if rows[0] else -1
     if (len(rows)) == 0:
