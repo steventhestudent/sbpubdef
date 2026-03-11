@@ -27,7 +27,7 @@ export function ProcedureFiltersFloating({
 				}}
 				className="focus:ring-opacity-50 mt-1 block w-full rounded-md border border-gray-300 bg-white p-2 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
 			>
-				<option value="">All Categories</option>
+				<option value="">All Categories ({procedures.length})</option>
 				{Object.keys(categories).map(($0, i) => (
 					<option
 						key={i}

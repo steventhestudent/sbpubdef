@@ -2,6 +2,7 @@
 
 export type ProcedureStepItem = {
 	id: number;
+	title: string;
 	procedureId?: number; // lookup id (optional; depends what you select)
 	procedureFilename?: string; // optional, if you select lookup Title or extra field
 	step: number;
@@ -12,6 +13,7 @@ export type ProcedureStepItem = {
 // If you want strict typing for list results:
 export type ProcedureStepsListResult = Record<string, unknown> & {
 	Id: number;
+	Title: string;
 	Step?: number;
 	Text?: string;
 	Images?: string;

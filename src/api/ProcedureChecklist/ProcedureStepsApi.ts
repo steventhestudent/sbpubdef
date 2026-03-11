@@ -45,6 +45,7 @@ export class ProcedureStepsApi extends ListApi<
 				.map(
 					(i): ProcedureStepItem => ({
 						id: i.Id,
+						title: i.Title,
 						procedureId:
 							typeof i.ProcedureIDId === "number"
 								? i.ProcedureIDId

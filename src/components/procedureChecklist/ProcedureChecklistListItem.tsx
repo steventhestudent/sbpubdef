@@ -10,6 +10,7 @@ export const ProcedureChecklistListItem = ({
 }): JSX.Element => {
 	return (
 		<li
+			title={`File:\n\t${procedure.filename}`}
 			className="w-full cursor-pointer px-3 py-2 transition-colors hover:bg-slate-50"
 			onClick={() =>
 				onProcedureSelected ? onProcedureSelected(procedure) : 0
@@ -21,13 +22,20 @@ export const ProcedureChecklistListItem = ({
 						{procedure.title || procedure.filename}
 					</p>
 					<p className="mt-0.5 text-xs text-slate-600">
-						{procedure.category} • {procedure.pageCount} pages{" "}
+						{procedure.category} •{" "}
+						<span className="text-slate-400">
+							{procedure.pageCount} pages{" "}
+						</span>
 						{procedure.effectiveDate ? (
-							<span
-								title={`Effective: ${procedure.effectiveDate}`}
-							>
-								{`• ${procedure.effectiveDate.slice(-4)}`}
-							</span>
+							<>
+								•{" "}
+								<span
+									className="text-slate-400"
+									title={`Effective: ${procedure.effectiveDate}`}
+								>
+									{procedure.effectiveDate.slice(-4)}
+								</span>
+							</>
 						) : (
 							<></>
 						)}

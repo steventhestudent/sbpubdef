@@ -84,6 +84,12 @@ export const ProcedureChecklistCompactView = ({
 				)}
 			</p>
 			<h2 className="mt-0">
+				<button
+					onClick={() => setSelectedProcedure(undefined)}
+					className="text-sm text-blue-600 hover:underline"
+				>
+					Procedures ← &nbsp;
+				</button>
 				{selectedProcedure.title || selectedProcedure.filename}
 			</h2>
 			{selectedProcedure.effectiveDate ? (
@@ -97,12 +103,6 @@ export const ProcedureChecklistCompactView = ({
 			{selectedProcedure.purpose ? (
 				<>
 					<b>Purpose:</b>
-					<div
-						className="float-right cursor-pointer text-blue-500 hover:underline"
-						onClick={() => setMaximizePurpose(!maximizePurpose)}
-					>
-						{maximizePurpose ? "Show Less..." : "Show More..."}
-					</div>
 				</>
 			) : (
 				<></>
@@ -120,48 +120,65 @@ export const ProcedureChecklistCompactView = ({
 			) : (
 				<></>
 			)}
-			<div>
-				<button
-					onClick={() => setSelectedProcedure(undefined)}
-					className="mb-2 text-sm text-blue-600 hover:underline"
-				>
-					← Back to procedure list
-				</button>
-				<span
-					title="Fullscreen"
-					className="float-right ml-2 block cursor-pointer text-center text-xs text-blue-600 hover:underline"
-					onClick={() => {
-						setShowOverlay(true);
-					}}
-				>
-					⛶
-				</span>
-				<span
-					title="Download..."
-					className="float-right block cursor-pointer text-center text-xs text-blue-600 hover:underline"
-					onClick={() => {
-						window.open(selectedProcedure.documentURL);
-					}}
-				>
-					⤓
-				</span>
-			</div>
-
 			<div
 				className="relative"
 				style={{
 					overflow: maximizePurpose ? "auto" : "hidden",
-					maxHeight: maximizePurpose ? "inherit" : "2.5em",
+					maxHeight: maximizePurpose ? "inherit" : "2.8em",
 				}}
+				title={selectedProcedure.purpose}
 			>
 				{selectedProcedure.purpose}
+				{selectedProcedure.purpose && maximizePurpose ? (
+					<div
+						className="float-right mb-2 cursor-pointer text-blue-500 hover:underline"
+						onClick={() => setMaximizePurpose(false)}
+					>
+						Show Less...
+					</div>
+				) : (
+					<></>
+				)}
 			</div>
+			{selectedProcedure.purpose && !maximizePurpose ? (
+				<div
+					className="mb-2 cursor-pointer text-right text-blue-500 hover:underline"
+					onClick={() => setMaximizePurpose(true)}
+				>
+					Show More...
+				</div>
+			) : (
+				<></>
+			)}
 			<div className="overflow-hidden rounded-md border border-slate-400 bg-white">
+				<div className="relative text-center font-bold">
+					<div className="absolute top-[2px] right-1">
+						<span
+							title="Fullscreen"
+							className="float-right ml-2 block cursor-pointer text-center text-xs text-blue-600 hover:underline"
+							onClick={() => {
+								setShowOverlay(true);
+							}}
+						>
+							⛶
+						</span>
+						<span
+							title="Download..."
+							className="float-right block cursor-pointer text-center text-xs text-blue-600 hover:underline"
+							onClick={() => {
+								window.open(selectedProcedure.documentURL);
+							}}
+						>
+							⤓
+						</span>
+					</div>
+					{isFinal ? "Procedure Complete" : current?.title}
+				</div>
 				<div className="min-h-64 w-full items-center justify-center bg-slate-100">
 					<div className="w-full p-6 text-center">
 						<div className="scrollbar-thin flex min-h-48 w-full items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-gradient-to-br from-blue-50 to-slate-100">
 							{imageUrl ? (
-								<div className="inline-block w-[75%] cursor-pointer bg-black outline-1 outline-white">
+								<div className="inline-block h-[14em] w-[100%] cursor-pointer bg-black/50 outline-1 outline-white">
 									{imageUrl.split("youtube.com/embed/")
 										.length > 1 ? (
 										<iframe
@@ -175,10 +192,12 @@ export const ProcedureChecklistCompactView = ({
 									) : (
 										<img
 											src={imageUrl}
-											className="w-full"
+											className="h-full w-full"
+											title={imageUrl}
 											onClick={() =>
 												setShowOverlay(imageUrl)
 											}
+											style={{ opacity: isFinal ? 0 : 1 }}
 										/>
 									)}
 								</div>
@@ -188,24 +207,21 @@ export const ProcedureChecklistCompactView = ({
 								</div>
 							)}
 						</div>
+						<div className="text-right text-sm font-medium text-slate-500">
+							{isFinal
+								? `⟳`
+								: `${current?.step ?? stepIndex + 1}/${steps.length}`}
+						</div>
 					</div>
 				</div>
-
 				<div className="mt-[-1em] border-t border-slate-300 bg-slate-50 px-4 py-3">
-					<div className="mb-2 flex items-center justify-between">
+					<div className="flex items-center justify-between">
 						<button
 							onClick={goPrev}
 							className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
 						>
 							← Back
 						</button>
-
-						<span className="text-sm font-medium text-slate-600">
-							{isFinal
-								? "Complete"
-								: `Step ${current?.step ?? stepIndex + 1} / ${steps.length}`}
-						</span>
-
 						<button
 							onClick={goNext}
 							className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -214,10 +230,9 @@ export const ProcedureChecklistCompactView = ({
 						</button>
 					</div>
 				</div>
-
 				{/* Text panel */}
-				<div className="w-full justify-center rounded-lg border-2 border-dashed border-slate-300 bg-gradient-to-br from-blue-50 to-slate-100">
-					<div className="px-4 py-4 text-center">
+				<div className="mb-2 ml-[5%] w-[90%] justify-center rounded-lg border-2 border-dashed border-slate-300 bg-gradient-to-br from-blue-50 to-slate-100">
+					<div className="max-h-[19em] overflow-y-auto px-4 py-4">
 						{isFinal ? (
 							<div className="mx-auto max-w-md rounded-md bg-black px-4 py-6 text-xs font-semibold text-white">
 								Procedure complete.
