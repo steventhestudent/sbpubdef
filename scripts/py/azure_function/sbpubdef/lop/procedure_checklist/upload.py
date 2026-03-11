@@ -2,7 +2,7 @@ import os.path
 from enum import Enum
 
 from . import ProcedureChecklist
-from ...local_upload import authenticate, get_site_id, get_drive_id, get_list_id, upload_file as _upload_file, add_list_item as _add_list_item, get_list_items, update_list_item as _update_list_item, odata_escape
+from ...local_upload import authenticate, get_site_id, get_drive_id, get_list_id, upload_file as _upload_file, add_list_item as _add_list_item, get_list_items, update_list_item as _update_list_item, odata_escape, delete_list_item
 
 class UPDATE_MODES(Enum):
     NO_API_REQUESTS = 0
@@ -70,21 +70,10 @@ def add_or_update_lists(procedure: ProcedureChecklist):
     # 4) Build steps_to_upsert list from procedure object
     # Prefer `procedure.steps` if parsed; otherwise fall back to flattening procedure.lists[].list_txt
     steps_to_upsert = []
-    if hasattr(procedure, "steps") and procedure.steps:
-        for i, s in enumerate(procedure.steps, start=1):
-            txt = s.get("text") if isinstance(s, dict) else str(s)
-            img = (s.get("image") if isinstance(s, dict) else None) or ""
-            steps_to_upsert.append({"step": i, "text": txt, "image": img})
-    else:
-        # fall back: flatten procedure.lists[*].list_txt lines sequentially
-        step_index = 1
-        for sub in getattr(procedure, "lists", []) or []:
-            list_txt = sub.get("list_txt") or ""
-            lines = [ln.strip() for ln in list_txt.splitlines() if ln.strip()]
-            for ln in lines:
-                # join lines for multi-line logical step? this simplistic approach treats each non-empty line as a step
-                steps_to_upsert.append({"step": step_index, "text": ln, "image": (sub.get("associated_images") or [None])[0] or ""})
-                step_index += 1
+    for i, s in enumerate(procedure.steps, start=1):
+        txt = s.get("text") if isinstance(s, dict) else str(s)
+        img = (s.get("image") if isinstance(s, dict) else None) or ""
+        steps_to_upsert.append({"step": i, "text": txt, "image": img})
 
     # 5) Upsert each step: update if exists else create
     touched_step_nums = set()
@@ -109,12 +98,9 @@ def add_or_update_lists(procedure: ProcedureChecklist):
             created_id = created.get("id") if isinstance(created, dict) and created.get("id") else None
             print(f"Created step {sn} (item {created_id})")
 
-    # 6) Optional: mark or remove stale steps that existed but are not in the new set
-    # existing_step_nums = set(existing_steps_map.keys())
-    # stale = existing_step_nums - touched_step_nums
-    # if stale:
-    #     print("Stale steps detected:", stale)
-    #     # OPTION A: mark inactive column (recommended)
-    #     # For each stale step id: update_list_item(site_id, steps_list_id, item_id, {"IsActive": False})
-    #     # OPTION B: delete hard (be careful)
-    #     # for each item_id in stale: delete_list_item(site_id, steps_list_id, item_id)
+    # mark or remove stale steps that existed but are not in the new set
+    existing_step_nums = set(existing_steps_map.keys())
+    stale = existing_step_nums - touched_step_nums
+    if stale:
+        print("Stale steps detected:", stale)
+        for item_id in stale: delete_list_item(site_id, steps_list_id, item_id)
