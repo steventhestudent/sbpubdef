@@ -8,6 +8,7 @@ export interface IPowerBiLinkConfig {
   url: string;
   pageName?: string;
   bookmarkName?: string;
+  thumbnailUrl?: string;
 }
 
 export interface IPowerBiParsedLink {
@@ -19,8 +20,12 @@ export interface IPowerBiParsedLink {
   bookmarkName?: string;
 }
 
+export type CarouselMode = "auto" | "horizontal" | "vertical";
+
 export interface IUrgencyPortalProps {
   context: WebPartContext;
   links: IPowerBiLinkConfig[];
   defaultUrl?: string;
+  carouselMode?: CarouselMode;
+  visibleCount?: number;
 }

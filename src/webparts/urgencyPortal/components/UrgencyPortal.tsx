@@ -7,6 +7,7 @@ import {
   IPowerBiParsedLink,
 } from "./IUrgencyPortalProps";
 import { Collapsible } from "@components/Collapsible";
+import { CardCarousel, ICardItem } from "./CardCarousel";
 
 type PBIEventResponseType =
   | { message?: string; error?: { message?: string } }
@@ -47,16 +48,7 @@ async function getReportInfo(
 
 interface IParsedItemWithUrl extends IPowerBiParsedLink {
   originalUrl: string;
-}
-
-type IServiceWithResize = {
-  resize: (element: HTMLElement) => void;
-};
-
-function isServiceWithResize(value: unknown): value is IServiceWithResize {
-  if (!value || typeof value !== "object") return false;
-  const v = value as { resize?: unknown };
-  return typeof v.resize === "function";
+  thumbnailUrl?: string;
 }
 
 function normalizeBookmarkName(bookmarkName?: string): string {
@@ -115,6 +107,7 @@ function parseLink(cfg: IPowerBiLinkConfig): {
           pageName: pageNameFromCfg,
           bookmarkName,
           originalUrl: urlText,
+          thumbnailUrl: cfg.thumbnailUrl,
         },
       };
     }
@@ -135,6 +128,7 @@ function parseLink(cfg: IPowerBiLinkConfig): {
           pageName: pageNameFromUrl || pageNameFromCfg,
           bookmarkName,
           originalUrl: urlText,
+          thumbnailUrl: cfg.thumbnailUrl,
         },
       };
     }
@@ -166,6 +160,7 @@ function parseLink(cfg: IPowerBiLinkConfig): {
       visualName,
       bookmarkName,
       originalUrl: urlText,
+      thumbnailUrl: cfg.thumbnailUrl,
     },
   };
 }
@@ -198,52 +193,6 @@ function getItemKey(item: IParsedItemWithUrl): string {
   return parts.join("||");
 }
 
-function resolveDefaultKey(
-  configuredRaw: string,
-  items: IParsedItemWithUrl[],
-): string {
-  const configured: string = (configuredRaw || "").trim();
-  if (!configured) return "";
-
-  const exact: IParsedItemWithUrl | undefined = items.find(
-    (i: IParsedItemWithUrl) => getItemKey(i) === configured,
-  );
-  if (exact) return getItemKey(exact);
-
-  const byUrl: IParsedItemWithUrl | undefined = items.find(
-    (i: IParsedItemWithUrl) => (i.originalUrl || "").trim() === configured,
-  );
-  if (byUrl) return getItemKey(byUrl);
-
-  return "";
-}
-
-function hasKey(items: IParsedItemWithUrl[], key: string): boolean {
-  return items.some((i: IParsedItemWithUrl) => getItemKey(i) === key);
-}
-
-function reconcileSelectedKey(
-  items: IParsedItemWithUrl[],
-  selectedKey: string,
-  selection: IParsedItemWithUrl | undefined,
-): string {
-  const key: string = (selectedKey || "").trim();
-  if (!key) return "";
-  if (hasKey(items, key)) return key;
-  if (!selection) return "";
-
-  const match: IParsedItemWithUrl | undefined = items.find(
-    (i: IParsedItemWithUrl) =>
-      (i.originalUrl || "").trim() === (selection.originalUrl || "").trim() &&
-      normalizePageName(i.pageName) === normalizePageName(selection.pageName) &&
-      (i.title || "").trim() === (selection.title || "").trim(),
-  );
-
-  if (match) return getItemKey(match);
-
-  return "";
-}
-
 function stripQuery(url: string): string {
   const idx: number = url.indexOf("?");
   if (idx < 0) return url;
@@ -272,7 +221,7 @@ function buildEmbedNewTabUrl(embedUrl: string): string {
   return `${base}${hasQuery ? "&" : "?"}autoAuth=true`;
 }
 
-function FullscreenIcon(props: { size?: number }): JSX.Element {
+function CloseIcon(props: { size?: number }): JSX.Element {
   const size: number = props.size ?? 18;
   return (
     <svg
@@ -286,135 +235,44 @@ function FullscreenIcon(props: { size?: number }): JSX.Element {
     >
       <path
         fill="currentColor"
-        d="M7 7h3V5H5v5h2V7Zm7-2v2h3v3h2V5h-5ZM7 14H5v5h5v-2H7v-3Zm12 0h-2v3h-3v2h5v-5Z"
+        d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12 5.7 16.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4Z"
       />
     </svg>
   );
 }
 
-function ExitFullscreenIcon(props: { size?: number }): JSX.Element {
-  const size: number = props.size ?? 18;
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      focusable="false"
-      role="img"
-      style={{ display: "block", pointerEvents: "none" }}
-    >
-      <path
-        fill="currentColor"
-        d="M7 7h3V5H5v5h2V7Zm7-2v2h3v3h2V5h-5ZM7 14H5v5h5v-2H7v-3Zm12 0h-2v3h-3v2h5v-5Z"
-      />
-    </svg>
-  );
-}
+// ── Popup Modal for embedding Power BI on card click ──
 
-export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
-  const [selectedKey, setSelectedKey] = React.useState<string>(
-    (props.defaultUrl || "").trim(),
-  );
-  const [selection, setSelection] = React.useState<
-    IParsedItemWithUrl | undefined
-  >(undefined);
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
+function EmbedPopup(props: {
+  selection: IParsedItemWithUrl;
+  allItems: IParsedItemWithUrl[];
+  context: IUrgencyPortalProps["context"];
+  onSelect: (item: IParsedItemWithUrl) => void;
+  onClose: () => void;
+}): JSX.Element {
+  const { selection, allItems, context, onSelect, onClose } = props;
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const bookmarkAppliedRef = React.useRef(false);
+  const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | undefined>(undefined);
   const [openInNewTabUrl, setOpenInNewTabUrl] = React.useState<
     string | undefined
   >(undefined);
-  const [isFullscreen, setIsFullscreen] = React.useState<boolean>(false);
 
-  const containerRef = React.useRef<HTMLDivElement>(null);
-  const bookmarkAppliedForKeyRef = React.useRef<string>("");
-
-  const { items, errors } = React.useMemo(
-    (): { items: IParsedItemWithUrl[]; errors: string[] } =>
-      parseAll(props.links),
-    [props.links],
-  );
-
-  const openFullscreen = React.useCallback((): void => {
-    if (selection) setIsFullscreen(true);
-  }, [selection]);
-
+  // Close on Escape
   React.useEffect(() => {
-    const nextKey: string = resolveDefaultKey(props.defaultUrl || "", items);
-    if (nextKey) {
-      setSelectedKey(nextKey);
-      return;
-    }
-
-    const configured: string = (props.defaultUrl || "").trim();
-    if (configured) {
-      setSelectedKey("");
-    }
-  }, [props.defaultUrl, items]);
-
-  React.useEffect(() => {
-    const active: boolean = Boolean(selectedKey);
-    if (!active) {
-      setSelection(undefined);
-      setIsLoading(false);
-      setError(undefined);
-      setOpenInNewTabUrl(undefined);
-      bookmarkAppliedForKeyRef.current = "";
-      setIsFullscreen(false);
-      if (containerRef.current) powerbiService.reset(containerRef.current);
-      return;
-    }
-
-    const found: IParsedItemWithUrl | undefined = items.find(
-      (i: IParsedItemWithUrl) => getItemKey(i) === selectedKey,
-    );
-
-    setSelection(found);
-    setError(undefined);
-  }, [selectedKey, items]);
-
-  React.useEffect(() => {
-    const nextKey: string = reconcileSelectedKey(items, selectedKey, selection);
-    if (nextKey !== selectedKey) setSelectedKey(nextKey);
-  }, [items, selectedKey, selection]);
-
-  React.useEffect(() => {
-    bookmarkAppliedForKeyRef.current = "";
-  }, [selection?.originalUrl, selection?.pageName, selection?.bookmarkName]);
-
-  React.useEffect(() => {
-    if (!isFullscreen) return;
-
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") setIsFullscreen(false);
+      if (e.key === "Escape") onClose();
     };
-
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isFullscreen]);
+  }, [onClose]);
 
-  React.useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const rafId = requestAnimationFrame(() => {
-      try {
-        if (isServiceWithResize(powerbiService)) {
-          powerbiService.resize(container);
-        }
-      } catch {
-        return;
-      }
-    });
-
-    return () => cancelAnimationFrame(rafId);
-  }, [isFullscreen]);
-
+  // Embed the report/visual
   React.useEffect(() => {
     let cancelled = false;
 
     const run = async (): Promise<void> => {
-      if (!selection) return;
       if (!containerRef.current) return;
 
       setIsLoading(true);
@@ -422,9 +280,8 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
       setOpenInNewTabUrl(undefined);
 
       try {
-        const token: string = await getPowerBiToken(props.context);
-        const reportInfo: { embedUrl: string; webUrl: string } =
-          await getReportInfo(token, selection.reportId);
+        const token: string = await getPowerBiToken(context);
+        const reportInfo = await getReportInfo(token, selection.reportId);
 
         if (cancelled || !containerRef.current) return;
 
@@ -449,7 +306,6 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
             config,
           ) as pbi.Report;
 
-          const selectionKey: string = getItemKey(selection);
           setOpenInNewTabUrl(buildEmbedNewTabUrl(reportInfo.embedUrl));
 
           const onLoaded = (): void => {
@@ -482,9 +338,9 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
                 setOpenInNewTabUrl(fullscreenUrl);
 
                 if (!desiredNorm) return undefined;
-                if (bookmarkAppliedForKeyRef.current === selectionKey) return undefined;
+                if (bookmarkAppliedRef.current) return undefined;
 
-                bookmarkAppliedForKeyRef.current = selectionKey;
+                bookmarkAppliedRef.current = true;
 
                 if (match) return report.bookmarksManager.apply(match.name);
                 return undefined;
@@ -496,7 +352,9 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
             if (!cancelled) setIsLoading(false);
           };
 
-          const onError = (event: pbi.service.ICustomEvent<unknown>): void => {
+          const onError = (
+            event: pbi.service.ICustomEvent<unknown>,
+          ): void => {
             const detail = event.detail as PBIEventResponseType;
             const message: string =
               detail?.message ??
@@ -510,16 +368,15 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 
           report.off("loaded");
           report.on("loaded", onLoaded);
-
           report.off("rendered");
           report.on("rendered", onRendered);
-
           report.off("error");
           report.on("error", onError);
 
           return;
         }
 
+        // Visual embed
         const pageName: string | undefined = selection.pageName;
         const visualName: string | undefined = selection.visualName;
 
@@ -556,7 +413,9 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
           if (!cancelled) setIsLoading(false);
         };
 
-        const onError = (event: pbi.service.ICustomEvent<unknown>): void => {
+        const onError = (
+          event: pbi.service.ICustomEvent<unknown>,
+        ): void => {
           const detail = event.detail as PBIEventResponseType;
           const message: string =
             detail?.message ?? detail?.error?.message ?? "Power BI error";
@@ -568,7 +427,6 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 
         visual.off("rendered");
         visual.on("rendered", onRendered);
-
         visual.off("error");
         visual.on("error", onError);
       } catch (e: unknown) {
@@ -590,21 +448,7 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
       cancelled = true;
       if (containerRef.current) powerbiService.reset(containerRef.current);
     };
-  }, [selection, props.context]);
-
-  const wrapperStyle: React.CSSProperties = {
-    fontFamily: "Segoe UI, Arial, sans-serif",
-  };
-
-  const selectStyle: React.CSSProperties = {
-    width: "100%",
-    maxWidth: 520,
-    padding: 8,
-    borderRadius: 6,
-    border: "1px solid #ccc",
-    font: "inherit",
-    flex: "0 0 auto",
-  };
+  }, [selection, context]);
 
   const iconButtonStyle: React.CSSProperties = {
     all: "unset",
@@ -625,113 +469,192 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
     WebkitTapHighlightColor: "transparent",
   };
 
-  const overlay =
-    isFullscreen && selection
-      ? ReactDom.createPortal(
-          <div
-            role="dialog"
-            aria-modal="true"
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 2147483646,
-              background: "rgba(0,0,0,0.55)",
-              display: "flex",
-              flexDirection: "column",
+  return ReactDom.createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 2147483646,
+        background: "rgba(0,0,0,0.55)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+      }}
+      onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        style={{
+          background: "white",
+          borderRadius: 10,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          width: "90vw",
+          maxWidth: 1200,
+          height: "85vh",
+          maxHeight: 800,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+        }}
+      >
+        {/* Header bar */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "10px 16px",
+            borderBottom: "1px solid #ddd",
+            gap: 12,
+            flexShrink: 0,
+          }}
+        >
+          <select
+            value={getItemKey(selection)}
+            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+              const found = allItems.find(
+                (i: IParsedItemWithUrl) => getItemKey(i) === e.target.value,
+              );
+              if (found) onSelect(found);
             }}
-            onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
-              if (e.target === e.currentTarget) setIsFullscreen(false);
+            style={{
+              fontWeight: 600,
+              fontSize: 15,
+              border: "1px solid #ccc",
+              borderRadius: 6,
+              padding: "4px 8px",
+              maxWidth: "60%",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              cursor: "pointer",
             }}
           >
-            <div
-              style={{
-                background: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                padding: "10px 12px",
-                borderBottom: "1px solid #ddd",
-                gap: 12,
-              }}
-            >
-              <div
-                style={{
-                  fontWeight: 600,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
+            {allItems.map((item: IParsedItemWithUrl) => (
+              <option key={getItemKey(item)} value={getItemKey(item)}>
+                {item.title}
+              </option>
+            ))}
+          </select>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {isLoading && (
+              <span style={{ color: "#888", fontSize: 13 }}>Loading...</span>
+            )}
+
+            {openInNewTabUrl && (
+              <a
+                href={openInNewTabUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#0f6cbd", textDecoration: "underline", fontSize: 13 }}
               >
-                {selection.title}
-              </div>
+                Open in new tab
+              </a>
+            )}
 
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                {openInNewTabUrl && (
-                  <a
-                    href={openInNewTabUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: "#0f6cbd", textDecoration: "underline" }}
-                  >
-                    Open in new tab
-                  </a>
-                )}
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={onClose}
+              style={iconButtonStyle}
+            >
+              <CloseIcon />
+            </button>
+          </div>
+        </div>
 
-                <button
-                  type="button"
-                  aria-label="Exit fullscreen"
-                  onClick={() => setIsFullscreen(false)}
-                  style={iconButtonStyle}
-                >
-                  <ExitFullscreenIcon />
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        )
-      : null;
+        {/* Error */}
+        {error && (
+          <p
+            style={{
+              color: "darkred",
+              whiteSpace: "pre-wrap",
+              padding: "8px 16px",
+              margin: 0,
+              flexShrink: 0,
+            }}
+          >
+            {error}
+          </p>
+        )}
+
+        {/* Embed container */}
+        <div
+          ref={containerRef}
+          style={{
+            flex: "1 1 auto",
+            minHeight: 0,
+            width: "100%",
+          }}
+        />
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+// ── Main Component ──
+
+export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
+  const [popupItem, setPopupItem] = React.useState<
+    IParsedItemWithUrl | undefined
+  >(undefined);
+
+  const { items, errors } = React.useMemo(
+    (): { items: IParsedItemWithUrl[]; errors: string[] } =>
+      parseAll(props.links),
+    [props.links],
+  );
+
+  const cardItems: ICardItem[] = React.useMemo(
+    () =>
+      items.map((item: IParsedItemWithUrl) => ({
+        key: getItemKey(item),
+        title: item.title,
+        thumbnailUrl: item.thumbnailUrl,
+      })),
+    [items],
+  );
+
+  const onCardClick = React.useCallback(
+    (cardItem: ICardItem) => {
+      const found = items.find(
+        (i: IParsedItemWithUrl) => getItemKey(i) === cardItem.key,
+      );
+      if (found) setPopupItem(found);
+    },
+    [items],
+  );
+
+  const closePopup = React.useCallback(() => {
+    setPopupItem(undefined);
+  }, []);
 
   return (
     <Collapsible
       instanceId={props.context.instanceId}
       title="PowerBI - Urgency Portal"
     >
-      <div style={{ ...wrapperStyle, marginTop: 8 }}>
+      <div style={{ fontFamily: "Segoe UI, Arial, sans-serif", marginTop: 8 }}>
         <div style={{ paddingLeft: 5, paddingRight: 5 }}>
-          <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
-            <select
-              style={selectStyle}
-              value={selectedKey}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                setSelectedKey(e.currentTarget.value)
-              }
-              disabled={items.length === 0}
-            >
-              <option value="">-- Select --</option>
-              {items.map((item: IParsedItemWithUrl) => {
-                const key: string = getItemKey(item);
-                return (
-                  <option key={key} value={key}>
-                    {item.title}
-                  </option>
-                );
-              })}
-            </select>
-
-            <div style={{ flex: "1 1 auto", minWidth: 0 }} />
-
-            {selection && (
-              <button
-                type="button"
-                aria-label="Fullscreen"
-                onClick={openFullscreen}
-                style={iconButtonStyle}
-              >
-                <FullscreenIcon />
-              </button>
-            )}
-          </div>
+          {items.length > 0 ? (
+            <CardCarousel
+              items={cardItems}
+              visibleCount={props.visibleCount ?? 3}
+              autoScrollMs={8000}
+              carouselMode={props.carouselMode}
+              onCardClick={onCardClick}
+            />
+          ) : (
+            <p style={{ color: "#888" }}>
+              No Power BI links configured. Edit the web part to add links.
+            </p>
+          )}
         </div>
 
         {errors.length > 0 && (
@@ -748,55 +671,15 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
           </p>
         )}
 
-        {isLoading && (
-          <p style={{ paddingLeft: 5, paddingRight: 5 }}>Loading…</p>
+        {popupItem && (
+          <EmbedPopup
+            selection={popupItem}
+            allItems={items}
+            context={props.context}
+            onSelect={setPopupItem}
+            onClose={closePopup}
+          />
         )}
-
-        {error && (
-          <p
-            style={{
-              color: "darkred",
-              whiteSpace: "pre-wrap",
-              paddingLeft: 5,
-              paddingRight: 5,
-            }}
-          >
-            {error}
-          </p>
-        )}
-
-        {selection && (
-          <div style={{ paddingLeft: 5, paddingRight: 5 }}>
-            <div style={{ marginTop: 12 }}>
-              <div
-                ref={containerRef}
-                style={
-                  isFullscreen
-                    ? {
-                        position: "fixed",
-                        top: 45,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        zIndex: 2147483647,
-                        width: "100%",
-                        height: "calc(100vh - 45px)",
-                        border: "none",
-                        borderRadius: 0,
-                      }
-                    : {
-                        height: "650px",
-                        width: "100%",
-                        border: "1px solid #ddd",
-                        borderRadius: 6,
-                      }
-                }
-              />
-            </div>
-          </div>
-        )}
-
-        {overlay}
       </div>
     </Collapsible>
   );

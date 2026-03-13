@@ -4,7 +4,7 @@ import {
   BaseClientSideWebPart,
   IPropertyPaneConfiguration,
 } from "@microsoft/sp-webpart-base";
-import { PropertyPaneDropdown } from "@microsoft/sp-property-pane";
+import { PropertyPaneDropdown, PropertyPaneSlider } from "@microsoft/sp-property-pane";
 
 import {
   PropertyFieldCollectionData,
@@ -15,11 +15,14 @@ import UrgencyPortal from "./components/UrgencyPortal";
 import {
   IUrgencyPortalProps,
   IPowerBiLinkConfig,
+  CarouselMode,
 } from "./components/IUrgencyPortalProps";
 
 export interface IUrgencyPortalWebPartProps {
   links: IPowerBiLinkConfig[];
   defaultUrl?: string;
+  carouselMode?: CarouselMode;
+  visibleCount?: number;
 }
 
 function normalizeBookmarkName(bookmarkName?: string): string {
@@ -49,6 +52,8 @@ export default class UrgencyPortalWebPart extends BaseClientSideWebPart<IUrgency
         context: this.context,
         links: this.properties.links || [],
         defaultUrl: this.properties.defaultUrl || "",
+        carouselMode: this.properties.carouselMode || "auto",
+        visibleCount: this.properties.visibleCount ?? 3,
       });
 
     ReactDom.render(element, this.domElement);
@@ -85,6 +90,21 @@ export default class UrgencyPortalWebPart extends BaseClientSideWebPart<IUrgency
                 PropertyPaneDropdown("defaultUrl", {
                   label: "Default Link",
                   options,
+                }),
+                PropertyPaneDropdown("carouselMode", {
+                  label: "Carousel Layout",
+                  options: [
+                    { key: "auto", text: "Auto" },
+                    { key: "horizontal", text: "Horizontal" },
+                    { key: "vertical", text: "Vertical" },
+                  ],
+                }),
+                PropertyPaneSlider("visibleCount", {
+                  label: "Cards Shown",
+                  min: 1,
+                  max: 3,
+                  step: 1,
+                  value: this.properties.visibleCount ?? 3,
                 }),
               ],
             },
@@ -129,6 +149,12 @@ export default class UrgencyPortalWebPart extends BaseClientSideWebPart<IUrgency
                     {
                       id: "bookmarkName",
                       title: "Bookmark Name (optional)",
+                      type: CustomCollectionFieldType.string,
+                      required: false,
+                    },
+                    {
+                      id: "thumbnailUrl",
+                      title: "Thumbnail URL (optional)",
                       type: CustomCollectionFieldType.string,
                       required: false,
                     },
