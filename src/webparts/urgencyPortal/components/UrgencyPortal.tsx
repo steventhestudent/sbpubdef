@@ -271,6 +271,7 @@ function EmbedPopup(props: {
   // Embed the report/visual
   React.useEffect(() => {
     let cancelled = false;
+    bookmarkAppliedRef.current = false;
 
     const run = async (): Promise<void> => {
       if (!containerRef.current) return;
