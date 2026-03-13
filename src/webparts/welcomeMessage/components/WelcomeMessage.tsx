@@ -21,7 +21,7 @@ function PDIntranetViewWrapper(
 		return (
 			<section>
 				<div className="rounded-xl border border-[var(--webpart-border-color)] bg-[#f9f9f9] p-6 shadow-sm">
-					<h2 className="text-center text-xl font-semibold text-slate-800">
+					<h2 className="xs:text-sm text-center text-xs font-semibold text-slate-800 md:text-lg lg:text-xl">
 						Welcome to the Public Defender Resource Center,&nbsp;
 						<span className="group relative">
 							<span className="cursor-pointer text-nowrap underline">
