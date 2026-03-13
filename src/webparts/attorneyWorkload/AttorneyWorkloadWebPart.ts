@@ -2,51 +2,34 @@ import { BaseClientSideWebPart } from '@microsoft/sp-webpart-base';
 import * as React from 'react';
 import * as ReactDom from 'react-dom';
 import AttorneyWorkload from './components/AttorneyWorkload';
-import { IAttorneyWorkloadProps, ICountyData } from './components/IAttorneyWorkloadProps';
+import { ILocationData, IAttorneyWorkloadProps } from './components/IAttorneyWorkloadProps';
 
-export interface IAttorneyWorkloadWebPartProps {
-  // Placeholder for web part properties
-}
+export default class AttorneyWorkloadWebPart
+  extends BaseClientSideWebPart<{}> {
 
-export default class AttorneyWorkloadWebPart extends BaseClientSideWebPart<IAttorneyWorkloadWebPartProps> {
+  private locations: ILocationData[] = [];
+
+  public async onInit(): Promise<void> {
+    await super.onInit();
+    await this.loadData();
+  }
+
+  private async loadData(): Promise<void> {
+    try {
+      const response = await fetch('http://localhost:7071/api/GetCases');
+      this.locations = await response.json();
+      console.log("DATA LOADED:", this.locations);
+    } catch (error) {
+      console.error("API ERROR:", error);
+      this.locations = [];
+    }
+  }
 
   public render(): void {
-    // Example static data
-    const counties: ICountyData[] = [
-      {
-        name: "North County",
-        caseTypes: [
-          {
-            type: "Criminal Defense",
-            attorneys: [
-              { name: "Michael Henderson", cases: [{ number: "NOR-CR-2024-0412" }, { number: "NOR-CR-2024-0892" }] }
-            ]
-          },
-          {
-            type: "Family Law",
-            attorneys: [
-              { name: "Sarah Jenkins", cases: [{ number: "NOR-FAM-2024-0012" }] }
-            ]
-          }
-        ]
-      },
-      {
-        name: "South County",
-        caseTypes: [
-          {
-            type: "Civil Litigation",
-            attorneys: [
-              { name: "Rebecca Thorne", cases: [{ number: "SOU-CIV-2024-9912" }] }
-            ]
-          }
-        ]
-      }
-    ];
-
-    const element: React.ReactElement<IAttorneyWorkloadProps> = React.createElement(
-      AttorneyWorkload,
-      { counties }
-    );
+    const element: React.ReactElement<IAttorneyWorkloadProps> =
+      React.createElement(AttorneyWorkload, {
+        locations: this.locations
+      });
 
     ReactDom.render(element, this.domElement);
   }
