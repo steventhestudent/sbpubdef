@@ -2,6 +2,7 @@ import * as React from "react";
 import { ProcedureChecklistItem } from "@type/ProcedureChecklist";
 import { ProcedureStepItem } from "@type/ProcedureSteps";
 import { ProcedureChecklistOverlay } from "@components/procedureChecklist/ProcedureChecklistOverlay";
+import { ProcedureStepsApi } from "@api/ProcedureChecklist/ProcedureStepsApi";
 
 const normalizeFirstUrl = (raw: string | undefined): string => {
 	if (!raw) return "";
@@ -30,8 +31,10 @@ export const ProcedureChecklistCompactView = ({
 	selectedProcedure,
 	setSelectedProcedure,
 	steps,
+	setSteps,
 	stepIndex,
 	setStepIndex,
+	procedureStepsApi,
 	editorMode = false,
 }: {
 	selectedProcedure: ProcedureChecklistItem;
@@ -39,24 +42,43 @@ export const ProcedureChecklistCompactView = ({
 		React.SetStateAction<ProcedureChecklistItem | undefined>
 	>;
 	steps: undefined | ProcedureStepItem[];
+	setSteps: React.Dispatch<
+		React.SetStateAction<ProcedureStepItem[] | undefined>
+	>;
 	stepIndex: number; // 0..steps.length (steps.length is final slide)
 	setStepIndex: React.Dispatch<React.SetStateAction<number>>;
+	procedureStepsApi: ProcedureStepsApi;
 	editorMode?: boolean;
 }): JSX.Element => {
 	const [maximizePurpose, setMaximizePurpose] = React.useState(false);
 	const [showOverlay, setShowOverlay] = React.useState<boolean | string>(
 		false,
 	);
+	const [hasUnsavedChanges, setHasUnsavedChangees] = React.useState(false);
+	const titleRef = React.useRef<HTMLDivElement>(null);
+	const textRef = React.useRef<HTMLDivElement>(null);
 	if (steps === undefined) return <div>loading...</div>;
-
 	const isFinal = stepIndex >= steps.length; // final black slide
-	const goNext = (): void =>
+	const goNext = (): void => {
 		setStepIndex((prev) => (prev >= steps.length ? 0 : prev + 1));
-	const goPrev = (): void =>
+		setHasUnsavedChangees(false);
+	};
+	const goPrev = (): void => {
 		setStepIndex((prev) => (prev <= 0 ? steps.length : prev - 1));
+		setHasUnsavedChangees(false);
+	};
 
 	const current = !isFinal ? steps[stepIndex] : undefined;
 	const imageUrl = resolveImageUrlCarryForward(steps, stepIndex);
+
+	const checkForUnsavedChanged = (e: React.FormEvent<HTMLDivElement>) => {
+		const lines = titleRef.current!.innerText.split("\n");
+		if (lines.length > 1) titleRef.current!.innerText = lines.join(" ");
+		setHasUnsavedChangees(
+			titleRef.current!.innerText !== current?.title ||
+				textRef.current!.innerHTML !== current?.text,
+		);
+	};
 
 	return (
 		<div className="">
@@ -151,31 +173,33 @@ export const ProcedureChecklistCompactView = ({
 				<></>
 			)}
 			<div className="overflow-hidden rounded-md border border-slate-400 bg-white">
-				<div className="relative text-center font-bold">
-					<div className="absolute top-[2px] right-1">
-						<span
-							title="Fullscreen"
-							className="float-right ml-2 block cursor-pointer text-center text-xs text-blue-600 hover:underline"
-							onClick={() => {
-								setShowOverlay(true);
-							}}
-						>
-							⛶
-						</span>
-						<span
-							title="Download..."
-							className="float-right block cursor-pointer text-center text-xs text-blue-600 hover:underline"
-							onClick={() => {
-								window.open(selectedProcedure.documentURL);
-							}}
-						>
-							⤓
-						</span>
-					</div>
-					{isFinal ? "Procedure Complete" : current?.title}
+				<div className="relative text-right font-bold">
+					<span className="font-mono text-xs font-medium text-slate-500">
+						{isFinal
+							? `⟳`
+							: `${current?.step ?? stepIndex + 1}/${steps.length}`}
+					</span>
+					<span
+						title="Download..."
+						className="ml-2 cursor-pointer text-center text-xs text-blue-600 hover:underline"
+						onClick={() => {
+							window.open(selectedProcedure.documentURL);
+						}}
+					>
+						⤓
+					</span>
+					<span
+						title="Fullscreen"
+						className="mx-2 cursor-pointer text-center text-xs text-blue-600 hover:underline"
+						onClick={() => {
+							setShowOverlay(true);
+						}}
+					>
+						⛶
+					</span>
 				</div>
-				<div className="min-h-64 w-full items-center justify-center bg-slate-100">
-					<div className="w-full p-6 text-center">
+				<div className="min-h-56 w-full items-center justify-center bg-slate-100">
+					<div className="w-full px-6 py-4 text-center">
 						<div className="scrollbar-thin flex min-h-48 w-full items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-gradient-to-br from-blue-50 to-slate-100">
 							{imageUrl ? (
 								<div className="inline-block h-[14em] w-[100%] cursor-pointer bg-black/50 outline-1 outline-white">
@@ -207,10 +231,13 @@ export const ProcedureChecklistCompactView = ({
 								</div>
 							)}
 						</div>
-						<div className="text-right text-sm font-medium text-slate-500">
-							{isFinal
-								? `⟳`
-								: `${current?.step ?? stepIndex + 1}/${steps.length}`}
+						<div
+							ref={titleRef}
+							contentEditable={editorMode ?? false}
+							className="text-sm font-bold text-black"
+							onInput={checkForUnsavedChanged}
+						>
+							{isFinal ? "Procedure Complete" : current?.title}
 						</div>
 					</div>
 				</div>
@@ -218,21 +245,52 @@ export const ProcedureChecklistCompactView = ({
 					<div className="flex items-center justify-between">
 						<button
 							onClick={goPrev}
-							className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+							className="rounded bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
 						>
 							← Back
 						</button>
+						{editorMode ? (
+							<button
+								disabled={!hasUnsavedChanges}
+								className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:bg-blue-700 disabled:opacity-50"
+								onClick={() => {
+									if (!hasUnsavedChanges) return;
+									const newTitle =
+										titleRef.current!.innerText;
+									const newText = textRef.current!.innerHTML;
+									setTimeout(
+										async () =>
+											await procedureStepsApi.updateItem(
+												current!.id,
+												{
+													Title: newTitle,
+													Text: newText,
+												} as ProcedureStepItem,
+											),
+									);
+									const s = [...steps];
+									s[stepIndex].title = newTitle;
+									s[stepIndex].text = newText;
+									setSteps(s);
+									setHasUnsavedChangees(false);
+								}}
+							>
+								Save
+							</button>
+						) : (
+							<></>
+						)}
 						<button
 							onClick={goNext}
-							className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+							className="rounded bg-slate-600 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
 						>
 							Next →
 						</button>
 					</div>
 				</div>
 				{/* Text panel */}
-				<div className="mb-2 ml-[5%] w-[90%] justify-center rounded-lg border-2 border-dashed border-slate-300 bg-gradient-to-br from-blue-50 to-slate-100">
-					<div className="max-h-[19em] overflow-y-auto px-4 py-4">
+				<div className="mb-2 ml-[2.5%] w-[95%] justify-center rounded-lg border-2 border-dashed border-slate-300 bg-gradient-to-br from-blue-50 to-slate-100">
+					<div className="max-h-[19em] overflow-y-auto px-2 py-2">
 						{isFinal ? (
 							<div className="mx-auto max-w-md rounded-md bg-black px-4 py-6 text-xs font-semibold text-white">
 								Procedure complete.
@@ -241,12 +299,15 @@ export const ProcedureChecklistCompactView = ({
 								</div>
 							</div>
 						) : (
-							<div className="mx-auto max-w-md text-xs font-semibold whitespace-pre-wrap text-slate-900">
+							<div className="text-sm font-semibold whitespace-pre-wrap text-slate-900">
 								<div
+									ref={textRef}
 									dangerouslySetInnerHTML={{
 										__html:
 											current?.text || "(No step text)",
 									}}
+									contentEditable={editorMode ?? false}
+									onInput={checkForUnsavedChanged}
 								/>
 							</div>
 						)}

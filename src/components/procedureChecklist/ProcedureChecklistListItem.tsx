@@ -4,20 +4,26 @@ import { ProcedureChecklistItem } from "@type/ProcedureChecklist";
 export const ProcedureChecklistListItem = ({
 	procedure,
 	onProcedureSelected,
+	onProcedureDeleted,
+	editorMode = false,
 }: {
 	procedure: ProcedureChecklistItem;
 	onProcedureSelected?: (proc: ProcedureChecklistItem) => void;
+	onProcedureDeleted?: (proc: ProcedureChecklistItem) => void;
+	editorMode: boolean;
 }): JSX.Element => {
 	return (
 		<li
 			title={`File:\n\t${procedure.filename}`}
 			className="w-full cursor-pointer px-3 py-2 transition-colors hover:bg-slate-50"
-			onClick={() =>
-				onProcedureSelected ? onProcedureSelected(procedure) : 0
-			}
 		>
 			<div className="flex w-full items-center justify-between">
-				<div className="w-[80%] overflow-x-hidden">
+				<div
+					className="w-[80%] overflow-x-hidden"
+					onClick={() =>
+						onProcedureSelected ? onProcedureSelected(procedure) : 0
+					}
+				>
 					<p className="text-slate-750 h-[1.2em] w-1 text-sm font-semibold overflow-ellipsis whitespace-nowrap">
 						{procedure.title || procedure.filename}
 					</p>
@@ -41,9 +47,38 @@ export const ProcedureChecklistListItem = ({
 						)}
 					</p>
 				</div>
-				<span className="m-[-2em] mr-[-0.5em] rounded border-1 p-1 text-xs font-medium whitespace-pre text-blue-800">
-					View →
-				</span>
+				{editorMode ? (
+					<>
+						<span
+							className="rounded border-1 border-2 p-0.5 text-xs font-medium whitespace-pre text-gray-500 hover:text-red-800"
+							onClick={() => {
+								if (
+									onProcedureDeleted &&
+									confirm(
+										`Delete procedure '${procedure.title || procedure.filename}'?`,
+									)
+								)
+									onProcedureDeleted(procedure);
+							}}
+						>
+							🗑
+						</span>
+						<span
+							className="rounded border-2 p-0.5 text-xs font-medium whitespace-pre text-gray-500 hover:text-blue-800"
+							onMouseDown={(e) => {
+								e.stopPropagation();
+								window.open(
+									`${location.origin}/sites/${ENV.HUB_NAME}/Lists/${ENV.LIST_PROCEDURECHECKLIST}/EditForm.aspx?ID=${procedure.id}`,
+								);
+							}}
+						>
+							✎
+						</span>
+					</>
+				) : (
+					<></>
+				)}
+				<span className="">→</span>
 			</div>
 		</li>
 	);

@@ -1,5 +1,6 @@
 // BaseApi.ts
 import { PNPWrapper } from "@utils/PNPWrapper";
+import { IWeb } from "@pnp/sp/webs";
 
 export type KQLAndOr = "AND" | "OR";
 export type ODataAndOr = "and" | "or";
@@ -27,6 +28,7 @@ export abstract class BaseApi<
 > {
 	protected parts: QueryPart[] = [];
 	protected _sites: string[] = [];
+	webRef: IWeb;
 
 	constructor(public readonly pnpWrapper: PNPWrapper) {}
 
@@ -83,5 +85,11 @@ export abstract class BaseApi<
 
 	async create(_input: TCreateInput): Promise<{ url: string }> {
 		throw new Error("create() not implemented for this API");
+	}
+
+	web(): IWeb {
+		if (this.webRef) return this.webRef;
+		this.webRef = this.pnpWrapper.web(this.pnpWrapper.siteUrls[0]);
+		return this.webRef;
 	}
 }

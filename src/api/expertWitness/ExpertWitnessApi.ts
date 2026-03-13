@@ -7,7 +7,7 @@ import { IExpert, ExpertWitnessResult } from "@type/PDExpertWitness";
 export class ExpertWitnessApi {
 	public static async getExperts(
 		siteUrl: string,
-		spHttpClient: SPHttpClient
+		spHttpClient: SPHttpClient,
 	): Promise<IExpert[]> {
 		const listTitle = "Expert Directory"; // must match your list title EXACTLY
 
@@ -19,16 +19,16 @@ export class ExpertWitnessApi {
 
 		const response: SPHttpClientResponse = await spHttpClient.get(
 			url,
-			SPHttpClient.configurations.v1
+			SPHttpClient.configurations.v1,
 		);
 
 		const json = await response.json();
 
-		console.log(
-			"ExpertWitnessService: raw items",
-			json.value?.length,
-			json.value
-		);
+		// console.log(
+		// 	"ExpertWitnessService: raw items",
+		// 	json.value?.length,
+		// 	json.value
+		// );
 
 		const items: ExpertWitnessResult[] = json.value || [];
 
@@ -55,7 +55,7 @@ export class ExpertWitnessApi {
 				email: i.Email,
 			};
 
-			console.log("ExpertWitnessService: mapped expert", mapped);
+			// console.log("ExpertWitnessService: mapped expert", mapped);
 			return mapped;
 		});
 	}

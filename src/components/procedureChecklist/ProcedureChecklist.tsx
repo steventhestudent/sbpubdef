@@ -86,6 +86,11 @@ export function ProcedureChecklist({
 		});
 	}, [search, procedures, filterCategory]);
 
+	const resetFilters = (): void => setFilterCategory(undefined);
+	React.useEffect(() => {
+		if (selectedProcedure === undefined) resetFilters();
+	}, [selectedProcedure]);
+
 	return (
 		<section className="p-4 text-sm">
 			{selectedProcedure ? (
@@ -139,6 +144,36 @@ export function ProcedureChecklist({
 											onProcedureSelected={
 												onProcedureSelected
 											}
+											editorMode={editorMode}
+											onProcedureDeleted={(proc) =>
+												setTimeout(async () => {
+													const a = [...procedures];
+													a.splice(
+														procedures.indexOf(
+															proc,
+														),
+														1,
+													);
+													setProcedures(a);
+													const steps =
+														await procedureStepsApi.get(
+															999,
+															{
+																procedureChecklistId:
+																	proc.id,
+															},
+														);
+													for (const step of steps) //todo: delete image
+														await procedureStepsApi.deleteItem(
+															step.id,
+														);
+													//todo: delete pdf
+													await procedureChecklistApi.deleteItem(
+														proc.id,
+													);
+													console.log(`finished`);
+												})
+											}
 										/>
 									))}
 								</ul>
@@ -149,9 +184,11 @@ export function ProcedureChecklist({
 							selectedProcedure={selectedProcedure}
 							setSelectedProcedure={setSelectedProcedure}
 							steps={steps}
+							setSteps={setSteps}
 							stepIndex={stepIndex}
 							setStepIndex={setStepIndex}
 							editorMode={editorMode}
+							procedureStepsApi={procedureStepsApi}
 						/>
 					)}
 				</>

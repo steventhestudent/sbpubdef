@@ -10,24 +10,20 @@ import {
 
 type StepsGetOpts = {
 	procedureChecklistId?: number;
-	procedureFilename?: string;
 };
 
 export class ProcedureStepsApi extends ListApi<
 	ProcedureStepItem,
 	StepsGetOpts
 > {
+	listName = ENV.LIST_PROCEDURESTEPS;
 	protected async getRest(
 		limitPerSite = 50,
 		opts?: StepsGetOpts,
 	): Promise<ProcedureStepItem[]> {
-		const w = this.pnpWrapper.web(this.pnpWrapper.siteUrls[0]);
-		const list = w.lists.getByTitle(ENV.LIST_PROCEDURESTEPS);
-
 		if (opts) this.and(`ProcedureId/Id eq ${opts.procedureChecklistId}`);
-
-		const rows = await list.items
-			.select(
+		const rows = await this.list()
+			.items.select(
 				"Id",
 				"Title",
 				"ProcedureId/Id",
@@ -44,8 +40,8 @@ export class ProcedureStepsApi extends ListApi<
 			(rows as unknown as ProcedureStepsListResult[])
 				.map(
 					(i): ProcedureStepItem => ({
-						id: i.Id,
-						title: i.Title,
+						id: i.Id || -1,
+						title: i.Title || "",
 						procedureId:
 							typeof i.ProcedureIDId === "number"
 								? i.ProcedureIDId

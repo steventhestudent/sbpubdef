@@ -11,14 +11,13 @@ export class ProcedureChecklistApi extends ListApi<
 	ProcedureChecklistItem,
 	AssignGetOpts
 > {
+	listName = ENV.LIST_PROCEDURECHECKLIST;
 	protected async getRest(
 		limitPerSite = 50,
 		opts?: AssignGetOpts,
 	): Promise<ProcedureChecklistItem[]> {
-		const w = this.pnpWrapper.web(this.pnpWrapper.siteUrls[0]);
-		const list = w.lists.getByTitle(ENV.LIST_PROCEDURECHECKLIST);
-		const rows = await list.items
-			.select(
+		const rows = await this.list()
+			.items.select(
 				"Id",
 				"Title",
 				"Purpose",

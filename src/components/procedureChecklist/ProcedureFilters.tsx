@@ -7,12 +7,12 @@ export function ProcedureFiltersFloating({
 }: {
 	procedures: ProcedureChecklistItem[];
 	onCategoryChange: (category: string) => void;
-}) {
+}): JSX.Element {
 	const [categories, setCategories] = React.useState<{
 		[key: string]: number;
 	}>({});
 	React.useEffect(() => {
-		let c: { [key: string]: number } = {};
+		const c: { [key: string]: number } = {};
 		procedures.forEach(($0) => {
 			if (c[$0.category]) c[$0.category] = c[$0.category] + 1;
 			else c[$0.category] = 1;
@@ -28,12 +28,14 @@ export function ProcedureFiltersFloating({
 				className="focus:ring-opacity-50 mt-1 block w-full rounded-md border border-gray-300 bg-white p-2 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200"
 			>
 				<option value="">All Categories ({procedures.length})</option>
-				{Object.keys(categories).map(($0, i) => (
-					<option
-						key={i}
-						value={$0}
-					>{`${$0} (${categories[$0]})`}</option>
-				))}
+				{Object.keys(categories)
+					.sort((a, b) => a.localeCompare(b))
+					.map(($0, i) => (
+						<option
+							key={i}
+							value={$0}
+						>{`${$0} (${categories[$0]})`}</option>
+					))}
 			</select>
 		</div>
 	);
@@ -45,7 +47,7 @@ export function ProcedureFilters({
 }: {
 	procedures: ProcedureChecklistItem[];
 	onCategoryChange: (category: string) => void;
-}) {
+}): JSX.Element {
 	return (
 		<span className="group relative ml-[1.5em]">
 			Filters:
