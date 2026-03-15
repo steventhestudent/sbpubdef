@@ -71,7 +71,9 @@ export const ProcedureChecklistCompactView = ({
 	const current = !isFinal ? steps[stepIndex] : undefined;
 	const imageUrl = resolveImageUrlCarryForward(steps, stepIndex);
 
-	const checkForUnsavedChanged = (e: React.FormEvent<HTMLDivElement>) => {
+	const checkForUnsavedChanged = (
+		e: React.FormEvent<HTMLDivElement>,
+	): void => {
 		const lines = titleRef.current!.innerText.split("\n");
 		if (lines.length > 1) titleRef.current!.innerText = lines.join(" ");
 		setHasUnsavedChangees(
@@ -250,33 +252,46 @@ export const ProcedureChecklistCompactView = ({
 							← Back
 						</button>
 						{editorMode ? (
-							<button
-								disabled={!hasUnsavedChanges}
-								className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:bg-blue-700 disabled:opacity-50"
-								onClick={() => {
-									if (!hasUnsavedChanges) return;
-									const newTitle =
-										titleRef.current!.innerText;
-									const newText = textRef.current!.innerHTML;
-									setTimeout(
-										async () =>
-											await procedureStepsApi.updateItem(
-												current!.id,
-												{
-													Title: newTitle,
-													Text: newText,
-												} as ProcedureStepItem,
-											),
-									);
-									const s = [...steps];
-									s[stepIndex].title = newTitle;
-									s[stepIndex].text = newText;
-									setSteps(s);
-									setHasUnsavedChangees(false);
-								}}
-							>
-								Save
-							</button>
+							<span>
+								<button
+									disabled={!hasUnsavedChanges}
+									className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:bg-blue-700 disabled:opacity-50"
+									onClick={() => {
+										if (!hasUnsavedChanges) return;
+										const newTitle =
+											titleRef.current!.innerText;
+										const newText =
+											textRef.current!.innerHTML;
+										setTimeout(
+											async () =>
+												await procedureStepsApi.updateItem(
+													current!.id,
+													{
+														Title: newTitle,
+														Text: newText,
+													} as ProcedureStepItem,
+												),
+										);
+										const s = [...steps];
+										s[stepIndex].title = newTitle;
+										s[stepIndex].text = newText;
+										setSteps(s);
+										setHasUnsavedChangees(false);
+									}}
+								>
+									Save
+								</button>{" "}
+								<button
+									className="cursor-pointer"
+									onClick={() =>
+										window.open(
+											`${location.origin}/sites/${ENV.HUB_NAME}/Lists/${ENV.LIST_PROCEDURESTEPS}/EditForm.aspx?ID=${current!.id}`,
+										)
+									}
+								>
+									✎
+								</button>
+							</span>
 						) : (
 							<></>
 						)}

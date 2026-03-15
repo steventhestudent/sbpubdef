@@ -115,9 +115,11 @@ export class PNPWrapper {
 	}
 	get sp(): SPFI {
 		const shouldUseCache = this.shouldUseCache();
+		console.debug(
+			`shoulduse cache: ${shouldUseCache}, ${this.initialCachedRequestFlag}`,
+		);
 		if (!this.initialCachedRequestFlag && shouldUseCache)
 			setTimeout(() => (this.initialCachedRequestFlag = true)); // don't use cache on subsequent requests (on this.pnpWrapper) (settimeout to wait for other components to finish their cached requests)
-		console.log(`shoulduse cache: ${shouldUseCache}`);
 		return shouldUseCache ? this.spfi_use_cache : this.spfi;
 	}
 }

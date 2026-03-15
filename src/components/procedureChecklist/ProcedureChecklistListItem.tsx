@@ -50,7 +50,7 @@ export const ProcedureChecklistListItem = ({
 				{editorMode ? (
 					<>
 						<span
-							className="rounded border-1 border-2 p-0.5 text-xs font-medium whitespace-pre text-gray-500 hover:text-red-800"
+							className="rounded border-1 p-0.5 text-xs font-medium whitespace-pre text-gray-500 hover:text-red-800"
 							onClick={() => {
 								if (
 									onProcedureDeleted &&
@@ -64,7 +64,7 @@ export const ProcedureChecklistListItem = ({
 							🗑
 						</span>
 						<span
-							className="rounded border-2 p-0.5 text-xs font-medium whitespace-pre text-gray-500 hover:text-blue-800"
+							className="rounded border-1 p-0.5 text-xs font-medium whitespace-pre text-gray-500 hover:text-blue-800"
 							onMouseDown={(e) => {
 								e.stopPropagation();
 								window.open(
