@@ -9,7 +9,6 @@ import {
 	PDRoleBasedSelect,
 	BlankGuestView,
 } from "@components/PDRoleBasedSelect";
-import * as Utils from "@utils";
 import { PNPWrapper } from "@utils/PNPWrapper";
 
 type AssignmentWebPartItem = PDAssignment;
@@ -43,7 +42,7 @@ function PDIntranetView({
 	};
 
 	React.useEffect(() => {
-		Utils.loadCachedThenFresh(load);
+		pnpWrapper.loadCachedThenFresh(load);
 	}, []);
 
 	return (

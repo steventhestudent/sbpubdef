@@ -4,7 +4,6 @@ import { ContentTable } from "@components/cms/ContentTable";
 import { AnnouncementsApi } from "@api/announcements";
 import { ContentRow } from "@type/cms/ContentRow";
 import { PDAnnouncement } from "@type/PDAnnouncement";
-import * as Utils from "@utils";
 
 function announcementContentRow(data: PDAnnouncement, i: number): ContentRow {
 	return {
@@ -42,7 +41,7 @@ export function AnnouncementsManager({
 		console.log("announcements: ", data);
 	}
 	React.useEffect(() => {
-		Utils.loadCachedThenFresh(load); // pnpWrapper.cacheVal is "true" <--- not bool: true (subsequent req's are not cached)
+		announcementsApi.pnpWrapper.loadCachedThenFresh(load); // pnpWrapper.cacheVal is "true" <--- not bool: true (subsequent req's are not cached)
 	}, []);
 
 	return (

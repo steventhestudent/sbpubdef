@@ -2,7 +2,6 @@ import * as React from "react";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
 import { ProcedureChecklistApi } from "@api/ProcedureChecklist";
 import { ProcedureChecklistItem } from "@type/ProcedureChecklist";
-import * as Utils from "@utils";
 import { ProcedureFilters } from "@components/procedureChecklist/ProcedureFilters";
 import { ProcedureChecklistListItem } from "@components/procedureChecklist/ProcedureChecklistListItem";
 import { ProcedureChecklistCompactView } from "@components/procedureChecklist/ProcedureChecklistCompactView";
@@ -53,7 +52,7 @@ export function ProcedureChecklist({
 	};
 
 	React.useEffect(() => {
-		Utils.loadCachedThenFresh(load);
+		pnpWrapper.loadCachedThenFresh(load);
 	}, []);
 
 	const onProcedureSelected = async (
@@ -147,14 +146,6 @@ export function ProcedureChecklist({
 											editorMode={editorMode}
 											onProcedureDeleted={(proc) =>
 												setTimeout(async () => {
-													const a = [...procedures];
-													a.splice(
-														procedures.indexOf(
-															proc,
-														),
-														1,
-													);
-													setProcedures(a);
 													const steps =
 														await procedureStepsApi.get(
 															999,
@@ -171,7 +162,14 @@ export function ProcedureChecklist({
 													await procedureChecklistApi.deleteItem(
 														proc.id,
 													);
-													console.log(`finished`);
+													const a = [...procedures];
+													a.splice(
+														procedures.indexOf(
+															proc,
+														),
+														1,
+													);
+													setProcedures(a);
 												})
 											}
 										/>

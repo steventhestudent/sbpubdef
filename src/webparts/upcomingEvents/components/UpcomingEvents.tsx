@@ -3,7 +3,6 @@ import type { IUpcomingEventsProps } from "./IUpcomingEventsProps";
 import type { PDEvent } from "@type/PDEvent";
 import { Collapsible } from "@components/Collapsible";
 import { EventsApi } from "@api/events/EventsApi";
-import * as Utils from "@utils";
 import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
 import { GraphClient, MSGraphClientV3 } from "@utils/graph/GraphClient";
@@ -51,7 +50,7 @@ function PDIntranetView({
 	}, []);
 
 	React.useEffect(() => {
-		Utils.loadCachedThenFresh(load);
+		pnpWrapper.loadCachedThenFresh(load);
 	}, [load]);
 
 	const addToOutlookCalendar = async (event: PDEvent): Promise<void> => {

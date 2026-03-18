@@ -6,7 +6,6 @@ import { Collapsible } from "@components/Collapsible";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { StaffDirectoryApi } from "@api/staffDirectory";
 import type { PDStaffDirectoryItem } from "@type/PDStaffDirectory";
-import * as Utils from "@utils";
 import ClearableInput from "@components/ClearableInput";
 
 type StaffDirectoryComponentItem = PDStaffDirectoryItem;
@@ -39,7 +38,7 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 	};
 
 	React.useEffect(() => {
-		Utils.loadCachedThenFresh(load);
+		pnpWrapper.loadCachedThenFresh(load);
 	}, []);
 
 	/*
