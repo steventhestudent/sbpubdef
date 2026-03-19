@@ -19,9 +19,9 @@ export interface IReservation {
 export class HotelingService {
 	private sp: SPFI;
 
-	constructor(context: WebPartContext) {
-		this.sp = spfi().using(SPFx(context));
-	}
+constructor(context: WebPartContext) {
+	this.sp = spfi(context.pageContext.web.absoluteUrl).using(SPFx(context));
+}
 
 	public async createReservation(reservation: IReservation): Promise<number> {
 		const user = await this.sp.web.ensureUser(reservation.UserEmail);
