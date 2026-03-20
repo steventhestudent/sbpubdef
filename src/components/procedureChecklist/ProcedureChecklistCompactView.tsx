@@ -204,13 +204,23 @@ export const ProcedureChecklistCompactView = ({
 					<div className="w-full px-6 py-4 text-center">
 						<div className="scrollbar-thin flex min-h-48 w-full items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-gradient-to-br from-blue-50 to-slate-100">
 							{imageUrl ? (
-								<div className="inline-block h-[14em] w-[100%] cursor-pointer bg-black/50 outline-1 outline-white">
+								<div
+									className="inline-block h-[14em] w-[100%] cursor-pointer bg-black/50 text-center outline-1 outline-white"
+									style={{
+										height:
+											imageUrl.split("youtube.com/embed/")
+												.length > 1
+												? "auto"
+												: "300",
+									}}
+								>
 									{imageUrl.split("youtube.com/embed/")
 										.length > 1 ? (
 										<iframe
 											src={imageUrl}
 											width="300"
 											height="300"
+											className="m-auto"
 											onMouseDown={() =>
 												setShowOverlay(imageUrl)
 											}
