@@ -1,4 +1,5 @@
 import * as React from "react";
+import * as ReactDom from "react-dom";
 import * as pbi from "powerbi-client";
 import {
 	IUrgencyPortalProps,
@@ -6,6 +7,7 @@ import {
 	IPowerBiParsedLink,
 } from "./IUrgencyPortalProps";
 import { Collapsible } from "@components/Collapsible";
+import { CardCarousel, ICardItem } from "./CardCarousel";
 
 type PBIEventResponseType =
 	| { message?: string; error?: { message?: string } }
@@ -24,11 +26,11 @@ async function getPowerBiToken(
 	return provider.getToken("https://analysis.windows.net/powerbi/api");
 }
 
-async function getEmbedUrl(
+async function getReportInfo(
 	accessToken: string,
 	reportId: string,
-): Promise<string> {
-	const response = await fetch(
+): Promise<{ embedUrl: string; webUrl: string }> {
+	const response: Response = await fetch(
 		`https://api.powerbi.com/v1.0/myorg/reports/${reportId}`,
 		{
 			headers: { Authorization: `Bearer ${accessToken}` },
@@ -36,31 +38,42 @@ async function getEmbedUrl(
 	);
 
 	if (!response.ok) {
-		const body = await response.text().catch((): string => "");
+		const body: string = await response.text().catch((): string => "");
 		throw new Error(`Failed to get report (${response.status}). ${body}`);
 	}
 
-	const json: { embedUrl: string } = (await response.json()) as {
+	const json = (await response.json()) as {
 		embedUrl: string;
+		webUrl: string;
 	};
-	return json.embedUrl;
+	return { embedUrl: json.embedUrl, webUrl: json.webUrl };
 }
 
 interface IParsedItemWithUrl extends IPowerBiParsedLink {
 	originalUrl: string;
+	thumbnailUrl?: string;
+}
+
+function normalizeBookmarkName(bookmarkName?: string): string {
+	return (bookmarkName || "").trim().toLowerCase();
+}
+
+function normalizePageName(pageName?: string): string {
+	return (pageName || "").trim();
 }
 
 function parseLink(cfg: IPowerBiLinkConfig): {
 	item?: IParsedItemWithUrl;
 	error?: string;
 } {
-	const title = (cfg.title || "").trim();
-	const urlText = (cfg.url || "").trim();
+	const title: string = (cfg.title || "").trim();
+	const urlText: string = (cfg.url || "").trim();
 
 	if (!title) return { error: "Missing title" };
 	if (!urlText) return { error: `Missing URL for "${title}"` };
-	if (cfg.kind !== "report" && cfg.kind !== "visual")
+	if (cfg.kind !== "report" && cfg.kind !== "visual") {
 		return { error: `Invalid kind for "${title}"` };
+	}
 
 	let url: URL;
 	try {
@@ -69,33 +82,58 @@ function parseLink(cfg: IPowerBiLinkConfig): {
 		return { error: `Invalid URL for "${title}"` };
 	}
 
-	const path = url.pathname || "";
-	const isReportEmbed = path.toLowerCase() === "/reportembed";
+	const bookmarkNameRaw: string = (cfg.bookmarkName || "").trim();
+	const bookmarkName: string | undefined = bookmarkNameRaw
+		? bookmarkNameRaw
+		: undefined;
+
+	const cfgPageName: string = normalizePageName(cfg.pageName);
+	const pageNameFromCfg: string | undefined = cfgPageName
+		? cfgPageName
+		: undefined;
+
+	const path: string = url.pathname || "";
+	const isReportEmbed: boolean = path.toLowerCase() === "/reportembed";
 
 	if (cfg.kind === "report") {
 		if (isReportEmbed) {
-			const reportId = url.searchParams.get("reportId") || "";
-			if (!reportId)
+			const reportId: string = url.searchParams.get("reportId") || "";
+			if (!reportId) {
 				return {
 					error: `reportEmbed URL missing reportId for "${title}"`,
 				};
-			return {
-				item: { title, kind: "report", reportId, originalUrl: urlText },
-			};
-		}
+			}
 
-		const parts = path.split("/").filter(Boolean);
-		const idx = parts.indexOf("reports");
-		if (idx >= 0 && parts[idx + 1]) {
-			const reportId = parts[idx + 1];
-			const pageName = parts[idx + 2];
 			return {
 				item: {
 					title,
 					kind: "report",
 					reportId,
-					pageName,
+					pageName: pageNameFromCfg,
+					bookmarkName,
 					originalUrl: urlText,
+					thumbnailUrl: cfg.thumbnailUrl,
+				},
+			};
+		}
+
+		const parts: string[] = path.split("/").filter(Boolean);
+		const idx: number = parts.indexOf("reports");
+		if (idx >= 0 && parts[idx + 1]) {
+			const reportId: string = parts[idx + 1];
+			const pageNameFromUrl: string | undefined = parts[idx + 2]
+				? parts[idx + 2]
+				: undefined;
+
+			return {
+				item: {
+					title,
+					kind: "report",
+					reportId,
+					pageName: pageNameFromUrl || pageNameFromCfg,
+					bookmarkName,
+					originalUrl: urlText,
+					thumbnailUrl: cfg.thumbnailUrl,
 				},
 			};
 		}
@@ -103,19 +141,20 @@ function parseLink(cfg: IPowerBiLinkConfig): {
 		return { error: `Unsupported report URL for "${title}"` };
 	}
 
-	const parts = path.split("/").filter(Boolean);
-	const idx = parts.indexOf("reports");
+	const parts: string[] = path.split("/").filter(Boolean);
+	const idx: number = parts.indexOf("reports");
 	if (idx < 0 || !parts[idx + 1] || !parts[idx + 2]) {
 		return {
 			error: `Visual URL must be /reports/{reportId}/{pageName} for "${title}"`,
 		};
 	}
 
-	const reportId = parts[idx + 1];
-	const pageName = parts[idx + 2];
-	const visualName = url.searchParams.get("visual") || "";
-	if (!visualName)
+	const reportId: string = parts[idx + 1];
+	const pageName: string = parts[idx + 2];
+	const visualName: string = url.searchParams.get("visual") || "";
+	if (!visualName) {
 		return { error: `Visual URL missing visual=... for "${title}"` };
+	}
 
 	return {
 		item: {
@@ -124,7 +163,9 @@ function parseLink(cfg: IPowerBiLinkConfig): {
 			reportId,
 			pageName,
 			visualName,
+			bookmarkName,
 			originalUrl: urlText,
+			thumbnailUrl: cfg.thumbnailUrl,
 		},
 	};
 }
@@ -146,86 +187,112 @@ function parseAll(links: IPowerBiLinkConfig[]): {
 }
 
 function getItemKey(item: IParsedItemWithUrl): string {
-	return item.originalUrl;
+	const url: string = (item.originalUrl || "").trim();
+	const page: string = normalizePageName(item.pageName);
+	const bookmark: string = normalizeBookmarkName(item.bookmarkName);
+
+	const parts: string[] = [url];
+	if (page) parts.push(`page:${page}`);
+	if (bookmark) parts.push(`bookmark:${bookmark}`);
+
+	return parts.join("||");
 }
 
-export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
-	const [selectedKey, setSelectedKey] = React.useState<string>(
-		props.defaultUrl || "",
-	);
-	const [selection, setSelection] = React.useState<IParsedItemWithUrl | null>(
-		null,
-	);
-	const [isLoading, setIsLoading] = React.useState<boolean>(false);
-	const [error, setError] = React.useState<string | null>(null);
-	const [openInNewTabUrl, setOpenInNewTabUrl] = React.useState<string | null>(
-		null,
-	);
+function stripQuery(url: string): string {
+	const idx: number = url.indexOf("?");
+	if (idx < 0) return url;
+	return url.slice(0, idx);
+}
 
+function buildServiceFullscreenUrl(
+	webUrl: string,
+	pageName: string | undefined,
+	bookmarkGuid: string | undefined,
+): string {
+	const base: string = stripQuery((webUrl || "").trim());
+	const page: string = normalizePageName(pageName);
+	const path: string = page ? `${base}/${encodeURIComponent(page)}` : base;
+
+	const params: URLSearchParams = new URLSearchParams();
+	params.set("experience", "power-bi");
+	if (bookmarkGuid) params.set("bookmarkGuid", bookmarkGuid);
+
+	return `${path}?${params.toString()}`;
+}
+
+function buildEmbedNewTabUrl(embedUrl: string): string {
+	const base: string = (embedUrl || "").trim();
+	const hasQuery: boolean = base.indexOf("?") >= 0;
+	return `${base}${hasQuery ? "&" : "?"}autoAuth=true`;
+}
+
+function CloseIcon(props: { size?: number }): JSX.Element {
+	const size: number = props.size ?? 18;
+	return (
+		<svg
+			width={size}
+			height={size}
+			viewBox="0 0 24 24"
+			aria-hidden="true"
+			focusable="false"
+			role="img"
+			style={{ display: "block", pointerEvents: "none" }}
+		>
+			<path
+				fill="currentColor"
+				d="M18.3 5.71a1 1 0 0 0-1.41 0L12 10.59 7.11 5.7A1 1 0 0 0 5.7 7.11L10.59 12 5.7 16.89a1 1 0 1 0 1.41 1.41L12 13.41l4.89 4.89a1 1 0 0 0 1.41-1.41L13.41 12l4.89-4.89a1 1 0 0 0 0-1.4Z"
+			/>
+		</svg>
+	);
+}
+
+// ── Popup Modal for embedding Power BI on card click ──
+
+function EmbedPopup(props: {
+	selection: IParsedItemWithUrl;
+	allItems: IParsedItemWithUrl[];
+	context: IUrgencyPortalProps["context"];
+	onSelect: (item: IParsedItemWithUrl) => void;
+	onClose: () => void;
+}): JSX.Element {
+	const { selection, allItems, context, onSelect, onClose } = props;
 	const containerRef = React.useRef<HTMLDivElement>(null);
+	const bookmarkAppliedRef = React.useRef(false);
+	const [isLoading, setIsLoading] = React.useState(true);
+	const [error, setError] = React.useState<string | undefined>(undefined);
+	const [openInNewTabUrl, setOpenInNewTabUrl] = React.useState<
+		string | undefined
+	>(undefined);
 
-	const { items, errors } = React.useMemo(
-		(): { items: IParsedItemWithUrl[]; errors: string[] } =>
-			parseAll(props.links),
-		[props.links],
-	);
-
+	// Close on Escape
 	React.useEffect(() => {
-		const configured = (props.defaultUrl || "").trim();
-		if (
-			configured &&
-			items.some((i: IParsedItemWithUrl) => i.originalUrl === configured)
-		) {
-			setSelectedKey(configured);
-			return;
-		}
-		if (
-			configured &&
-			!items.some((i: IParsedItemWithUrl) => i.originalUrl === configured)
-		) {
-			setSelectedKey("");
-		}
-	}, [props.defaultUrl, items]);
+		const onKeyDown = (e: KeyboardEvent): void => {
+			if (e.key === "Escape") onClose();
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, [onClose]);
 
-	React.useEffect(() => {
-		if (!selectedKey) {
-			setSelection(null);
-			setIsLoading(false);
-			setError(null);
-			setOpenInNewTabUrl(null);
-			if (containerRef.current)
-				powerbiService.reset(containerRef.current);
-			return;
-		}
-
-		const found =
-			items.find(
-				(i: IParsedItemWithUrl) => getItemKey(i) === selectedKey,
-			) || null;
-		setSelection(found);
-		setError(null);
-	}, [selectedKey, items]);
-
+	// Embed the report/visual
 	React.useEffect(() => {
 		let cancelled = false;
+		bookmarkAppliedRef.current = false;
 
 		const run = async (): Promise<void> => {
-			if (!selection) return;
 			if (!containerRef.current) return;
 
 			setIsLoading(true);
-			setError(null);
-			setOpenInNewTabUrl(null);
+			setError(undefined);
+			setOpenInNewTabUrl(undefined);
 
 			try {
-				const token = await getPowerBiToken(props.context);
-				const embedUrl = await getEmbedUrl(token, selection.reportId);
+				const token: string = await getPowerBiToken(context);
+				const reportInfo = await getReportInfo(
+					token,
+					selection.reportId,
+				);
 
 				if (cancelled || !containerRef.current) return;
-
-				const hasQuery = embedUrl.indexOf("?") >= 0;
-				const urlWithAutoAuth = `${embedUrl}${hasQuery ? "&" : "?"}autoAuth=true`;
-				setOpenInNewTabUrl(urlWithAutoAuth);
 
 				powerbiService.reset(containerRef.current);
 
@@ -233,7 +300,7 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 					const config: pbi.IReportEmbedConfiguration = {
 						type: "report",
 						id: selection.reportId,
-						embedUrl,
+						embedUrl: reportInfo.embedUrl,
 						accessToken: token,
 						tokenType: pbi.models.TokenType.Aad,
 						pageName: selection.pageName,
@@ -248,32 +315,101 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 						config,
 					) as pbi.Report;
 
-					report.off("loaded");
-					report.on("loaded", () => {
-						if (!cancelled) setIsLoading(false);
-					});
-
-					report.off("error");
-					report.on(
-						"error",
-						(event: pbi.service.ICustomEvent<unknown>) => {
-							const detail = event.detail as PBIEventResponseType;
-							const message =
-								detail?.message ??
-								detail?.error?.message ??
-								"Unknown Power BI error";
-							if (!cancelled) {
-								setError(message);
-								setIsLoading(false);
-							}
-						},
+					setOpenInNewTabUrl(
+						buildEmbedNewTabUrl(reportInfo.embedUrl),
 					);
+
+					const onLoaded = (): void => {
+						if (cancelled) return;
+
+						const desiredDisplay: string = (
+							selection.bookmarkName || ""
+						).trim();
+						const desiredNorm: string =
+							normalizeBookmarkName(desiredDisplay);
+
+						report.bookmarksManager
+							.getBookmarks()
+							.then((bookmarks: pbi.models.IReportBookmark[]) => {
+								const match:
+									| pbi.models.IReportBookmark
+									| undefined = desiredNorm
+									? bookmarks.find(
+											(b: pbi.models.IReportBookmark) => {
+												const n: string =
+													normalizeBookmarkName(
+														b.name,
+													);
+												const d: string =
+													normalizeBookmarkName(
+														b.displayName,
+													);
+												return (
+													n === desiredNorm ||
+													d === desiredNorm
+												);
+											},
+										)
+									: undefined;
+
+								const bookmarkGuid: string | undefined = match
+									? match.name
+									: undefined;
+
+								const fullscreenUrl: string =
+									buildServiceFullscreenUrl(
+										reportInfo.webUrl,
+										selection.pageName,
+										bookmarkGuid,
+									);
+								setOpenInNewTabUrl(fullscreenUrl);
+
+								if (!desiredNorm) return undefined;
+								if (bookmarkAppliedRef.current)
+									return undefined;
+
+								bookmarkAppliedRef.current = true;
+
+								if (match)
+									return report.bookmarksManager.apply(
+										match.name,
+									);
+								return undefined;
+							})
+							.catch((): void => undefined);
+					};
+
+					const onRendered = (): void => {
+						if (!cancelled) setIsLoading(false);
+					};
+
+					const onError = (
+						event: pbi.service.ICustomEvent<unknown>,
+					): void => {
+						const detail = event.detail as PBIEventResponseType;
+						const message: string =
+							detail?.message ??
+							detail?.error?.message ??
+							"Unknown Power BI error";
+						if (!cancelled) {
+							setError(message);
+							setIsLoading(false);
+						}
+					};
+
+					report.off("loaded");
+					report.on("loaded", onLoaded);
+					report.off("rendered");
+					report.on("rendered", onRendered);
+					report.off("error");
+					report.on("error", onError);
 
 					return;
 				}
 
-				const pageName = selection.pageName;
-				const visualName = selection.visualName;
+				// Visual embed
+				const pageName: string | undefined = selection.pageName;
+				const visualName: string | undefined = selection.visualName;
 
 				if (!pageName || !visualName) {
 					setError("Visual requires pageName and visualName");
@@ -281,10 +417,12 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 					return;
 				}
 
+				setOpenInNewTabUrl(buildEmbedNewTabUrl(reportInfo.embedUrl));
+
 				const config: pbi.IVisualEmbedConfiguration = {
 					type: "visual",
 					id: selection.reportId,
-					embedUrl,
+					embedUrl: reportInfo.embedUrl,
 					accessToken: token,
 					tokenType: pbi.models.TokenType.Aad,
 					pageName,
@@ -302,26 +440,28 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 					config,
 				) as pbi.Visual;
 
-				visual.off("loaded");
-				visual.on("loaded", () => {
+				const onRendered = (): void => {
 					if (!cancelled) setIsLoading(false);
-				});
+				};
 
+				const onError = (
+					event: pbi.service.ICustomEvent<unknown>,
+				): void => {
+					const detail = event.detail as PBIEventResponseType;
+					const message: string =
+						detail?.message ??
+						detail?.error?.message ??
+						"Power BI error";
+					if (!cancelled) {
+						setError(message);
+						setIsLoading(false);
+					}
+				};
+
+				visual.off("rendered");
+				visual.on("rendered", onRendered);
 				visual.off("error");
-				visual.on(
-					"error",
-					(event: pbi.service.ICustomEvent<unknown>) => {
-						const detail = event.detail as PBIEventResponseType;
-						const message =
-							detail?.message ??
-							detail?.error?.message ??
-							"Power BI error";
-						if (!cancelled) {
-							setError(message);
-							setIsLoading(false);
-						}
-					},
-				);
+				visual.on("error", onError);
 			} catch (e: unknown) {
 				if (!cancelled) {
 					setError(e instanceof Error ? e.message : String(e));
@@ -342,63 +482,234 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 			if (containerRef.current)
 				powerbiService.reset(containerRef.current);
 		};
-	}, [selection, props.context]);
+	}, [selection, context]);
 
-	const wrapperStyle: React.CSSProperties = {
-		fontFamily: "Segoe UI, Arial, sans-serif",
-	};
-
-	const selectStyle: React.CSSProperties = {
-		width: "100%",
-		maxWidth: 520,
-		padding: 8,
+	const iconButtonStyle: React.CSSProperties = {
+		all: "unset",
+		boxSizing: "border-box",
+		display: "inline-flex",
+		alignItems: "center",
+		justifyContent: "center",
+		width: 34,
+		height: 34,
 		borderRadius: 6,
 		border: "1px solid #ccc",
-		font: "inherit",
+		backgroundColor: "white",
+		cursor: "pointer",
+		padding: 0,
+		lineHeight: 0,
+		fontSize: 0,
+		userSelect: "none",
+		WebkitTapHighlightColor: "transparent",
 	};
+
+	return ReactDom.createPortal(
+		<div
+			role="dialog"
+			aria-modal="true"
+			style={{
+				position: "fixed",
+				inset: 0,
+				zIndex: 2147483646,
+				background: "rgba(0,0,0,0.55)",
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				padding: 24,
+			}}
+			onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
+				if (e.target === e.currentTarget) onClose();
+			}}
+		>
+			<div
+				style={{
+					background: "white",
+					borderRadius: 10,
+					overflow: "hidden",
+					display: "flex",
+					flexDirection: "column",
+					width: "90vw",
+					maxWidth: 1200,
+					height: "85vh",
+					maxHeight: 800,
+					boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+				}}
+			>
+				{/* Header bar */}
+				<div
+					style={{
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "space-between",
+						padding: "10px 16px",
+						borderBottom: "1px solid #ddd",
+						gap: 12,
+						flexShrink: 0,
+					}}
+				>
+					<select
+						value={getItemKey(selection)}
+						onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+							const found = allItems.find(
+								(i: IParsedItemWithUrl) =>
+									getItemKey(i) === e.target.value,
+							);
+							if (found) onSelect(found);
+						}}
+						style={{
+							fontWeight: 600,
+							fontSize: 15,
+							border: "1px solid #ccc",
+							borderRadius: 6,
+							padding: "4px 8px",
+							maxWidth: "60%",
+							overflow: "hidden",
+							textOverflow: "ellipsis",
+							whiteSpace: "nowrap",
+							cursor: "pointer",
+						}}
+					>
+						{allItems.map((item: IParsedItemWithUrl) => (
+							<option
+								key={getItemKey(item)}
+								value={getItemKey(item)}
+							>
+								{item.title}
+							</option>
+						))}
+					</select>
+
+					<div
+						style={{
+							display: "flex",
+							alignItems: "center",
+							gap: 10,
+						}}
+					>
+						{isLoading && (
+							<span style={{ color: "#888", fontSize: 13 }}>
+								Loading...
+							</span>
+						)}
+
+						{openInNewTabUrl && (
+							<a
+								href={openInNewTabUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								style={{
+									color: "#0f6cbd",
+									textDecoration: "underline",
+									fontSize: 13,
+								}}
+							>
+								Open in new tab
+							</a>
+						)}
+
+						<button
+							type="button"
+							aria-label="Close"
+							onClick={onClose}
+							style={iconButtonStyle}
+						>
+							<CloseIcon />
+						</button>
+					</div>
+				</div>
+
+				{/* Error */}
+				{error && (
+					<p
+						style={{
+							color: "darkred",
+							whiteSpace: "pre-wrap",
+							padding: "8px 16px",
+							margin: 0,
+							flexShrink: 0,
+						}}
+					>
+						{error}
+					</p>
+				)}
+
+				{/* Embed container */}
+				<div
+					ref={containerRef}
+					style={{
+						flex: "1 1 auto",
+						minHeight: 0,
+						width: "100%",
+					}}
+				/>
+			</div>
+		</div>,
+		document.body,
+	);
+}
+
+// ── Main Component ──
+
+export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
+	const [popupItem, setPopupItem] = React.useState<
+		IParsedItemWithUrl | undefined
+	>(undefined);
+
+	const { items, errors } = React.useMemo(
+		(): { items: IParsedItemWithUrl[]; errors: string[] } =>
+			parseAll(props.links),
+		[props.links],
+	);
+
+	const cardItems: ICardItem[] = React.useMemo(
+		() =>
+			items.map((item: IParsedItemWithUrl) => ({
+				key: getItemKey(item),
+				title: item.title,
+				thumbnailUrl: item.thumbnailUrl,
+			})),
+		[items],
+	);
+
+	const onCardClick = React.useCallback(
+		(cardItem: ICardItem) => {
+			const found = items.find(
+				(i: IParsedItemWithUrl) => getItemKey(i) === cardItem.key,
+			);
+			if (found) setPopupItem(found);
+		},
+		[items],
+	);
+
+	const closePopup = React.useCallback(() => {
+		setPopupItem(undefined);
+	}, []);
 
 	return (
 		<Collapsible
 			instanceId={props.context.instanceId}
 			title="PowerBI - Urgency Portal"
 		>
-			<div style={{ ...wrapperStyle, marginTop: 8 }}>
+			<div
+				style={{
+					fontFamily: "Segoe UI, Arial, sans-serif",
+					marginTop: 8,
+				}}
+			>
 				<div style={{ paddingLeft: 5, paddingRight: 5 }}>
-					<select
-						style={selectStyle}
-						value={selectedKey}
-						onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-							setSelectedKey(e.currentTarget.value)
-						}
-						disabled={items.length === 0}
-					>
-						<option value="">-- Select --</option>
-						{items.map((item: IParsedItemWithUrl) => {
-							const key = getItemKey(item);
-							return (
-								<option key={key} value={key}>
-									{item.title}
-								</option>
-							);
-						})}
-					</select>
-
-					{selection && (
-						<a
-							href={openInNewTabUrl || selection.originalUrl}
-							target="_blank"
-							rel="noopener noreferrer"
-							style={{
-								display: "block",
-								marginTop: 10,
-								fontSize: 16,
-								fontWeight: 600,
-								color: "#0f6cbd",
-								textDecoration: "underline",
-							}}
-						>
-							{selection.title}
-						</a>
+					{items.length > 0 ? (
+						<CardCarousel
+							items={cardItems}
+							visibleCount={props.visibleCount ?? 3}
+							autoScrollMs={8000}
+							carouselMode={props.carouselMode}
+							onCardClick={onCardClick}
+						/>
+					) : (
+						<p style={{ color: "#888" }}>
+							No Power BI links configured. Edit the web part to
+							add links.
+						</p>
 					)}
 				</div>
 
@@ -408,30 +719,21 @@ export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
 							color: "darkred",
 							whiteSpace: "pre-wrap",
 							marginTop: 10,
+							paddingLeft: 5,
+							paddingRight: 5,
 						}}
 					>
 						{errors.join("\n")}
 					</p>
 				)}
 
-				{isLoading && <p>Loading…</p>}
-
-				{error && (
-					<p style={{ color: "darkred", whiteSpace: "pre-wrap" }}>
-						{error}
-					</p>
-				)}
-
-				{selection && (
-					<div
-						ref={containerRef}
-						style={{
-							height: "650px",
-							width: "100%",
-							border: "1px solid #ddd",
-							borderRadius: 6,
-							marginTop: 12,
-						}}
+				{popupItem && (
+					<EmbedPopup
+						selection={popupItem}
+						allItems={items}
+						context={props.context}
+						onSelect={setPopupItem}
+						onClose={closePopup}
 					/>
 				)}
 			</div>

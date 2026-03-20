@@ -4,7 +4,10 @@ import {
 	BaseClientSideWebPart,
 	IPropertyPaneConfiguration,
 } from "@microsoft/sp-webpart-base";
-import { PropertyPaneDropdown } from "@microsoft/sp-property-pane";
+import {
+	PropertyPaneDropdown,
+	PropertyPaneSlider,
+} from "@microsoft/sp-property-pane";
 
 import {
 	PropertyFieldCollectionData,
@@ -15,11 +18,34 @@ import UrgencyPortal from "./components/UrgencyPortal";
 import {
 	IUrgencyPortalProps,
 	IPowerBiLinkConfig,
+	CarouselMode,
 } from "./components/IUrgencyPortalProps";
 
 export interface IUrgencyPortalWebPartProps {
 	links: IPowerBiLinkConfig[];
 	defaultUrl?: string;
+	carouselMode?: CarouselMode;
+	visibleCount?: number;
+}
+
+function normalizeBookmarkName(bookmarkName?: string): string {
+	return (bookmarkName || "").trim().toLowerCase();
+}
+
+function normalizePageName(pageName?: string): string {
+	return (pageName || "").trim();
+}
+
+function buildLinkKey(link: IPowerBiLinkConfig): string {
+	const url: string = (link.url || "").trim();
+	const page: string = normalizePageName(link.pageName);
+	const bookmark: string = normalizeBookmarkName(link.bookmarkName);
+
+	const parts: string[] = [url];
+	if (page) parts.push(`page:${page}`);
+	if (bookmark) parts.push(`bookmark:${bookmark}`);
+
+	return parts.join("||");
 }
 
 export default class UrgencyPortalWebPart extends BaseClientSideWebPart<IUrgencyPortalWebPartProps> {
@@ -29,6 +55,8 @@ export default class UrgencyPortalWebPart extends BaseClientSideWebPart<IUrgency
 				context: this.context,
 				links: this.properties.links || [],
 				defaultUrl: this.properties.defaultUrl || "",
+				carouselMode: this.properties.carouselMode || "auto",
+				visibleCount: this.properties.visibleCount ?? 3,
 			});
 
 		ReactDom.render(element, this.domElement);
@@ -40,10 +68,12 @@ export default class UrgencyPortalWebPart extends BaseClientSideWebPart<IUrgency
 
 	protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {
 		const linkOptions = (this.properties.links || []).map(
-			(l: IPowerBiLinkConfig): { key: string; text: string } => ({
-				key: (l.url || "").trim(),
-				text: (l.title || "").trim() || (l.url || "").trim(),
-			}),
+			(l: IPowerBiLinkConfig): { key: string; text: string } => {
+				const key: string = buildLinkKey(l);
+				const text: string =
+					(l.title || "").trim() || (l.url || "").trim();
+				return { key, text };
+			},
 		);
 
 		const options: Array<{ key: string; text: string }> = [
@@ -64,6 +94,24 @@ export default class UrgencyPortalWebPart extends BaseClientSideWebPart<IUrgency
 								PropertyPaneDropdown("defaultUrl", {
 									label: "Default Link",
 									options,
+								}),
+								PropertyPaneDropdown("carouselMode", {
+									label: "Carousel Layout",
+									options: [
+										{ key: "auto", text: "Auto" },
+										{
+											key: "horizontal",
+											text: "Horizontal",
+										},
+										{ key: "vertical", text: "Vertical" },
+									],
+								}),
+								PropertyPaneSlider("visibleCount", {
+									label: "Cards Shown",
+									min: 1,
+									max: 3,
+									step: 1,
+									value: this.properties.visibleCount ?? 3,
 								}),
 							],
 						},
@@ -104,6 +152,24 @@ export default class UrgencyPortalWebPart extends BaseClientSideWebPart<IUrgency
 											title: "Power BI URL",
 											type: CustomCollectionFieldType.string,
 											required: true,
+										},
+										{
+											id: "pageName",
+											title: "Page ID (optional)",
+											type: CustomCollectionFieldType.string,
+											required: false,
+										},
+										{
+											id: "bookmarkName",
+											title: "Bookmark Name (optional)",
+											type: CustomCollectionFieldType.string,
+											required: false,
+										},
+										{
+											id: "thumbnailUrl",
+											title: "Thumbnail URL (optional)",
+											type: CustomCollectionFieldType.string,
+											required: false,
 										},
 									],
 								}),
