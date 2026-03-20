@@ -10,9 +10,7 @@ build.addSuppression(
 var getTasks = build.rig.getTasks;
 build.rig.getTasks = function () {
 	var result = getTasks.call(build.rig);
-
 	result.set("serve", result.get("serve-deprecated"));
-
 	return result;
 };
 
@@ -24,10 +22,12 @@ build.configureWebpack.mergeConfig({
 			...(generatedConfig.resolve.alias || {}),
 			"@api": path.resolve(__dirname, "lib/api"),
 			"@components": path.resolve(__dirname, "lib/components"),
+			"@data": path.resolve(__dirname, "lib/data"),
 			"@dist": path.resolve(__dirname, "dist"),
 			"@extensions": path.resolve(__dirname, "lib/extensions"),
+			"@services": path.resolve(__dirname, "lib/services"),
 			"@styles": path.resolve(__dirname, "lib/styles"),
-			"@type": path.resolve(__dirname, "lib/types"),
+			"@type": path.resolve(__dirname, "lib/type"),
 			"@utils": path.resolve(__dirname, "lib/utils"),
 			"@webparts": path.resolve(__dirname, "lib/webparts"),
 		};
@@ -35,18 +35,8 @@ build.configureWebpack.mergeConfig({
 	},
 });
 
-/* this breaks aliases so i commented it out */
-// // keep dist on gulp clean
-// const { resolve } = path;
-// build.configureWebpack.mergeConfig({
-// 	additionalConfiguration: (generatedConfig) => {
-// 		generatedConfig.resolve.alias = {
-// 			...(generatedConfig.resolve.alias || {}),
-// 			"@dist": resolve(__dirname, "dist"),
-// 		};
-// 		return generatedConfig;
-// 	},
-// });
+// writes src/type/env.global.generated.d.ts (provide autocomplete) // writes src/type/env.generated.ts (sets ENV) (imported on src/utils/CommonWebPartImports)
+require("./scripts/js/gen-env")();
 
 /* fast-serve */
 const { addFastServe } = require("spfx-fast-serve-helpers");

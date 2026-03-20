@@ -1,0 +1,5 @@
+PyMuPDF
+msal
+requests
+python-dotenv
+azure-functions

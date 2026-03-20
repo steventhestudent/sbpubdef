@@ -76,7 +76,7 @@ export abstract class CustomContentApi<
 	// 		this.preprocess({ department });
 	// 		if (department)
 	// 			this.and(
-	// 				`${PD.siteColumn.PDDepartment} eq '${department.replace(/'/g, "''")}'`,
+	// 				`${ENV.INTERNALCOLUMN_PDDEPARTMENT} eq '${department.replace(/'/g, "''")}'`,
 	// 			);
 	// 		return undefined;
 	// 	}

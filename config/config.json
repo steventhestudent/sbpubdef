@@ -137,6 +137,22 @@
           "manifest": "./src/webparts/attorneyWorkload/AttorneyWorkloadWebPart.manifest.json"
         }
       ]
+    },
+    "urgency-portal-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/urgencyPortal/UrgencyPortalWebPart.js",
+          "manifest": "./src/webparts/urgencyPortal/UrgencyPortalWebPart.manifest.json"
+        }
+      ]
+    },
+    "office-hoteling-web-part": {
+      "components": [
+        {
+          "entrypoint": "./lib/webparts/officeHoteling/OfficeHotelingWebPart.js",
+          "manifest": "./src/webparts/officeHoteling/OfficeHotelingWebPart.manifest.json"
+        }
+      ]
     }
   },
   "externals": {},
@@ -157,6 +173,9 @@
     "ThemeInjectorApplicationCustomizerStrings": "lib/extensions/themeInjector/loc/{locale}.js",
     "CmsWebPartStrings": "lib/webparts/cms/loc/{locale}.js",
     "PortalResourcesWebPartStrings": "lib/webparts/portalResources/loc/{locale}.js",
-    "AttorneyWorkloadWebPartStrings": "lib/webparts/attorneyWorkload/loc/{locale}.js"
+    "AttorneyWorkloadWebPartStrings": "lib/webparts/attorneyWorkload/loc/{locale}.js",
+    "UrgencyPortalWebPartStrings": "lib/webparts/urgencyPortal/loc/{locale}.js",
+    "PropertyControlStrings": "node_modules/@pnp/spfx-property-controls/lib/loc/{locale}.js",
+    "OfficeHotelingWebPartStrings": "lib/webparts/officeHoteling/loc/{locale}.js"
   }
 }

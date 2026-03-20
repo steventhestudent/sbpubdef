@@ -3,6 +3,7 @@ import type { IExpertWitnessDirectoryProps } from "./IExpertWitnessDirectoryProp
 import { Collapsible } from "@components/Collapsible";
 import { IExpert } from "@type/PDExpertWitness";
 import { ExpertWitnessApi } from "@api/expertWitness";
+import ClearableInput from "@components/ClearableInput";
 
 const MAX_VISIBLE = 4;
 
@@ -96,22 +97,14 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 					Search experts
 				</label>
 				<div className="mt-1 flex gap-2">
-					<input
-						id="expert-search"
-						type="search"
-						className="w-full rounded-md border border-slate-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-[var(--pd-muted)]"
+					<ClearableInput
 						placeholder="Name, field, location…"
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						onChange={(e) =>
+							setSearch(
+								(e.target as HTMLInputElement).value || "",
+							)
+						}
 					/>
-					<button
-						type="button"
-						className="rounded-md border border-slate-300 px-3 text-sm bg-blue-600 hover:bg-blue-700 text-white font-bold"
-						onClick={() => setSearch((s) => s.trim())}
-						aria-label="Run search"
-					>
-						↠
-					</button>
 				</div>
 
 				{/* status text */}
@@ -131,12 +124,12 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 								No experts match this search.
 							</div>
 						) : (
-							<ul className="mt-3 divide-y divide-slate-400 rounded-md border border-slate-400 text-slate-900 bg-white">
+							<ul className="mt-3 divide-y divide-slate-400 rounded-md border border-slate-400 bg-white text-slate-900">
 								{visible.map((e) => (
 									<li key={e.id} className="px-3 py-2">
 										<div className="flex items-center justify-between gap-4">
 											<div>
-												<p className="text-sm text-slate-750 font-semibold">
+												<p className="text-slate-750 text-sm font-semibold">
 													{e.name}
 												</p>
 												{e.expertise && (
@@ -162,7 +155,7 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 													</p>
 												)}
 											</div>
-											<span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700 border border-green-200">
+											<span className="rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
 												Available
 											</span>
 										</div>

@@ -10,3 +10,7 @@
 /*@tailwind base;*/
 /*@tailwind components;*/
 /*@tailwind utilities;*/
+
+@theme {
+	--breakpoint-xs: 490px;
+}

@@ -7,7 +7,6 @@ import "@pnp/sp/fields";
 import "@pnp/sp/items";
 
 import { CustomContentApi, AnnGetOpts } from "@api/CustomContentApi";
-import { PD, SP } from "@api/config";
 import type {
 	NewsSearchResult,
 	PDAnnouncement,
@@ -105,7 +104,7 @@ export class AnnouncementsApi extends CustomContentApi<
 	): Promise<PDAnnouncement[]> {
 		this.preprocess({
 			...(opts ?? {}),
-			contentType: PD.contentType.Announcement,
+			contentType: ENV.CONTENTTYPE_ANNOUNCEMENT,
 		});
 		// News-only
 		this.and("PromotedState=2");
@@ -143,7 +142,7 @@ export class AnnouncementsApi extends CustomContentApi<
 				author: r.Author,
 				thumbnailUrl: r.PictureThumbnailURL,
 				PDDepartment:
-					r.PDDepartment || r.PD_x0020_Department || "Everyone",
+					r.PDDepartment || r.x0020_Department || "Everyone",
 			} as PDAnnouncement;
 		});
 	}
@@ -158,12 +157,12 @@ export class AnnouncementsApi extends CustomContentApi<
 
 		const calls = targets.map(async (siteUrl) => {
 			const w = this.pnpWrapper.web(siteUrl);
-			const list = w.lists.getByTitle(SP.contentType.SitePages);
+			const list = w.lists.getByTitle(ENV.SP_CONTENTTYPE_SITEPAGES);
 
 			// 1) Ensure PD Announcement CT exists in this library
 			const cts = await list.contentTypes.select("StringId", "Name")();
 			const pdCt = (cts as IContentTypeInfo[]).find(
-				(ct) => ct.Name === PD.contentType.Announcement,
+				(ct) => ct.Name === ENV.CONTENTTYPE_ANNOUNCEMENT,
 			);
 			if (!pdCt) return [] as PDAnnouncement[];
 			const pdCtId = pdCt.StringId;
@@ -272,23 +271,23 @@ export class AnnouncementsApi extends CustomContentApi<
 		// 2) switch to PD Announcement CT
 		let item = await page.getItem();
 		const cts = await web.lists
-			.getByTitle(SP.contentType.SitePages)
+			.getByTitle(ENV.SP_CONTENTTYPE_SITEPAGES)
 			.contentTypes.select("StringId", "Name")();
 		const pdCt = (cts as IContentTypeInfo[]).find(
-			(ct) => ct.Name === PD.contentType.Announcement,
+			(ct) => ct.Name === ENV.CONTENTTYPE_ANNOUNCEMENT,
 		);
 		if (pdCt) {
 			await item.update({ ContentTypeId: pdCt.StringId });
 			const { Id } = await item.select("Id")();
 			item = web.lists
-				.getByTitle(SP.contentType.SitePages)
+				.getByTitle(ENV.SP_CONTENTTYPE_SITEPAGES)
 				.items.getById(Id);
 		}
 
 		// 3) PDDepartment (robust write immediately after CT switch)
 		if (department) {
 			const deptField = await web.lists
-				.getByTitle(SP.contentType.SitePages)
+				.getByTitle(ENV.SP_CONTENTTYPE_SITEPAGES)
 				.fields.getByInternalNameOrTitle("PDDepartment")
 				.select("InternalName")();
 			await item.validateUpdateListItem(

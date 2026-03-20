@@ -1,0 +1,9 @@
+- update config/
+  - .env.public.prod
+  - .env.prod
+  - package-solution.json
+    - webApiPermissionRequests from app registration: Application (client) ID + scope name
+  - scripts/py/azure_function
+    - set AZURE_FUNCTIONS_ENVIRONMENT to any value to ensure they use production
+  - scripts/js (gen-env)
+    - ensure that process.env.NODE_ENV === "production"

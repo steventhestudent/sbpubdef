@@ -5,7 +5,6 @@ import type { IAnnouncementsProps } from "./IAnnouncementsProps";
 // import type { PDAnnouncement } from "@type/PDAnnouncement";
 import { AnnouncementsApi } from "@api/announcements";
 import { Collapsible } from "@components/Collapsible";
-import * as Utils from "@utils";
 
 import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
@@ -67,7 +66,7 @@ function PDIntranetView({
 	};
 
 	React.useEffect(() => {
-		Utils.loadCachedThenFresh(load);
+		pnpWrapper.loadCachedThenFresh(load);
 	}, [sourceRole]);
 
 	return (
@@ -90,7 +89,7 @@ function PDIntranetView({
 								/>
 							)}
 
-							<span className="flex-1 min-w-0">
+							<span className="min-w-0 flex-1">
 								<span className="flex items-center gap-2">
 									<span className="block truncate text-sm font-medium text-slate-800">
 										{a.title}
@@ -103,7 +102,7 @@ function PDIntranetView({
 								</span>
 
 								{a.summary && (
-									<span className="mt-0.5 block text-xs text-slate-600 line-clamp-2">
+									<span className="mt-0.5 line-clamp-2 block text-xs text-slate-600">
 										{a.summary}
 									</span>
 								)}

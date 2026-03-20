@@ -1,4 +1,4 @@
-import "@dist/tailwind.css";
+import "@utils/CommonWebPartImports";
 import * as React from "react";
 import * as ReactDom from "react-dom";
 import { Version } from "@microsoft/sp-core-library";
@@ -80,7 +80,7 @@ export default class MostCommonFormsWebPart extends BaseClientSideWebPart<IMostC
 		return Promise.resolve(
 			this.context.isServedFromLocalhost
 				? strings.AppLocalEnvironmentSharePoint
-				: strings.AppSharePointEnvironment
+				: strings.AppSharePointEnvironment,
 		);
 	}
 
@@ -95,15 +95,15 @@ export default class MostCommonFormsWebPart extends BaseClientSideWebPart<IMostC
 		if (semanticColors) {
 			this.domElement.style.setProperty(
 				"--bodyText",
-				semanticColors.bodyText || null
+				semanticColors.bodyText || null,
 			);
 			this.domElement.style.setProperty(
 				"--link",
-				semanticColors.link || null
+				semanticColors.link || null,
 			);
 			this.domElement.style.setProperty(
 				"--linkHovered",
-				semanticColors.linkHovered || null
+				semanticColors.linkHovered || null,
 			);
 		}
 	}
