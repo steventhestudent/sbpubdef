@@ -4,7 +4,6 @@ import * as ReactDom from 'react-dom';
 import AttorneyWorkload from './components/AttorneyWorkload';
 import { ILocationData, IAttorneyWorkloadProps } from './components/IAttorneyWorkloadProps';
 
-// Interfaces matching your JSON
 interface ICaseRaw {
   CaseID: string;
   CaseStatus: string;
@@ -45,7 +44,6 @@ export default class AttorneyWorkloadWebPart
       const response = await fetch("https://csproject25.sharepoint.com/sites/PD-Intranet/Shared%20Documents/Intranet%20Form%20Database/Attorneys/Workload/attorneyWorkload.json");
       const data: ISharePointData = await response.json();
 
-      // Transform into ILocationData[]
       const locationsMap = new Map<
         string,
         Map<string, Map<string, { CaseID: string; CaseStatus: string }[]>>
