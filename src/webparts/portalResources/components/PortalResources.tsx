@@ -5,6 +5,7 @@ import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
 import { ProcedureChecklist } from "@components/procedureChecklist/ProcedureChecklist";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
+import { CDDResourceGuides } from "@components/cddResourceGuides/CDDResourceGuides";
 
 // a wrapper to pass other things we want from webpart props (context)
 function CollapsibleWrapper(
@@ -23,7 +24,7 @@ function CollapsibleWrapper(
 			IT: "LOPS - Legal Office Procedural System",
 			LOP: "LOPS - Legal Office Procedural System",
 			TrialSupervisor: "Attorney Workload",
-			CDD: "Resource Guides",
+			CDD: "CDD",
 		};
 		return (
 			<Collapsible
@@ -36,7 +37,11 @@ function CollapsibleWrapper(
 				{(function () {
 					if (sourceRole === "CDD")
 						return (
-							<div className="min-h-64">resource guides...</div>
+							<CDDResourceGuides
+								userGroupNames={userGroupNames}
+								pnpWrapper={pnpWrapper}
+								sourceRole={sourceRole}
+							/>
 						);
 					if (sourceRole === "TrialSupervisor")
 						return (
