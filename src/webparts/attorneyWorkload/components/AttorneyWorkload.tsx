@@ -1,71 +1,75 @@
 import * as React from "react";
 import type {
 	IAttorneyWorkloadProps,
-	ICountyData,
-	ICaseType,
 	IAttorney,
-	ICase,
 } from "./IAttorneyWorkloadProps";
 import styles from "./AttorneyWorkload.module.scss";
+import { Collapsible } from "@components/Collapsible";
 
 export default function AttorneyWorkload(
 	props: IAttorneyWorkloadProps,
 ): JSX.Element {
-	const { counties } = props;
+	const { locations } = props;
 	const [searchText, setSearchText] = React.useState("");
 	const [expandedItems, setExpandedItems] = React.useState<Set<string>>(
 		new Set(),
 	);
 
-	const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>): void =>
+	const handleSearchChange = (
+		e: React.ChangeEvent<HTMLInputElement>,
+	): void => {
 		setSearchText(e.target.value);
+	};
 
 	const toggleExpand = (id: string): void => {
 		const newExpanded = new Set(expandedItems);
-		if (newExpanded.has(id)) newExpanded.delete(id);
-		else newExpanded.add(id);
+		if (newExpanded.has(id)) {
+			newExpanded.delete(id);
+		} else {
+			newExpanded.add(id);
+		}
+
 		setExpandedItems(newExpanded);
 	};
 
-	// Determine which parents to auto-expand based on search
+	React.useEffect(() => {
+		setExpandedItems(new Set());
+	}, [searchText]);
+
 	const getExpandedParents = React.useMemo(() => {
 		if (!searchText) return new Set<string>();
-		const lowerSearch = searchText.toLowerCase();
+		const lower = searchText.toLowerCase();
 		const expanded = new Set<string>();
 
-		counties.forEach((county) => {
-			const countyId = `county-${county.name}`;
+		locations.forEach((location) => {
+			const locationId = `location-${location.name}`;
+			const locationMatches = location.name.toLowerCase().includes(lower);
+			if (locationMatches) expanded.add(locationId);
 
-			// County level search
-			if (county.name.toLowerCase().includes(lowerSearch)) {
-				return; // County itself is search target, do not auto-expand
-			}
-
-			county.caseTypes.forEach((ct) => {
-				const ctId = `${countyId}-type-${ct.type}`;
-
-				// Case type level search
-				if (ct.type.toLowerCase().includes(lowerSearch)) {
-					expanded.add(countyId);
-					return;
+			location.caseTypes.forEach((ct) => {
+				const ctId = `${locationId}-type-${ct.type}`;
+				const ctMatches = ct.type.toLowerCase().includes(lower);
+				if (ctMatches) {
+					expanded.add(locationId);
+					expanded.add(ctId);
 				}
 
 				ct.attorneys.forEach((att) => {
 					const attId = `${ctId}-att-${att.name}`;
-
-					// Attorney name search
-					if (att.name.toLowerCase().includes(lowerSearch)) {
-						expanded.add(countyId);
+					const attMatches = att.name.toLowerCase().includes(lower);
+					if (attMatches) {
+						expanded.add(locationId);
 						expanded.add(ctId);
-						return;
+						expanded.add(attId);
 					}
 
-					// Case number search
-					const matchingCases = att.cases.filter((c) =>
-						c.number.toLowerCase().includes(lowerSearch),
+					const caseMatches = att.cases.some(
+						(c) =>
+							c.CaseID.toLowerCase().includes(lower) ||
+							c.CaseStatus.toLowerCase().includes(lower),
 					);
-					if (matchingCases.length > 0) {
-						expanded.add(countyId);
+					if (caseMatches) {
+						expanded.add(locationId);
 						expanded.add(ctId);
 						expanded.add(attId);
 					}
@@ -74,39 +78,73 @@ export default function AttorneyWorkload(
 		});
 
 		return expanded;
-	}, [counties, searchText]);
+	}, [locations, searchText]);
 
-	// Filter counties for search (keep all levels visible so dropdowns are clickable)
-	const filteredCounties = React.useMemo((): ICountyData[] => {
-		if (!searchText) return counties;
+	const isDropdownOpen = (id: string): boolean => {
+		if (searchText) {
+			return expandedItems.has(id) || getExpandedParents.has(id);
+		}
+		return expandedItems.has(id);
+	};
 
-		const lowerSearch = searchText.toLowerCase();
+	const getVisibleCases = (att: IAttorney): typeof att.cases => {
+		if (!searchText) return att.cases;
+		const lower = searchText.toLowerCase();
+		const matchingCases = att.cases.filter(
+			(c) =>
+				c.CaseID.toLowerCase().includes(lower) ||
+				c.CaseStatus.toLowerCase().includes(lower),
+		);
+		return matchingCases.length > 0 ? matchingCases : att.cases;
+	};
 
-		return counties
-			.map((county) => {
-				const countyMatches = county.name
+	const getAttorneyCaseCount = (att: IAttorney): number =>
+		getVisibleCases(att).length;
+
+	const getCaseTypeCaseCount = (
+		caseType: (typeof locations)[0]["caseTypes"][0],
+	): number =>
+		caseType.attorneys.reduce(
+			(total, att) => total + getVisibleCases(att).length,
+			0,
+		);
+
+	const getLocationCaseCount = (location: (typeof locations)[0]): number =>
+		location.caseTypes.reduce(
+			(total, ct) => total + getCaseTypeCaseCount(ct),
+			0,
+		);
+
+	const filteredLocations = React.useMemo(() => {
+		if (!searchText) return locations;
+		const lower = searchText.toLowerCase();
+
+		return locations
+			.map((location) => {
+				const locationMatches = location.name
 					.toLowerCase()
-					.includes(lowerSearch);
+					.includes(lower);
 
-				const caseTypes = county.caseTypes
+				const caseTypes = location.caseTypes
 					.map((ct) => {
-						const ctMatches = ct.type
-							.toLowerCase()
-							.includes(lowerSearch);
+						const ctMatches = ct.type.toLowerCase().includes(lower);
 
 						const attorneys = ct.attorneys
 							.map((att) => {
 								const attMatches =
-									att.name
-										.toLowerCase()
-										.includes(lowerSearch) ||
-									att.cases.some((c) =>
-										c.number
-											.toLowerCase()
-											.includes(lowerSearch),
+									att.name.toLowerCase().includes(lower) ||
+									att.cases.some(
+										(c) =>
+											c.CaseID.toLowerCase().includes(
+												lower,
+											) ||
+											c.CaseStatus.toLowerCase().includes(
+												lower,
+											),
 									);
-
-								return attMatches || ctMatches || countyMatches
+								return attMatches ||
+									ctMatches ||
+									locationMatches
 									? { ...att }
 									: null;
 							})
@@ -114,158 +152,208 @@ export default function AttorneyWorkload(
 
 						return ctMatches ||
 							attorneys.length > 0 ||
-							countyMatches
+							locationMatches
 							? { ...ct, attorneys }
 							: null;
 					})
-					.filter((ct): ct is ICaseType => ct !== null);
+					.filter(
+						(ct): ct is (typeof location.caseTypes)[0] =>
+							ct !== null,
+					);
 
-				return countyMatches || caseTypes.length > 0
-					? { ...county, caseTypes }
+				return locationMatches || caseTypes.length > 0
+					? { ...location, caseTypes }
 					: null;
 			})
-			.filter((county): county is ICountyData => county !== null);
-	}, [counties, searchText]);
-
-	// Determine if a dropdown is open
-	const isDropdownOpen = (id: string): boolean =>
-		expandedItems.has(id) || getExpandedParents.has(id);
-
-	// Determine which cases to display for an attorney
-	const getVisibleCases = (att: IAttorney): ICase[] => {
-		const lowerSearch = searchText.toLowerCase();
-		if (!searchText) return att.cases; // show all normally
-		// If any case number matches search, show only matching case numbers
-		const matchingCases = att.cases.filter((c) =>
-			c.number.toLowerCase().includes(lowerSearch),
-		);
-		if (matchingCases.length > 0) return matchingCases;
-		// Otherwise (search by name, case type, county) show all cases
-		return att.cases;
-	};
+			.filter(
+				(location): location is (typeof locations)[0] =>
+					location !== null,
+			);
+	}, [locations, searchText]);
 
 	return (
 		<section className={styles.attorneyWorkload}>
-			<h2 className={styles.title}>Attorney Workload</h2>
-			<input
-				className={styles.searchInput}
-				type="text"
-				placeholder="Search by county, case type, attorney, or case number..."
-				value={searchText}
-				onChange={handleSearchChange}
-			/>
+			<Collapsible
+				instanceId="attorney-workload"
+				title="Attorney Workload"
+			>
+				<div className={styles.searchContainer}>
+					<input
+						className={styles.searchInput}
+						type="text"
+						placeholder="Search by location, case type, attorney, case number, or status..."
+						value={searchText}
+						onChange={handleSearchChange}
+					/>
+				</div>
 
-			<div className={styles.countiesContainer}>
-				{filteredCounties.length ? (
-					filteredCounties.map((county) => {
-						const countyId = `county-${county.name}`;
-						const isCountyOpen = isDropdownOpen(countyId);
+				<div className={styles.locationsContainer}>
+					{filteredLocations.length ? (
+						filteredLocations.map((location) => {
+							const locationId = `location-${location.name}`;
+							const isLocationOpen = isDropdownOpen(locationId);
 
-						return (
-							<div key={countyId} className={styles.countyCard}>
-								<button
-									className={styles.expandButton}
-									onClick={() => toggleExpand(countyId)}
+							return (
+								<div
+									key={locationId}
+									className={styles.locationCard}
 								>
-									{isCountyOpen ? "▼" : "▶"} {county.name}
-								</button>
+									<button
+										className={styles.expandButton}
+										onClick={() => toggleExpand(locationId)}
+									>
+										<span>
+											{isLocationOpen ? "▼" : "▶"}{" "}
+											{location.name}{" "}
+											<span className={styles.caseCount}>
+												(
+												{getLocationCaseCount(location)}
+												)
+											</span>
+										</span>
+									</button>
 
-								{isCountyOpen &&
-									county.caseTypes.map((ct) => {
-										const ctId = `${countyId}-type-${ct.type}`;
-										const isCtOpen = isDropdownOpen(ctId);
+									{isLocationOpen &&
+										location.caseTypes.map((ct) => {
+											const ctId = `${locationId}-type-${ct.type}`;
+											const isCtOpen =
+												isDropdownOpen(ctId);
 
-										return (
-											<div
-												key={ctId}
-												className={styles.caseTypeCard}
-											>
-												<button
+											return (
+												<div
+													key={ctId}
 													className={
-														styles.expandButton
-													}
-													onClick={() =>
-														toggleExpand(ctId)
+														styles.caseTypeCard
 													}
 												>
-													{isCtOpen ? "▼" : "▶"}{" "}
-													{ct.type}
-												</button>
-
-												{isCtOpen &&
-													ct.attorneys.map((att) => {
-														const attId = `${ctId}-att-${att.name}`;
-														const isAttOpen =
-															isDropdownOpen(
-																attId,
-															);
-
-														return (
-															<div
-																key={attId}
+													<button
+														className={
+															styles.expandButton
+														}
+														onClick={() =>
+															toggleExpand(ctId)
+														}
+													>
+														<span>
+															{isCtOpen
+																? "▼"
+																: "▶"}{" "}
+															{ct.type}{" "}
+															<span
 																className={
-																	styles.attorneyCard
+																	styles.caseCount
 																}
 															>
-																<button
-																	className={
-																		styles.expandButton
-																	}
-																	onClick={() =>
-																		toggleExpand(
-																			attId,
-																		)
-																	}
-																>
-																	{isAttOpen
-																		? "▼"
-																		: "▶"}{" "}
-																	{att.name}
-																</button>
+																(
+																{getCaseTypeCaseCount(
+																	ct,
+																)}
+																)
+															</span>
+														</span>
+													</button>
 
-																{isAttOpen && (
+													{isCtOpen &&
+														ct.attorneys.map(
+															(att) => {
+																const attId = `${ctId}-att-${att.name}`;
+																const isAttOpen =
+																	isDropdownOpen(
+																		attId,
+																	);
+
+																return (
 																	<div
+																		key={
+																			attId
+																		}
 																		className={
-																			styles.casesContainer
+																			styles.attorneyCard
 																		}
 																	>
-																		{getVisibleCases(
-																			att,
-																		).map(
-																			(
-																				c,
-																			) => (
-																				<div
-																					key={
-																						c.number
-																					}
+																		<button
+																			className={
+																				styles.expandButton
+																			}
+																			onClick={() =>
+																				toggleExpand(
+																					attId,
+																				)
+																			}
+																		>
+																			<span>
+																				{isAttOpen
+																					? "▼"
+																					: "▶"}{" "}
+																				{
+																					att.name
+																				}{" "}
+																				<span
 																					className={
-																						styles.caseNumber
+																						styles.caseCount
 																					}
 																				>
-																					{
-																						c.number
-																					}
-																				</div>
-																			),
+																					(
+																					{getAttorneyCaseCount(
+																						att,
+																					)}
+
+																					)
+																				</span>
+																			</span>
+																		</button>
+
+																		{isAttOpen && (
+																			<div
+																				className={
+																					styles.casesContainer
+																				}
+																			>
+																				{getVisibleCases(
+																					att,
+																				).map(
+																					(
+																						c,
+																					) => (
+																						<div
+																							key={
+																								c.CaseID
+																							}
+																							className={
+																								styles.caseNumber
+																							}
+																						>
+																							<strong>
+																								{
+																									c.CaseID
+																								}
+																							</strong>{" "}
+																							—{" "}
+																							{
+																								c.CaseStatus
+																							}
+																						</div>
+																					),
+																				)}
+																			</div>
 																		)}
 																	</div>
-																)}
-															</div>
-														);
-													})}
-											</div>
-										);
-									})}
-							</div>
-						);
-					})
-				) : (
-					<div className={styles.noResults}>
-						No results found for &quot;{searchText}&quot;
-					</div>
-				)}
-			</div>
+																);
+															},
+														)}
+												</div>
+											);
+										})}
+								</div>
+							);
+						})
+					) : (
+						<div className={styles.noResults}>
+							No results found for &quot;{searchText}&quot;
+						</div>
+					)}
+				</div>
+			</Collapsible>
 		</section>
 	);
 }

@@ -1,24 +1,23 @@
-// --- Types ---
 export interface ICase {
-	number: string; // Maps to CaseNumber
+	CaseID: string;
+	CaseStatus: string;
 }
 
 export interface IAttorney {
-	name: string; // Maps to Name from AttorneyLocationTemp
+	name: string;
 	cases: ICase[];
 }
 
 export interface ICaseType {
-	type: string; // Maps to CaseType
+	type: string;
 	attorneys: IAttorney[];
 }
 
-export interface ICountyData {
-	name: string; // Maps to Location
+export interface ILocationData {
+	name: string;
 	caseTypes: ICaseType[];
 }
 
-// --- Props Interface ---
 export interface IAttorneyWorkloadProps {
-	counties: ICountyData[];
+	locations: ILocationData[];
 }

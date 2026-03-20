@@ -3,62 +3,122 @@ import * as React from "react";
 import * as ReactDom from "react-dom";
 import AttorneyWorkload from "./components/AttorneyWorkload";
 import {
+	ILocationData,
 	IAttorneyWorkloadProps,
-	ICountyData,
 } from "./components/IAttorneyWorkloadProps";
 
-export interface IAttorneyWorkloadWebPartProps {
-	// Placeholder for web part properties
+interface ICaseRaw {
+	CaseID: string;
+	CaseStatus: string;
+	AttorneyID: number;
+	CaseTypeID: number;
 }
 
-export default class AttorneyWorkloadWebPart extends BaseClientSideWebPart<IAttorneyWorkloadWebPartProps> {
-	public render(): void {
-		// Example static data
-		const counties: ICountyData[] = [
-			{
-				name: "North County",
-				caseTypes: [
-					{
-						type: "Criminal Defense",
-						attorneys: [
-							{
-								name: "Michael Henderson",
-								cases: [
-									{ number: "NOR-CR-2024-0412" },
-									{ number: "NOR-CR-2024-0892" },
-								],
-							},
-						],
-					},
-					{
-						type: "Family Law",
-						attorneys: [
-							{
-								name: "Sarah Jenkins",
-								cases: [{ number: "NOR-FAM-2024-0012" }],
-							},
-						],
-					},
-				],
-			},
-			{
-				name: "South County",
-				caseTypes: [
-					{
-						type: "Civil Litigation",
-						attorneys: [
-							{
-								name: "Rebecca Thorne",
-								cases: [{ number: "SOU-CIV-2024-9912" }],
-							},
-						],
-					},
-				],
-			},
-		];
+interface IAttorneyRaw {
+	AttorneyID: number;
+	Name: string;
+	Location: string;
+}
 
+interface ICaseTypeRaw {
+	CaseTypeID: number;
+	Name: string;
+}
+
+interface ISharePointData {
+	attorneys: IAttorneyRaw[];
+	caseTypes: ICaseTypeRaw[];
+	cases: ICaseRaw[];
+}
+
+export default class AttorneyWorkloadWebPart extends BaseClientSideWebPart<{}> {
+	private locations: ILocationData[] = [];
+
+	public async onInit(): Promise<void> {
+		await super.onInit();
+		await this.loadData();
+	}
+
+	private async loadData(): Promise<void> {
+		try {
+			// Fetch the JSON file from SharePoint
+			const response = await fetch(
+				"https://csproject25.sharepoint.com/sites/PD-Intranet/Shared%20Documents/Intranet%20Form%20Database/Attorneys/Workload/attorneyWorkload.json",
+			);
+			const data: ISharePointData = await response.json();
+
+			const locationsMap = new Map<
+				string,
+				Map<
+					string,
+					Map<string, { CaseID: string; CaseStatus: string }[]>
+				>
+			>();
+
+			data.attorneys.forEach((att) => {
+				const attorneyCases = data.cases.filter(
+					(c) => c.AttorneyID === att.AttorneyID,
+				);
+
+				attorneyCases.forEach((c) => {
+					const caseTypeRecord = data.caseTypes.find(
+						(ct) => ct.CaseTypeID === c.CaseTypeID,
+					);
+					const caseTypeName = caseTypeRecord?.Name ?? "Unknown";
+
+					if (!locationsMap.has(att.Location)) {
+						locationsMap.set(att.Location, new Map());
+					}
+
+					const caseTypesMap = locationsMap.get(att.Location)!;
+
+					if (!caseTypesMap.has(caseTypeName)) {
+						caseTypesMap.set(caseTypeName, new Map());
+					}
+
+					const attorneysMap = caseTypesMap.get(caseTypeName)!;
+
+					if (!attorneysMap.has(att.Name)) {
+						attorneysMap.set(att.Name, []);
+					}
+
+					attorneysMap.get(att.Name)!.push({
+						CaseID: c.CaseID,
+						CaseStatus: c.CaseStatus,
+					});
+				});
+			});
+
+			// Convert map to array structure for the component
+			this.locations = Array.from(locationsMap.entries()).map(
+				([locationName, caseTypesMap]) => ({
+					name: locationName,
+					caseTypes: Array.from(caseTypesMap.entries()).map(
+						([caseTypeName, attorneysMap]) => ({
+							type: caseTypeName,
+							attorneys: Array.from(attorneysMap.entries()).map(
+								([attorneyName, cases]) => ({
+									name: attorneyName,
+									cases,
+								}),
+							),
+						}),
+					),
+				}),
+			);
+
+			console.log("DATA LOADED:", this.locations);
+		} catch (error) {
+			console.error("API ERROR:", error);
+			this.locations = [];
+		}
+	}
+
+	public render(): void {
 		const element: React.ReactElement<IAttorneyWorkloadProps> =
-			React.createElement(AttorneyWorkload, { counties });
+			React.createElement(AttorneyWorkload, {
+				locations: this.locations,
+			});
 
 		ReactDom.render(element, this.domElement);
 	}
