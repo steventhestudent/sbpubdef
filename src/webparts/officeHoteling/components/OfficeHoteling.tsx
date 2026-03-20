@@ -1,15 +1,17 @@
 import * as React from "react";
 import type { IOfficeHotelingProps } from "./IOfficeHotelingProps";
 import { GraphClient, MSGraphClientV3 } from "@utils/graph/GraphClient";
-import { AadHttpClient } from "@microsoft/sp-http";
 import { HotelingService } from "@services/HotelingService";
+import { AadHttpClient } from "@microsoft/sp-http";
 import { ISPFXContext, SPFx as spSPFx, spfi, SPFI } from "@pnp/sp";
 import {
 	buildReservationSummaryEmailHtml,
+	buildReservationSummaryIcsAttachment,
 	canDeleteReservation,
 	generateTimeSlots,
 	getMondayOfWeek,
 	getReservationDateRange,
+	type EmailAttachment,
 	LOCATION_DESK_OPTIONS,
 	OFFICE_LOCATIONS,
 	REMINDER_COOLDOWN_SECONDS,
@@ -31,12 +33,10 @@ import {
 import "@pnp/sp/webs";
 import "@pnp/sp/lists";
 import "@pnp/sp/items";
+import "@pnp/sp/files";
+import "@pnp/sp/folders";
 
 export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
-	// Initialize Hoteling Service
-	const hotelingService = new HotelingService(props.context);
-	const userEmail = props.context.pageContext.user.email || "";
-
 	const [selectedLocation, setSelectedLocation] = React.useState(
 		OFFICE_LOCATIONS[0],
 	);
@@ -44,6 +44,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		LOCATION_DESK_OPTIONS[OFFICE_LOCATIONS[0]][0],
 	);
 	const [reservations, setReservations] = React.useState<Reservation[]>([]);
+	const hotelingServiceRef = React.useRef<HotelingService | null>(null);
 	const [editingReservationId, setEditingReservationId] = React.useState<
 		string | null
 	>(null);
@@ -67,38 +68,6 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		React.useState<boolean>(false);
 	const [statusMessage, setStatusMessage] =
 		React.useState<StatusMessage | null>(null);
-
-	// Load reservations from SharePoint on mount
-	React.useEffect(() => {
-		const loadReservations = async (): Promise<void> => {
-			try {
-				const spReservations =
-					await hotelingService.getMyReservations(userEmail);
-				// Convert IReservation to Reservation format
-				const converted: Reservation[] = spReservations.map((r) => ({
-					id: r.Id?.toString() || `res-${Date.now()}`,
-					location: r.Location,
-					date: r.ReservationDate.toISOString().split("T")[0],
-					time: r.TimeBlock as "Morning" | "Afternoon",
-					desk: r.Desk,
-					spListItemId: r.Id, // Store the SharePoint list item ID
-				}));
-				setReservations(converted);
-			} catch (error) {
-				console.error(
-					"Failed to load reservations from SharePoint:",
-					error,
-				);
-				setStatusMessage({
-					type: "error",
-					text: "Failed to load reservations. Please refresh the page.",
-				});
-			}
-		};
-
-		setTimeout(async () => loadReservations());
-	}, []);
-
 	const [pendingSelections, setPendingSelections] = React.useState<
 		Reservation[]
 	>([]);
@@ -126,7 +95,42 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			setSlots.add(`${r.date}-${r.time.toLowerCase()}`);
 		});
 		setBookedSlots(setSlots);
+		// Persistence now handled via HotelingService (SharePoint).
 	}, [reservations]);
+
+	// Initialize HotelingService and load reservations from SharePoint on mount
+	React.useEffect(() => {
+		hotelingServiceRef.current = new HotelingService(props.context);
+		const load = async (): Promise<void> => {
+			const userEmail = props.context.pageContext.user.email ?? "";
+			if (!userEmail) return;
+			try {
+				const items =
+					await hotelingServiceRef.current!.getMyReservations(
+						userEmail,
+					);
+				const mapped: Reservation[] = items.map((it) => {
+					const d = new Date(it.ReservationDate);
+					const yyyy = d.getFullYear();
+					const mm = String(d.getMonth() + 1).padStart(2, "0");
+					const dd = String(d.getDate()).padStart(2, "0");
+					return {
+						id: `sp-${it.Id}`,
+						location: it.Location,
+						desk: it.Desk,
+						date: `${yyyy}-${mm}-${dd}`,
+						time: (it.TimeBlock as string) || "Morning",
+						// preserve SharePoint list id for later deletes/updates
+						sharePointListItemId: it.Id,
+					} as unknown as Reservation;
+				});
+				setReservations(mapped);
+			} catch (e) {
+				console.warn("Failed to load reservations from SharePoint.", e);
+			}
+		};
+		setTimeout(async () => load());
+	}, []);
 
 	React.useEffect(() => {
 		if (!statusMessage) {
@@ -214,14 +218,20 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 	maxDate.setDate(maxDate.getDate() + 20);
 	const maxWeekStart = getMondayOfWeek(maxDate);
 
+	const SEND_EMAIL_FUNCTION_URL =
+		"https://sbpubdef-agfwa0d9e3b9anch.westus3-01.azurewebsites.net/api/SendEmail";
+	const SEND_EMAIL_API_APP_ID = "c852c7d6-8c34-4b51-a368-92be5f2ac96a";
+	const contextSiteUrl = props.context?.pageContext?.web?.absoluteUrl ?? "";
+
 	const sendEmailViaFunction = async (
 		toEmails: string[],
 		subject: string,
 		body: string,
+		attachments?: EmailAttachment[],
 	): Promise<void> => {
 		const client: AadHttpClient =
 			await props.context.aadHttpClientFactory.getClient(
-				ENV.FUNCTION_API_APP_ID,
+				SEND_EMAIL_API_APP_ID,
 			);
 
 		const payload = {
@@ -229,10 +239,11 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			subject,
 			body,
 			content_type: "HTML",
+			attachments,
 		};
 
 		const response = await client.post(
-			ENV.FUNCTION_BASE_URL + "/api/SendEmail",
+			SEND_EMAIL_FUNCTION_URL,
 			AadHttpClient.configurations.v1,
 			{
 				headers: { "Content-Type": "application/json" },
@@ -270,7 +281,96 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			titleText: "Reservation Confirmed",
 			introText: "Your hoteling reservation has been confirmed.",
 			subjectPrefix: "Reservation Confirmed",
+			includeIcsAttachment: true,
 		});
+	};
+
+	const getSharePointClient = (): SPFI => {
+		if (!contextSiteUrl) {
+			throw new Error(
+				"SharePoint context is unavailable. Unable to access Events list.",
+			);
+		}
+
+		return spfi().using(spSPFx(props.context as unknown as ISPFXContext));
+	};
+
+	const uploadIcsToSharePointFileUrl = async (
+		attachment: EmailAttachment,
+		preferredFileName?: string,
+	): Promise<string | undefined> => {
+		if (!contextSiteUrl) {
+			return undefined;
+		}
+
+		try {
+			const fileName = (preferredFileName || attachment.name).replace(
+				/[\\/]/g,
+				"-",
+			);
+			const webServerRelativeUrl =
+				props.context?.pageContext?.web?.serverRelativeUrl ?? "";
+			const normalizedWebServerRelativeUrl =
+				webServerRelativeUrl.endsWith("/")
+					? webServerRelativeUrl.slice(0, -1)
+					: webServerRelativeUrl;
+			const candidateFolderServerRelativePaths = [
+				`${normalizedWebServerRelativeUrl}/SiteAssets`,
+				`${normalizedWebServerRelativeUrl}/Shared Documents`,
+				`${normalizedWebServerRelativeUrl}/Documents`,
+			];
+
+			const binary = atob(attachment.contentBytes);
+			const bytes = new Uint8Array(binary.length);
+			for (let i = 0; i < binary.length; i++) {
+				bytes[i] = binary.charCodeAt(i);
+			}
+
+			const blob = new Blob([bytes], {
+				type: attachment.contentType || "text/calendar",
+			});
+
+			const sp = getSharePointClient();
+
+			for (const folderServerRelativePath of candidateFolderServerRelativePaths) {
+				try {
+					await sp.web.folders.addUsingPath(folderServerRelativePath);
+				} catch {
+					console.log(`err`);
+				}
+
+				try {
+					await sp.web
+						.getFolderByServerRelativePath(folderServerRelativePath)
+						.files.addUsingPath(fileName, blob, {
+							Overwrite: true,
+						});
+
+					const folderRelativeToWeb = folderServerRelativePath
+						.replace(normalizedWebServerRelativeUrl, "")
+						.replace(/^\//, "");
+					const encodedFolderPath = folderRelativeToWeb
+						.split("/")
+						.map((segment) => encodeURIComponent(segment))
+						.join("/");
+
+					console.log(
+						`ICS file uploaded to ${folderServerRelativePath}.`,
+					);
+					return `${contextSiteUrl}/${encodedFolderPath}/${encodeURIComponent(fileName)}?download=1`;
+				} catch (error) {
+					console.warn(
+						`Failed to upload ICS file to ${folderServerRelativePath}.`,
+						error,
+					);
+				}
+			}
+
+			return undefined;
+		} catch (error) {
+			console.warn("Failed to prepare ICS file upload.", error);
+			return undefined;
+		}
 	};
 
 	async function sendReservationSummaryEmail(
@@ -281,6 +381,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			introText?: string;
 			subjectPrefix?: string;
 			includeAllDayInSubject?: boolean;
+			includeIcsAttachment?: boolean;
 		},
 	): Promise<void> {
 		const summaryGroups = summarizeReservations(reservationsToSummarize);
@@ -298,28 +399,95 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 				? `${subjectPrefix}: All Day`
 				: subjectPrefix;
 
-		const bodyHtml = buildReservationSummaryEmailHtml(
+		const buildSharePointEventUrl = (
+			eventWebLink?: string,
+		): string | undefined => {
+			if (!eventWebLink) {
+				return undefined;
+			}
+
+			try {
+				if (contextSiteUrl) {
+					return new URL(eventWebLink, contextSiteUrl).toString();
+				}
+
+				return new URL(eventWebLink).toString();
+			} catch {
+				return eventWebLink;
+			}
+		};
+
+		const buildReservationIcsFileName = (): string => {
+			const firstReservation = reservationsToSummarize[0];
+			if (!firstReservation) {
+				return "Office Hoteling.ics";
+			}
+
+			const isAllDay = summaryGroups.some(
+				(group) => group.timeLabel === "All Day",
+			);
+
+			const baseTitle = `Office Hoteling: ${firstReservation.location}${firstReservation.desk ? ` (${firstReservation.desk})` : ""}${isAllDay ? " - All Day (8:00 AM - 5:00 PM)" : ""}`;
+			const fileSafeTitle = baseTitle
+				.replace(":", "_")
+				.replace(/[\\/:*?"<>|]/g, "-")
+				.replace(/\s+/g, " ")
+				.trim();
+
+			return `${fileSafeTitle}.ics`;
+		};
+
+		const icsAttachment = options?.includeIcsAttachment
+			? buildReservationSummaryIcsAttachment(
+					summaryGroups,
+					uniqueLocations,
+				)
+			: undefined;
+
+		const downloadCalendarFileName = buildReservationIcsFileName();
+
+		const attachments = icsAttachment
+			? [{ ...icsAttachment, name: downloadCalendarFileName }]
+			: undefined;
+
+		let downloadCalendarUrl = buildSharePointEventUrl(
+			reservationsToSummarize.find(
+				(reservation) => !!reservation.sharePointEventWebLink,
+			)?.sharePointEventWebLink,
+		);
+
+		if (icsAttachment) {
+			const hostedIcsUrl = await uploadIcsToSharePointFileUrl(
+				icsAttachment,
+				downloadCalendarFileName,
+			);
+			if (hostedIcsUrl) {
+				downloadCalendarUrl = hostedIcsUrl;
+			} else {
+				console.warn(
+					"Falling back to Event.aspx URL because hosted ICS upload failed.",
+				);
+			}
+		}
+
+		const bodyWithDownloadButton = buildReservationSummaryEmailHtml(
 			summaryGroups,
 			uniqueLocations,
 			{
 				titleText: options?.titleText,
 				introText: options?.introText,
+				downloadCalendarUrl,
+				downloadCalendarFileName,
 			},
 		);
 
-		await sendEmailViaFunction([recipientEmail], subject, bodyHtml);
+		await sendEmailViaFunction(
+			[recipientEmail],
+			subject,
+			bodyWithDownloadButton,
+			attachments,
+		);
 	}
-
-	const getSharePointClient = (): SPFI => {
-		const contextSiteUrl = props.context?.pageContext?.web?.absoluteUrl;
-		if (!contextSiteUrl) {
-			throw new Error(
-				"SharePoint context is unavailable. Unable to access Events list.",
-			);
-		}
-
-		return spfi().using(spSPFx(props.context as unknown as ISPFXContext));
-	};
 
 	const createSharePointEventForReservation = async (
 		reservation: Reservation,
@@ -358,7 +526,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			fAllDayEvent: false,
 		});
 
-		const webLink = `${window.location.origin}/_layouts/15/Event.aspx?ListGuid=${listGuid}&ItemId=${added.Id}`;
+		const webLink = `${contextSiteUrl}/_layouts/15/Event.aspx?ListGuid=${listGuid}&ItemId=${added.Id}`;
 		return { itemId: added.Id, webLink };
 	};
 
@@ -407,7 +575,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			return "Unknown error";
 		}
 
-		if (typeof error === "object" && error !== null) {
+		if (typeof error === "object") {
 			const e = error as {
 				message?: string;
 				statusCode?: number;
@@ -523,6 +691,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 				task: sendReservationSummaryEmail(
 					reservationsToSummarize,
 					recipientEmail,
+					{ includeIcsAttachment: true },
 				),
 			});
 		}
@@ -598,27 +767,6 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 		};
 
 		deletedReservations.forEach((reservation) => {
-			// Delete from SharePoint HotelingReservations list
-			if (reservation.spListItemId) {
-				try {
-					setTimeout(
-						async () =>
-							await hotelingService.deleteReservation(
-								reservation.spListItemId!,
-							),
-					);
-				} catch (error) {
-					const detail = extractErrorMessage(error);
-					setStatusMessage({
-						type: "error",
-						text: `Failed to delete reservation from SharePoint: ${detail}`,
-					});
-					setPendingDeleteIds(null);
-					return;
-				}
-			}
-
-			// Delete calendar events
 			if (
 				reservation.outlookEventId &&
 				!processedOutlookEventIds.has(reservation.outlookEventId)
@@ -659,6 +807,50 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 				);
 			}
 		});
+
+		// Delete matching SharePoint list items for the deleted reservations (handles morning+afternoon pairs)
+		if (hotelingServiceRef.current) {
+			try {
+				const all =
+					await hotelingServiceRef.current.getAllReservations();
+				const spIdsToDelete = new Set<number>();
+				for (const reservation of deletedReservations) {
+					for (const it of all) {
+						const d = new Date(it.ReservationDate);
+						const yyyy = d.getFullYear();
+						const mm = String(d.getMonth() + 1).padStart(2, "0");
+						const dd = String(d.getDate()).padStart(2, "0");
+						const dateStr = `${yyyy}-${mm}-${dd}`;
+						if (
+							dateStr === reservation.date &&
+							(it.Location ?? "") ===
+								(reservation.location ?? "") &&
+							(it.Desk ?? "") === (reservation.desk ?? "")
+						) {
+							if (it.Id && Number.isFinite(Number(it.Id))) {
+								spIdsToDelete.add(Number(it.Id));
+							}
+						}
+					}
+				}
+				const deletePromises = Array.from(spIdsToDelete).map((id) =>
+					hotelingServiceRef
+						.current!.deleteReservation(id)
+						.catch((e) => {
+							console.warn(
+								`Failed to delete SharePoint reservation ${id}`,
+								e,
+							);
+						}),
+				);
+				await Promise.allSettled(deletePromises);
+			} catch (e) {
+				console.warn(
+					"Failed to delete matching SharePoint reservations.",
+					e,
+				);
+			}
+		}
 
 		const newReservations = reservations.filter(
 			(reservation) => !pendingDeleteIds.includes(reservation.id),
@@ -857,6 +1049,46 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 							: r,
 					);
 					setReservations(newReservations);
+
+					// persist edit to SharePoint if applicable
+					if (
+						hotelingServiceRef.current &&
+						(oldReservation as Reservation).sharePointListItemId
+					) {
+						const spId = Number(
+							(oldReservation as Reservation)
+								.sharePointListItemId,
+						);
+						if (Number.isFinite(spId)) {
+							try {
+								const [y, m, d] = pendingReservation.date
+									.split("-")
+									.map(Number);
+								const reservationDate = new Date(
+									y,
+									m - 1,
+									d,
+									12,
+									0,
+									0,
+								);
+								await hotelingServiceRef.current.updateReservation(
+									spId,
+									{
+										Location: pendingReservation.location,
+										Desk: pendingReservation.desk ?? "",
+										ReservationDate: reservationDate,
+										TimeBlock: pendingReservation.time,
+									},
+								);
+							} catch (e) {
+								console.warn(
+									"Failed to update reservation in SharePoint.",
+									e,
+								);
+							}
+						}
+					}
 				}
 			} else {
 				if (reservations.length >= 3) {
@@ -947,6 +1179,36 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 					`${pendingReservation.date}-${pendingReservation.time.toLowerCase()}`,
 				);
 				setBookedSlots(newBookedSlots);
+				// persist to SharePoint if service available
+				if (hotelingServiceRef.current) {
+					try {
+						const [y, m, d] = reservationToSave.date
+							.split("-")
+							.map(Number);
+						const reservationDate = new Date(y, m - 1, d, 12, 0, 0); // set noon to avoid TZ shift
+						const createdId =
+							await hotelingServiceRef.current.createReservation({
+								Location: reservationToSave.location,
+								Desk: reservationToSave.desk ?? "",
+								ReservationDate: reservationDate,
+								TimeBlock: reservationToSave.time,
+								UserEmail:
+									props.context.pageContext.user.email ?? "",
+							});
+						(
+							reservationToSave as Reservation
+						).sharePointListItemId = createdId;
+						reservationToSave.id = `sp-${createdId}`;
+					} catch (e) {
+						extraFailures.push(
+							`SharePoint save failed: ${String(e)}`,
+						);
+						console.warn(
+							"Failed to create reservation in SharePoint.",
+							e,
+						);
+					}
+				}
 				setReservations([
 					...updatedExistingReservations,
 					reservationToSave,
@@ -1003,33 +1265,6 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			const savedReservations: Reservation[] = [];
 
 			for (const pendingSelection of pendingSelections) {
-				// Save to SharePoint HotelingReservations list
-				console.log("save to list..");
-				try {
-					const [year, month, day] = pendingSelection.date
-						.split("-")
-						.map(Number);
-					const reservationDate = new Date(year, month - 1, day);
-
-					console.log("Calling hotelingService.createReservation...");
-
-					const createdId = await hotelingService.createReservation({
-						Location: pendingSelection.location,
-						Desk: pendingSelection.desk || "Desk 1",
-						ReservationDate: reservationDate,
-						TimeBlock: pendingSelection.time,
-						UserEmail: userEmail,
-					});
-
-					console.log("Created reservation with ID:", createdId);
-					// pendingSelection.spListItemId = createdId;
-				} catch (error) {
-					console.error("save failed:", error);
-					extraFailures.push(
-						`SharePoint reservation failed: ${extractErrorMessage(error)}`,
-					);
-				}
-
 				if (workingReservations.length >= 3) {
 					extraFailures.push(
 						"Reservation limit reached while saving selected time slots.",
@@ -1123,6 +1358,31 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 			}
 
 			setBookedSlots(newBookedSlots);
+			// persist saved reservations to SharePoint where possible
+			if (hotelingServiceRef.current && savedReservations.length > 0) {
+				for (const saved of savedReservations) {
+					try {
+						const [y, m, d] = saved.date.split("-").map(Number);
+						const reservationDate = new Date(y, m - 1, d, 12, 0, 0);
+						const createdId =
+							await hotelingServiceRef.current.createReservation({
+								Location: saved.location,
+								Desk: saved.desk ?? "",
+								ReservationDate: reservationDate,
+								TimeBlock: saved.time,
+								UserEmail:
+									props.context.pageContext.user.email ?? "",
+							});
+						(saved as Reservation).sharePointListItemId = createdId;
+						saved.id = `sp-${createdId}`;
+					} catch (e) {
+						console.warn(
+							"Failed to create reservation in SharePoint.",
+							e,
+						);
+					}
+				}
+			}
 			setReservations(workingReservations);
 
 			const followUpFailures =
@@ -1226,7 +1486,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 	);
 
 	return (
-		<section className="border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] p-6 shadow-sm">
+		<section className="border border-[--webpart-border-color] bg-[--webpart-bg-color] p-6 shadow-sm">
 			<h2 className="mb-4 text-xl font-semibold text-slate-800">
 				Hoteling
 			</h2>

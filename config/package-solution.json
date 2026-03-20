@@ -11,6 +11,10 @@
 			{
 				"resource": "c852c7d6-8c34-4b51-a368-92be5f2ac96a",
 				"scope": "access_as_entra_user"
+			},
+			{
+				"resource": "Microsoft Graph",
+				"scope": "Calendars.ReadWrite"
 			}
 		],
 		"developer": {

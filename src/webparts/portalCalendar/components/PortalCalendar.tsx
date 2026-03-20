@@ -1,18 +1,7 @@
 import * as React from "react";
 import type { IPortalCalendarProps } from "./IPortalCalendarProps";
-import { buildMonthMatrix, CalendarItem } from "@utils/calendar";
-import { useCalendarData } from "@api/calendar";
-import { Collapsible } from "@components/Collapsible";
-import {
-	PortalCalendarTooltip,
-	PortalCalendarTooltipShowOptions,
-	tooltipEnter,
-	tooltipLeave,
-} from "@components/calendar/PortalCalendarTooltip";
-import { PortalCalendarHeader } from "@components/calendar/PortalCalendarHeader";
-import { PortalCalendarCell } from "@components/calendar/PortalCalendarCell";
-
-const daysStr = "Sun Mon Tue Wed Thu Fri Sat";
+import { useCalendarData } from "@components/calendar/useCalendarData";
+import { buildMonthMatrix, sameDay, formatMonthYear } from "@utils/calendar";
 
 export default function PortalCalendar(
 	props: IPortalCalendarProps,
@@ -20,6 +9,7 @@ export default function PortalCalendar(
 	const sites = ["/sites/PD-Intranet", "/sites/Tech-Team", "/sites/HR"]; // or from props
 	const { items, loading, load } = useCalendarData(props.context, sites);
 
+	const today = React.useMemo(() => new Date(), []);
 	const [cursor, setCursor] = React.useState(() => {
 		const d = new Date();
 		d.setDate(1);
@@ -33,99 +23,263 @@ export default function PortalCalendar(
 		}
 	}, []); // load as dep causes infinite re-runs. just load onmount, since: //todo: scope useCalendarData within ±1 month (currently loading ALL calendar data ever) —— then reloads become necessary
 
-	const refreshCalendar = (): void => {
-		load({ includeOutlook: true }).catch((error) => {
-			console.warn("Failed to refresh calendar.", error);
-		});
-	};
-
 	const weeks = React.useMemo(
 		() => buildMonthMatrix(cursor.getFullYear(), cursor.getMonth()),
 		[cursor],
 	);
 
-	const [tooltipShowOptions, setTooltipShowOptions] = React.useState(
-		undefined as PortalCalendarTooltipShowOptions | undefined,
-	);
+	const gotoPrev: () => void = () => {
+		const d = new Date(cursor);
+		d.setMonth(cursor.getMonth() - 1);
+		setCursor(d);
+	};
+	const gotoNext: () => void = () => {
+		const d = new Date(cursor);
+		d.setMonth(cursor.getMonth() + 1);
+		setCursor(d);
+	};
+	const refreshCalendar = (): void => {
+		load({ includeOutlook: true }).catch((error) => {
+			console.warn("Failed to refresh calendar.", error);
+		});
+	};
+	const inThisMonth: (d: Date) => boolean = (d: Date) =>
+		d.getMonth() === cursor.getMonth();
+	const [tooltip, setTooltip] = React.useState<{
+		x: number;
+		y: number;
+		title: string;
+		timeLabel?: string;
+		location?: string;
+		meta?: string;
+	} | null>(null);
 
-	const $rel = React.useRef(null as HTMLDivElement | null);
+	// group items by yyyy-mm-dd
+	const byKey = React.useMemo(() => {
+		const map = new Map<string, typeof items>();
+		for (const it of items) {
+			const key = `${it.when.getFullYear()}-${it.when.getMonth()}-${it.when.getDate()}`;
+			if (!map.has(key)) map.set(key, []);
+			map.get(key)!.push(it);
+		}
+		return map;
+	}, [items]);
+
+	const dayKey: (d: Date) => string = (d: Date) =>
+		`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+
+	const showTooltip = (
+		e: React.MouseEvent<HTMLLIElement>,
+		item: (typeof items)[number],
+	): void => {
+		setTooltip({
+			x: e.clientX + 12,
+			y: e.clientY + 12,
+			title: item.title,
+			timeLabel: item.timeLabel,
+			location: item.location,
+			meta: item.meta,
+		});
+	};
 
 	return (
-		<div className="-h-full relative w-full" ref={$rel}>
-			<PortalCalendarTooltip
-				showOptions={tooltipShowOptions}
-				setTooltipShowOptions={setTooltipShowOptions}
-			/>
-			<Collapsible
-				instanceId={props.context.instanceId}
-				hideChevron={true}
-				headerClickable={false}
-				headerClassName="bg-white border-b border-slate-300"
-				title={
-					<PortalCalendarHeader
-						cursor={cursor}
-						setCursor={setCursor}
-						loading={loading}
-						refreshCalendar={refreshCalendar}
-					/>
-				}
-			>
-				<div className="w-full overflow-x-auto p-2">
-					<table className="w-full table-fixed border-collapse border border-slate-300">
-						<thead>
-							<tr>
-								{daysStr.split(" ").map((d) => (
-									<th
-										key={d}
-										className="border border-slate-300 bg-slate-100 px-2 py-1 text-center text-slate-700"
-									>
-										<div className="text-xs font-semibold tracking-wide uppercase">
-											{d}
-										</div>
-									</th>
-								))}
-							</tr>
-						</thead>
-						<tbody>
-							{weeks.map((row, i) => (
-								<tr key={i} className="align-top">
-									{row.map((d, j) => (
-										<PortalCalendarCell
-											key={j}
-											cursor={cursor}
-											items={items}
-											date={d}
-											onMouseEnterItem={(
-												item: CalendarItem,
-											) =>
-												tooltipEnter(
-													setTooltipShowOptions,
-													item,
-													$rel,
-												)
-											}
-											onMouseLeaveItem={(
-												item: CalendarItem,
-											) =>
-												tooltipLeave(
-													setTooltipShowOptions,
-													item,
-												)
-											}
-										/>
-									))}
-								</tr>
-							))}
-						</tbody>
-					</table>
-
-					{loading && (
-						<div className="p-2 text-xs text-slate-500">
-							Loading…
-						</div>
-					)}
+		<section className="rounded-xl border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm">
+			<header className="flex items-center justify-between rounded-t-xl border-b border-slate-300 bg-[var(--webpart-header-bg-color)] px-4 py-3">
+				<h4 className="text-base font-semibold text-slate-800">
+					Calendar / Events / Trainings
+				</h4>
+				<div className="flex items-center gap-2">
+					<button
+						onClick={refreshCalendar}
+						disabled={loading}
+						className="rounded-md border border-slate-300 bg-[#c9cbcc] px-2 py-1 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						Refresh
+					</button>
+					<button
+						onClick={gotoPrev}
+						className="rounded-md border border-slate-300 bg-[#c9cbcc] px-2 py-1 text-sm"
+					>
+						&larr;
+					</button>
+					<span className="text-sm text-slate-700">
+						{formatMonthYear(cursor)}
+					</span>
+					<button
+						onClick={gotoNext}
+						className="rounded-md border border-slate-300 bg-[#c9cbcc] px-2 py-1 text-sm"
+					>
+						&rarr;
+					</button>
 				</div>
-			</Collapsible>
-		</div>
+			</header>
+
+			<div className="relative w-full p-1">
+				<table className="w-full table-fixed border-collapse">
+					<thead>
+						<tr>
+							{[
+								"Sun",
+								"Mon",
+								"Tue",
+								"Wed",
+								"Thu",
+								"Fri",
+								"Sat",
+							].map((d) => (
+								<th
+									key={d}
+									className="px-2 py-1 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase"
+								>
+									{d}
+								</th>
+							))}
+						</tr>
+					</thead>
+					<tbody>
+						{weeks.map((row: Date[], i: number) => (
+							<tr key={i} className="align-top">
+								{row.map((d: Date, j: number) => {
+									const k = dayKey(d);
+									const dayItems = byKey.get(k) || [];
+									return (
+										<td
+											key={j}
+											className={`min-h-10 border border-[var(--webpart-inner-border-color)] p-1 align-top ${inThisMonth(d) ? "" : "bg-slate-50"}`}
+											width="14%"
+										>
+											<div className="text-right text-xs text-slate-500">
+												{d.getDate()}
+												{sameDay(d, today) && (
+													<span className="ml-2 inline-flex items-center rounded bg-blue-100 px-1 text-[10px] text-blue-800">
+														today
+													</span>
+												)}
+											</div>
+
+											<ul className="mt-1 max-h-28 space-y-1 overflow-y-auto pr-1">
+												{dayItems.length === 0
+													? null
+													: dayItems.map((item) => (
+															<li
+																key={item.id}
+																onMouseEnter={(
+																	e,
+																) =>
+																	showTooltip(
+																		e,
+																		item,
+																	)
+																}
+																onMouseMove={(
+																	e,
+																) =>
+																	showTooltip(
+																		e,
+																		item,
+																	)
+																}
+																onMouseLeave={() =>
+																	setTooltip(
+																		null,
+																	)
+																}
+																className={`overflow-hidden rounded px-1 py-0.5 text-xs text-ellipsis whitespace-nowrap ${
+																	item.kind ===
+																	"event"
+																		? "bg-blue-50 text-blue-800"
+																		: "bg-amber-50 text-amber-900"
+																}`}
+															>
+																<span className="font-medium">
+																	{item.timeLabel ||
+																		"—"}
+																</span>{" "}
+																{item.href ? (
+																	<a
+																		className="hover:underline"
+																		href={
+																			item.href
+																		}
+																		target={
+																			item.href.includes(
+																				"#hoteling",
+																			)
+																				? "_self"
+																				: "_blank"
+																		}
+																		rel="noopener noreferrer"
+																	>
+																		{
+																			item.title
+																		}
+																	</a>
+																) : (
+																	<span>
+																		{
+																			item.title
+																		}
+																	</span>
+																)}
+																{item.location && (
+																	<span className="text-slate-500">
+																		{" "}
+																		—{" "}
+																		{
+																			item.location
+																		}
+																	</span>
+																)}
+																{item.meta && (
+																	<span className="ml-1 text-slate-500">
+																		(
+																		{
+																			item.meta
+																		}
+																		)
+																	</span>
+																)}
+															</li>
+														))}
+											</ul>
+										</td>
+									);
+								})}
+							</tr>
+						))}
+					</tbody>
+				</table>
+
+				{tooltip && (
+					<div
+						className="fixed z-50 w-64 rounded-md border border-slate-300 bg-white p-3 shadow-lg"
+						style={{ left: tooltip.x, top: tooltip.y }}
+					>
+						<p className="text-sm font-semibold text-slate-800">
+							{tooltip.title}
+						</p>
+						{tooltip.timeLabel && (
+							<p className="mt-1 text-xs text-slate-600">
+								Time: {tooltip.timeLabel}
+							</p>
+						)}
+						{tooltip.location && (
+							<p className="text-xs text-slate-600">
+								Location: {tooltip.location}
+							</p>
+						)}
+						{tooltip.meta && (
+							<p className="text-xs text-slate-500">
+								{tooltip.meta}
+							</p>
+						)}
+					</div>
+				)}
+
+				{loading && (
+					<div className="p-2 text-xs text-slate-500">Loading…</div>
+				)}
+			</div>
+		</section>
 	);
 }
