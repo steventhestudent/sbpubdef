@@ -5,9 +5,6 @@ import { WelcomeSearch } from "./WelcomeSearch";
 import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
 
-import { PD } from "@api/config";
-import { OfficeHoteling } from "@components/officehoteling/OfficeHoteling";
-
 // a wrapper to pass other things we want from props (userDisplayName)
 function PDIntranetViewWrapper(
 	userDisplayName: string,
@@ -23,32 +20,28 @@ function PDIntranetViewWrapper(
 	}: RoleBasedViewProps): JSX.Element {
 		return (
 			<section>
-				<div className="rounded-xl border border-[var(--webpart-border-color)] p-6 shadow-sm bg-[#f9f9f9]">
-					<h2 className="text-center text-xl font-semibold text-slate-800">
+				<div className="rounded-xl border border-[var(--webpart-border-color)] bg-[#f9f9f9] p-6 shadow-sm">
+					<h2 className="xs:text-sm text-center text-xs font-semibold text-slate-800 md:text-lg lg:text-xl">
 						Welcome to the Public Defender Resource Center,&nbsp;
-						<span className="relative group">
-							<span className="underline cursor-pointer text-nowrap">
+						<span className="group relative">
+							<span className="cursor-pointer text-nowrap underline">
 								{escape(userDisplayName)}
 							</span>
-							<span className="absolute bottom-[-0.44em] right-[-0.4em] text-gray-500 text-sm">
+							<span className="absolute right-[-0.4em] bottom-[-0.44em] text-sm text-gray-500">
 								⌄
 							</span>
-							<div
-								className="w-[14em] border-1 border-[#b6b6b6] rounded-b box-border absolute left-[calc(50%-7.666em)] top-[2.05em] bg-slate-200 text-xs overflow-hidden max-h-[50px] ml-[1em] text-left opacity-0
-							invisible transition-opacity duration-333 ease-in-out
-							group-hover:visible group-hover:opacity-100"
-							>
+							<div className="invisible absolute top-[2.05em] left-[calc(50%-7.666em)] ml-[1em] box-border max-h-[50px] w-[14em] overflow-hidden rounded-b border-1 border-[#b6b6b6] bg-slate-200 text-left text-xs opacity-0 transition-opacity duration-333 ease-in-out group-hover:visible group-hover:opacity-100">
 								<div
-									className="cursor-pointer absolute float-left w-[48px] h-[48px] bg-slate-300 border-1 border-l-0 border-t-0 border-[#b6b6b6] text-center relative"
+									className="absolute relative float-left h-[48px] w-[48px] cursor-pointer border-1 border-t-0 border-l-0 border-[#b6b6b6] bg-slate-300 text-center"
 									title="User Avatar"
 								>
-									<div className="opacity-50 absolute top-[50%] left-[50%] ml-[-0.4em] mt-[-0.6333em]">
+									<div className="absolute top-[50%] left-[50%] mt-[-0.6333em] ml-[-0.4em] opacity-50">
 										⧅
 									</div>
 								</div>
 								<ol
 									title="Entra ID Security Groups (Group Memberships):"
-									className="p-0.5 absolute left-[48px] w-[calc(100%-48px)] overflow-auto max-h-full scrollbar-thin"
+									className="scrollbar-thin absolute left-[48px] max-h-full w-[calc(100%-48px)] overflow-auto p-0.5"
 								>
 									Groups ({userGroupNames.length}):
 									{
@@ -62,34 +55,30 @@ function PDIntranetViewWrapper(
 										) ? (
 											<span
 												title="View Page As"
-												className="text-xl cursor-pointer absolute top-[-0.2em] right-[0em] text-gray-500 hover:text-black"
+												className="absolute top-[-0.2em] right-[0em] cursor-pointer text-xl text-gray-500 hover:text-black"
 												onClick={() => {
 													const res = parseInt(
 														prompt(
-															`View Page As:\n${Object.keys(
-																PD.role,
-															)
-																.map(
-																	($0, i) =>
-																		`\t${i + 1}. ${$0}`,
-																)
-																.join("\n")}`,
+															`View Page As:\n${ENV.ROLE_KEYS.map(
+																(rk, i) =>
+																	`\t${i + 1}. ${ENV[rk]}`,
+															).join("\n")}`,
 														) || "",
 													);
 													if (isNaN(res)) return;
 													if (
 														res === 0 ||
 														res >
-															Object.keys(PD.role)
-																.length
+															ENV.ROLE_KEYS.length
 													)
 														return;
-													alert(
-														"redirect adding hash: " +
-															Object.keys(
-																PD.role,
-															)[res - 1],
-													);
+													location.hash = `View-As-${
+														ENV[
+															ENV.ROLE_KEYS[
+																res - 1
+															]
+														]
+													}`;
 												}}
 											>
 												⏿
@@ -98,7 +87,7 @@ function PDIntranetViewWrapper(
 									}
 									{userGroupNames.map((userGroupName) => (
 										<li
-											className="list-decimal ml-3"
+											className="ml-3 list-decimal"
 											key={userGroupName}
 										>
 											{userGroupName}
@@ -106,7 +95,7 @@ function PDIntranetViewWrapper(
 									))}
 								</ol>
 								<div
-									className="absolute bottom-0 right-0 cursor-pointer text-xl opacity-75 hover:opacity-100 text-right"
+									className="absolute right-0 bottom-0 cursor-pointer text-right text-xl opacity-75 hover:opacity-100"
 									title="User Settings"
 								>
 									⚙️
@@ -114,12 +103,11 @@ function PDIntranetViewWrapper(
 							</div>
 						</span>
 					</h2>
-					<p className="text-center mt-1 text-sm text-slate-600">
+					<p className="mt-1 text-center text-sm text-slate-600">
 						Find forms, manuals, events, and more.
 					</p>
 					<div className="mt-4 mb-1">
 						<WelcomeSearch />
-						<OfficeHoteling />
 					</div>
 				</div>
 			</section>
@@ -132,6 +120,7 @@ export function WelcomeMessage(props: IWelcomeMessageProps): JSX.Element {
 		<PDRoleBasedSelect
 			alwaysHideSelect={true}
 			ctx={props.context}
+			preventRoleForcing={true}
 			views={{
 				Everyone: PDIntranetViewWrapper(props.userDisplayName),
 				PDIntranet: PDIntranetViewWrapper(props.userDisplayName),

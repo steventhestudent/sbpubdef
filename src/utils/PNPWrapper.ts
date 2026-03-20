@@ -36,13 +36,17 @@ export class PNPWrapper {
 		this._spfi = spfi().using(SPFx(ctx));
 		this._spfi_use_cache = spfi()
 			.using(SPFx(ctx))
-			.using(Caching({ store: "session" }));
+			.using(
+				Caching({
+					keyFactory: (url) => `wp:${ctx.instanceId}:${url}`,
+					// expireFunc: (url) => dateAdd(new Date(), "minute", 1),
+				}),
+			); // .using(Caching({ store: "session" })); //CachingPessimisticRefresh = if cache exists → return cached value immediately, start async request → update cache
 		this.cacheSetting = opts?.cache ?? DEFAULT_CACHE;
-		this.hubSiteId =
-			opts?.hubSiteId || "d074d04a-ee38-4373-a580-326ed5580edb"; // default hub PD-Intranet
+		this.hubSiteId = opts?.hubSiteId || ENV.HUB_SITEID; // default hub PD-Intranet
 		this.siteUrls = opts?.siteUrls ?? [];
 		if (this.siteUrls.length === 0)
-			this.siteUrls.push("/sites/PD-Intranet");
+			this.siteUrls.push("/sites/" + ENV.HUB_NAME);
 		Logger.activeLogLevel = LogLevel.Info;
 
 		// const site = ctx.pageContext.site.serverRelativeUrl || "/";
@@ -103,7 +107,7 @@ export class PNPWrapper {
 		}
 	}
 
-	private shouldUseCache(): boolean {
+	public shouldUseCache(): boolean {
 		if (this.cacheSetting === "true") return !this.initialCachedRequestFlag;
 		return this.cacheSetting;
 	}
@@ -117,8 +121,32 @@ export class PNPWrapper {
 	get sp(): SPFI {
 		const shouldUseCache = this.shouldUseCache();
 		if (!this.initialCachedRequestFlag && shouldUseCache)
-			this.initialCachedRequestFlag = true; // don't use cache on subsequent requests (on this.pnpWrapper)
-		console.log(`shoulduse cache: ${shouldUseCache}`);
+			setTimeout(() => (this.initialCachedRequestFlag = true)); // don't use cache on subsequent requests (on this.pnpWrapper) (settimeout to wait for other components to finish their cached requests)
+		console.debug(
+			`shoulduse cache: ${shouldUseCache}, ${this.initialCachedRequestFlag}`,
+		);
 		return shouldUseCache ? this.spfi_use_cache : this.spfi;
+	}
+
+	loadCachedThenFresh(fn: () => Promise<void>): void {
+		setTimeout(async () => {
+			const foundWebpartCache = Object.keys(localStorage).filter((k) =>
+				k.startsWith(`wp:${this.ctx.instanceId}`),
+			);
+			const t0 = new Date();
+			await fn(); // 1st load: cached
+			if (!foundWebpartCache.length) {
+				console.debug(
+					`loadCachedThenRefresh part 1/1: ${new Date().getTime() - t0.getTime()} ms (non-cached req.)`,
+				);
+				return;
+			}
+			foundWebpartCache.forEach((k) => localStorage.removeItem(k)); // ensure fresh     cacheVal: "true" (STRING *NOT* bool means: fresh for subsequent requests)
+			const t1 = new Date();
+			await fn(); // 2nd load: fresh results
+			console.debug(
+				`loadCachedThenRefresh part 1/2: ${t1.getTime() - t0.getTime()} ms (cached), part 2/2 ${new Date().getTime() - t1.getTime()} ms (non-cached req.)`,
+			);
+		});
 	}
 }

@@ -6,7 +6,7 @@ import { Collapsible } from "@components/Collapsible";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { StaffDirectoryApi } from "@api/staffDirectory";
 import type { PDStaffDirectoryItem } from "@type/PDStaffDirectory";
-import * as Utils from "@utils";
+import ClearableInput from "@components/ClearableInput";
 
 type StaffDirectoryComponentItem = PDStaffDirectoryItem;
 
@@ -38,7 +38,7 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 	};
 
 	React.useEffect(() => {
-		Utils.loadCachedThenFresh(load);
+		pnpWrapper.loadCachedThenFresh(load);
 	}, []);
 
 	/*
@@ -83,21 +83,24 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 					>
 						Search staff
 					</label>
-					<input
-						id="staff-search"
-						type="search"
-						placeholder="Search any field…"
-						value={searchTerm}
+					<ClearableInput
+						placeholder="Search any field..."
 						onChange={handleSearchChange}
-						className="mt-1 w-full rounded-md border border-slate-500 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 text-[var(--pd-muted)]"
 					/>
 				</form>
+
+				{/* status text */}
+				<p className="mt-2 text-xs text-slate-500">
+					{staff.length < 2
+						? "Loading directory…"
+						: `Showing ${filteredStaff.length} of ${staff.length} matches.`}
+				</p>
 
 				{/* Staff List */}
 				<div className="mt-2 max-h-[300px] overflow-y-auto rounded-md border border-slate-400">
 					<ul className="divide-y divide-slate-300">
 						{filteredStaff.length === 0 ? (
-							<li className="py-3 text-sm text-slate-600 text-center">
+							<li className="py-3 text-center text-sm text-slate-600">
 								No matching staff found.
 							</li>
 						) : (

@@ -39,6 +39,7 @@ export type CollapsibleProps = {
 	className?: string;
 	contentClassName?: string;
 	headerClassName?: string;
+	hideChevron?: boolean;
 };
 
 export const Collapsible: React.FC<CollapsibleProps> = ({
@@ -51,6 +52,7 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 	className = "",
 	contentClassName = "",
 	headerClassName = "",
+	hideChevron = false,
 }) => {
 	const key = React.useMemo(
 		() => storageKey(instanceId, { pageKey }),
@@ -93,13 +95,13 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 	}, [key]);
 
 	// Accessible chevron button
-	const Chevron = (
+	const Chevron = hideChevron ? undefined : (
 		<button
 			type="button"
 			aria-expanded={!collapsed}
 			aria-controls={`${instanceId}-content`}
 			onClick={toggle}
-			className="bg-[#c9cbcc] hover:bg-slate-400 active:bg-slate-600 inline-flex items-center justify-center h-8 w-8 rounded-lg transition-transform focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0078D4]"
+			className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#c9cbcc] transition-transform hover:bg-slate-400 focus:ring-2 focus:ring-[#0078D4] focus:ring-offset-2 focus:outline-none active:bg-slate-600"
 			title={collapsed ? "Expand" : "Collapse"}
 		>
 			{/* simple caret using border trick for crispness */}
@@ -122,26 +124,28 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 
 	return (
 		<section
-			className={`rounded-xl border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm ${className}`}
+			className={`h-full w-full rounded-xl border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm ${className}`}
 		>
 			<header
-				className={`bg-[var(--webpart-header-bg-color)] rounded-t-xl border-b border-slate-800 px-3 py-2 flex items-center justify-between select-none ${headerClassName}`}
+				className={`flex items-center justify-between rounded-t-xl border-b border-slate-800 bg-[var(--webpart-header-bg-color)] px-3 py-2 select-none ${headerClassName}`}
 			>
-				<div className="flex items-center gap-2">
+				<div className="flex w-full items-center gap-2">
 					{headerClickable ? (
 						<button
 							type="button"
 							onClick={toggle}
 							aria-expanded={!collapsed}
 							aria-controls={`${instanceId}-content`}
-							className="text-left font-medium text-gray-800 hover:opacity-80 focus:outline-none"
+							className="w-full text-left font-medium text-gray-800 hover:opacity-80 focus:outline-none"
 						>
 							<h4 className="text-base font-semibold text-slate-800">
 								{title}
 							</h4>
 						</button>
 					) : (
-						<div className="font-medium text-gray-800">{title}</div>
+						<div className="w-full font-medium text-gray-800">
+							{title}
+						</div>
 					)}
 				</div>
 				{Chevron}
@@ -150,7 +154,7 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 			{/* Content with smooth height transition */}
 			<div
 				id={`${instanceId}-content`}
-				className={`transition-[grid-template-rows] duration-300 ease-in-out overflow-hidden ${contentClassName}`}
+				className={`overflow-hidden transition-[grid-template-rows] duration-300 ease-in-out ${contentClassName}`}
 				style={{
 					display: "grid",
 					gridTemplateRows: collapsed ? "0fr" : "1fr",
@@ -158,7 +162,9 @@ export const Collapsible: React.FC<CollapsibleProps> = ({
 				aria-hidden={collapsed}
 			>
 				{/* inner wrapper participates in the CSS grid height animation */}
-				<div className="min-h-0">{hydrated ? children : null}</div>
+				<div className="min-h-0 w-full">
+					{hydrated ? children : null}
+				</div>
 			</div>
 		</section>
 	);

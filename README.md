@@ -7,6 +7,7 @@
 -   [sbpubdef todo.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/sbpubdef%20todo.md)
 -   [flow — Add Embed Page (List Item) - New Page-Embed.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/flow%20%E2%80%94%20Add%20Embed%20Page%20(List%20item)%20-%20New%20Page-Embed.md)
 -   [new webpart.md](docs/new%20webpart.md)
+-   [new azure function.md](docs/azure%20functions/new%20azure%20function.md)
     &nbsp;
 
 ## Install
@@ -16,16 +17,20 @@
     -   `pnpm env use --global lts`
 
 1. `git clone https://github.com/steventhestudent/sbpubdef.git`
-2. `cd sbpudef`
+2. `cd sbpubdef`
 3. `pnpm install`
 4. `pnpm npx gulp trust-dev-cert`
-5. **optionally:** scraped forms / resource folder (private repo, so that this one can stay public): `git clone git@github.com:steventhestudent/sbpubdef-resources.git resource` ask for an invite
+5. `git config --local user.name ""  &&  git config --local user.email "@calstatela.edu"`
+6. **optionally:** scraped forms / resource folder (private repo, so that this one can stay public): `git clone git@github.com:steventhestudent/sbpubdef-resources.git resource` ask for an invite
 
 #### now, hot reload + tailwind (gulp) server works:
 
 **webpart workbench:** ```pnpm run dev```
 
 **other gulp serve commands:** ```pnpm theme``` ~~```pnpm npx fast-serve --config=themeInjector```~~ ~~`pnpm npx gulp serve` (webparts) or ```gulp serve --config landingRedirectExt``` etc.~~
+
+you may have to manually visit https://localhost:4321/temp/build/manifests.js to trust the certificate
+
 
 &nbsp;
 
@@ -53,6 +58,9 @@ see [README](https://github.com/steventhestudent/sbpubdef-legacy.git) (sbpubdef-
 **Note:** you will have to change Package.json scripts to use npm-style (i.e.: drop the '```pnpm npx```')
 
 then ```npm run dev``` works.
+
+# Ask for environment file (config/.env.dev) —currently only `scripts/py/sharepoint_upload_to_doc_lib.py` depends on it
+
 &nbsp;
 
 &nbsp;

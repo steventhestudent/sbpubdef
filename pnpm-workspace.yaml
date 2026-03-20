@@ -1,11 +1,13 @@
 onlyBuiltDependencies:
   - '@parcel/watcher'
+  - '@pnp/spfx-property-controls'
   - '@tailwindcss/oxide'
   - core-js
   - core-js-pure
   - es5-ext
   - fsevents
   - spawn-sync
+  - swiper
   - yo
 
 shamefullyHoist: true
