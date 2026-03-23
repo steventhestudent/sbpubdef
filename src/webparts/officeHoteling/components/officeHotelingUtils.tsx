@@ -379,7 +379,7 @@ export const buildReservationSummaryEmailHtml = (
 					<a href="${googleLink}" style="display: inline-block; background: #0f766e; color: #fff; text-decoration: none; padding: 10px 14px; border-radius: 8px; font-weight: 600;">Add to Google Calendar</a>
 					${
 						downloadCalendarUrl
-							? `<a href="${downloadCalendarUrl}"${downloadCalendarFileName ? ` download="${downloadCalendarFileName}"` : ""} style="display: inline-block; background: #475569; color: #fff; text-decoration: none; padding: 10px 14px; border-radius: 8px; font-weight: 600;">Download Calendar</a>`
+							? `<a href="${downloadCalendarUrl}"${downloadCalendarFileName ? ` download="${downloadCalendarFileName}"` : ""} style="display: inline-block; background: #475569; color: #fff; text-decoration: none; padding: 10px 14px; border-radius: 8px; font-weight: 600;">Download ICS File</a>`
 							: ""
 					}
 				</div>
