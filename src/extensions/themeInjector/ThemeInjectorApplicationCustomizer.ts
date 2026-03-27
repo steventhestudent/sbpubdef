@@ -15,7 +15,7 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 	public async onInit(): Promise<void> {
 		Log.info(
 			"ThemeInjectorApplicationCustomizer",
-			`Initialized ${strings.Title}`
+			`Initialized ${strings.Title}`,
 		);
 		this.context.application.navigatedEvent.add(this, this.onNavigate);
 		console.log(`themeInjector.properties:`, this.properties);
@@ -30,7 +30,7 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 
 		(function () {
 			const headerTitleAnchor = document.querySelector(
-				"#SiteHeaderTitle a"
+				"#SiteHeaderTitle a",
 			) as HTMLAnchorElement;
 			const isOnSiteHome =
 				location.href.startsWith(headerTitleAnchor?.href) &&
@@ -39,6 +39,26 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 				headerTitleAnchor.style.color = isOnSiteHome
 					? "#f5ffb1"
 					: "white";
+		})();
+
+		(function navItemsColor() {
+			const containers = document.querySelectorAll(
+				".ms-HorizontalNavItems",
+			);
+			const container = containers[containers.length - 1];
+			Array.from(container.querySelectorAll("a span")).forEach(
+				(el: HTMLSpanElement, i) => {
+					el.classList.remove("is-selected"); //todo: if matches PDRoleBasedSelect.roleViewPriority
+					el.onclick = () => {
+						Array.from(
+							container.querySelectorAll("a span"),
+						).forEach((el: HTMLSpanElement, i) =>
+							el.classList.remove("is-selected"),
+						);
+						el.classList.add("is-selected");
+					};
+				},
+			);
 		})();
 	}
 }

@@ -21,7 +21,8 @@ function CollapsibleWrapper(
 		sourceRole,
 	}: RoleBasedViewProps): JSX.Element {
 		const collapsibleTitles: { [key: string]: string } = {
-			IT: "LOPS - Legal Office Procedural System",
+			IT: "IT",
+			ComplianceOfficer: "Compliance Officer",
 			LOP: "LOPS - Legal Office Procedural System",
 			TrialSupervisor: "Attorney Workload",
 			CDD: "CDD",
@@ -72,6 +73,7 @@ export function PortalResources(props: IPortalResourcesProps): JSX.Element {
 				Attorney: CollapsibleWrapper(props.context),
 				LOP: CollapsibleWrapper(props.context),
 				HR: CollapsibleWrapper(props.context),
+				ComplianceOfficer: CollapsibleWrapper(props.context),
 				IT: CollapsibleWrapper(props.context),
 				CDD: CollapsibleWrapper(props.context),
 				TrialSupervisor: CollapsibleWrapper(props.context),
