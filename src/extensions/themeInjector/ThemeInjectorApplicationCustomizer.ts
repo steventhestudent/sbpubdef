@@ -26,7 +26,10 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 	}
 
 	private onNavigate(): void {
-		DismissibleAnnouncementStrip();
+	console.log('🔵 ThemeInjector onNavigate() called');
+	DismissibleAnnouncementStrip(this.context).catch(error => {
+			console.error("Failed to load banner:", error);
+		});
 
 		(function () {
 			const headerTitleAnchor = document.querySelector(
