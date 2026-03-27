@@ -59,24 +59,37 @@ function PDIntranetViewWrapper(
 												onClick={() => {
 													const res = parseInt(
 														prompt(
-															`View Page As:\n${ENV.ROLE_KEYS.map(
-																(rk, i) =>
-																	`\t${i + 1}. ${ENV[rk]}`,
-															).join("\n")}`,
+															`View Page As:\n${ENV.ROLESELECT_ORDER.split(
+																" ",
+															)
+																.map(
+																	(rk, i) =>
+																		`\t${i + 1}. ${(ENV as unknown as { [key: string]: string })["ROLE_" + rk]}`,
+																)
+																.join("\n")}`,
 														) || "",
 													);
 													if (isNaN(res)) return;
 													if (
 														res === 0 ||
 														res >
-															ENV.ROLE_KEYS.length
+															ENV.ROLESELECT_ORDER.split(
+																" ",
+															).length
 													)
 														return;
 													location.hash = `View-As-${
-														ENV[
-															ENV.ROLE_KEYS[
-																res - 1
-															]
+														(
+															ENV as unknown as {
+																[
+																	key: string
+																]: string;
+															}
+														)[
+															"ROLE_" +
+																ENV.ROLESELECT_ORDER.split(
+																	" ",
+																)[res - 1]
 														]
 													}`;
 												}}
@@ -127,6 +140,7 @@ export function WelcomeMessage(props: IWelcomeMessageProps): JSX.Element {
 				Attorney: PDIntranetViewWrapper(props.userDisplayName),
 				LOP: PDIntranetViewWrapper(props.userDisplayName),
 				HR: PDIntranetViewWrapper(props.userDisplayName),
+				ComplianceOfficer: PDIntranetViewWrapper(props.userDisplayName),
 				IT: PDIntranetViewWrapper(props.userDisplayName),
 				CDD: PDIntranetViewWrapper(props.userDisplayName),
 				TrialSupervisor: PDIntranetViewWrapper(props.userDisplayName),

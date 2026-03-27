@@ -45,29 +45,33 @@ export function PDRoleBasedSelect({
 
 	const hasRole: (role: RoleKey) => boolean = (role: RoleKey) => {
 		const matchDict: { [key: RoleKey]: boolean } = {
-			Everyone: true,
-			Attorney: userGroups.some((x) => x.includes("attorney")),
+			EVERYONE: true,
+			ATTORNEY: userGroups.some((x) => x.includes("attorney")),
 			CDD: userGroups.some((x) => x.includes("cdd")),
 			LOP: userGroups.some((x) => x.includes("lop")),
-			TrialSupervisor: userGroups.some((x) =>
+			TRIALSUPERVISOR: userGroups.some((x) =>
 				x.includes("trialsupervisor"),
 			),
 			HR: userGroups.some((x) => x.includes("hr")),
+			COMPLIANCEOFFICER: userGroups.some((x) =>
+				x.includes("complianceofficer"),
+			),
 			IT: userGroups.some(
 				(x) =>
 					x.includes("it") ||
 					x.includes("administrator") ||
 					x.includes("csla dev project"),
 			),
-			PDIntranet: userGroups.some((x) => x.includes("PD-Intranet")),
+			PDINTRANET: userGroups.some((x) => x.includes("pdintranet")),
 		};
 		matchDict.PDIntranet =
-			matchDict.PDIntranet ||
-			matchDict.Attorney ||
+			matchDict.PDINTRANET ||
+			matchDict.ATTORNEY ||
 			matchDict.CDD ||
 			matchDict.LOP ||
-			matchDict.TrialSupervisor ||
+			matchDict.TRIALSUPERVISOR ||
 			matchDict.HR ||
+			matchDict.COMPLIANCEOFFICER ||
 			matchDict.IT;
 		return matchDict[role];
 	};
@@ -78,42 +82,48 @@ export function PDRoleBasedSelect({
 
 	/* duplicate of hasRole... for some reason can't reuse hasRole in roleViewPriority (is it linked to the react component? (since it's used in <option disabled={...}>???)) */
 	function _hasRole(roles: RoleKey[], role: RoleKey): boolean {
+		console.log(roles);
 		const matchDict: { [key: RoleKey]: boolean } = {
-			Everyone: true,
-			Attorney: userGroups.some((x) => x.includes("attorney")),
+			EVERYONE: true,
+			ATTORNEY: userGroups.some((x) => x.includes("attorney")),
 			CDD: userGroups.some((x) => x.includes("cdd")),
 			LOP: userGroups.some((x) => x.includes("lop")),
-			TrialSupervisor: userGroups.some((x) =>
+			TRIALSUPERVISOR: userGroups.some((x) =>
 				x.includes("trialsupervisor"),
 			),
 			HR: userGroups.some((x) => x.includes("hr")),
+			COMPLIANCEOFFICER: userGroups.some((x) =>
+				x.includes("complianceofficer"),
+			),
 			IT: userGroups.some(
 				(x) =>
 					x.includes("it") ||
 					x.includes("administrator") ||
 					x.includes("csla dev project"),
 			),
-			PDIntranet: userGroups.some((x) => x.includes("PD-Intranet")),
+			PDINTRANET: userGroups.some((x) => x.includes("pdintranet")),
 		};
 		matchDict.PDIntranet =
-			matchDict.PDIntranet ||
-			matchDict.Attorney ||
+			matchDict.PDINTRANET ||
+			matchDict.ATTORNEY ||
 			matchDict.CDD ||
 			matchDict.LOP ||
-			matchDict.TrialSupervisor ||
+			matchDict.TRIALSUPERVISOR ||
 			matchDict.HR ||
+			matchDict.COMPLIANCEOFFICER ||
 			matchDict.IT;
 		return matchDict[role];
 	}
 
 	function roleViewPriority(roles: RoleKey[]): RoleKey {
 		if (_hasRole(roles, "IT")) return "IT";
+		if (_hasRole(roles, "COMPLIANCEOFFICER")) return "ComplianceOfficer";
 		if (_hasRole(roles, "HR")) return "HR";
-		if (_hasRole(roles, "Attorney")) return "Attorney";
+		if (_hasRole(roles, "ATTORNEY")) return "Attorney";
 		if (_hasRole(roles, "CDD")) return "CDD";
 		if (_hasRole(roles, "LOP")) return "LOP";
-		if (_hasRole(roles, "TrialSupervisor")) return "TrialSupervisor";
-		if (_hasRole(roles, "PDIntranet")) return "PDIntranet";
+		if (_hasRole(roles, "TRIALSUPERVISOR")) return "TrialSupervisor";
+		if (_hasRole(roles, "PDINTRANET")) return "PDIntranet";
 		return "Everyone";
 	}
 
@@ -160,17 +170,26 @@ export function PDRoleBasedSelect({
 					data-show-select={shouldShowSelect}
 					className="data-[show-select=true]:multi-['block'] hidden rounded-md border-slate-300 bg-white px-2 py-1 text-sm text-gray-800 focus:ring-2 focus:ring-blue-500"
 				>
-					{ENV.ROLE_KEYS.map((rk, i) => (
+					{ENV.ROLESELECT_ORDER.split(" ").map((rk, i) => (
 						<option
 							key={i}
-							value={ENV[rk]}
+							value={
+								(ENV as unknown as { [key: string]: string })[
+									"ROLE_" + rk
+								]
+							}
 							disabled={
 								isRoleEnabledForUser(rk) === true
 									? false
 									: false
 							}
 						>
-							{ENV[rk]}
+							{(ENV as unknown as { [key: string]: string })[
+								"DISPLAY_" + rk
+							] ||
+								(ENV as unknown as { [key: string]: string })[
+									"ROLE_" + rk
+								]}
 						</option>
 					))}
 				</select>
