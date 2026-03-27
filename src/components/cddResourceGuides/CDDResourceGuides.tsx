@@ -99,9 +99,10 @@ export function CDDResourceGuides({
 
                             const rawTags = file.ListItemAllFields?.Tags || "";
                             const tags = rawTags.toLowerCase().split(/[,\s]+/).filter(Boolean);
+                            const label = file.ListItemAllFields?.Label;
 
                             return {
-                                name: cleanName(file.Name),
+                                name: label ? label : cleanName(file.Name),
                                 url,
                                 tags
                             };
@@ -147,9 +148,10 @@ export function CDDResourceGuides({
 
                                 const rawTags = file.ListItemAllFields?.Tags || "";
                                 const tags = rawTags.toLowerCase().split(/[,\s]+/).filter(Boolean);
+                                const label = file.ListItemAllFields?.Label;
 
                                 return {
-                                    name: cleanName(file.Name),
+                                    name: label ? label : cleanName(file.Name),
                                     url,
                                     tags
                                 };
