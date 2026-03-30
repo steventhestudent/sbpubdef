@@ -10,7 +10,7 @@ export async function userGroupNames(ctx: WebPartContext): Promise<string[]> {
 			.get();
 		return (res.value as IGraphGroup[])
 			.filter((g) => typeof g.displayName === "string")
-			.map((g) => g.displayName.toLowerCase());
+			.map((g) => g.displayName);
 	} catch (error) {
 		console.error("Error checking Azure AD groups:", error);
 		return [];

@@ -138,10 +138,13 @@ export function Announcements(props: IAnnouncementsProps): JSX.Element {
 				showSelect={true}
 				selectLabel="Department"
 				views={{
-					Everyone: PDIntranetView,
-					PDIntranet: PDIntranetView,
-					Attorney: PDIntranetView,
+					EVERYONE: PDIntranetView,
+					PDINTRANET: PDIntranetView,
+					ATTORNEY: PDIntranetView,
+					CDD: PDIntranetView,
 					LOP: PDIntranetView,
+					TRIALSUPERVISOR: PDIntranetView,
+					COMPLIANCEOFFICER: PDIntranetView,
 					HR: PDIntranetView,
 					IT: PDIntranetView,
 				}}

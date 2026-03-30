@@ -68,15 +68,15 @@ export function PortalResources(props: IPortalResourcesProps): JSX.Element {
 		<PDRoleBasedSelect
 			ctx={props.context}
 			views={{
-				Everyone: CollapsibleWrapper(props.context),
-				PDIntranet: CollapsibleWrapper(props.context),
-				Attorney: CollapsibleWrapper(props.context),
-				LOP: CollapsibleWrapper(props.context),
-				HR: CollapsibleWrapper(props.context),
-				ComplianceOfficer: CollapsibleWrapper(props.context),
-				IT: CollapsibleWrapper(props.context),
+				EVERYONE: CollapsibleWrapper(props.context),
+				PDINTRANET: CollapsibleWrapper(props.context),
+				ATTORNEY: CollapsibleWrapper(props.context),
 				CDD: CollapsibleWrapper(props.context),
+				LOP: CollapsibleWrapper(props.context),
 				TrialSupervisor: CollapsibleWrapper(props.context),
+				ComplianceOfficer: CollapsibleWrapper(props.context),
+				HR: CollapsibleWrapper(props.context),
+				IT: CollapsibleWrapper(props.context),
 			}}
 		/>
 	);

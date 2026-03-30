@@ -1,3 +1,4 @@
+import "@type/env.generated"; // load window.ENV
 import "@dist/tailwind.css"; // to do: comment out in production? (do webparts all include a copy of it!?)
 import "@styles/theme.css";
 import "@styles/SharePointStyleOverride.css";
@@ -7,6 +8,7 @@ import "@styles/custom-overrides.css";
 
 import { Log } from "@microsoft/sp-core-library";
 import { BaseApplicationCustomizer } from "@microsoft/sp-application-base";
+import * as Utils from "@utils";
 import * as strings from "ThemeInjectorApplicationCustomizerStrings";
 import { DismissibleAnnouncementStrip } from "./DismissibleAnnouncementStrip";
 import { CompactMode } from "./CompactMode";
@@ -26,7 +28,10 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 	}
 
 	private onNavigate(): void {
-		DismissibleAnnouncementStrip();
+		console.log("🔵 ThemeInjector onNavigate() called");
+		DismissibleAnnouncementStrip(this.context).catch((error) => {
+			console.error("Failed to load banner:", error);
+		});
 
 		(function () {
 			const headerTitleAnchor = document.querySelector(
@@ -48,12 +53,24 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 			const container = containers[containers.length - 1];
 			Array.from(container.querySelectorAll("a span")).forEach(
 				(el: HTMLSpanElement, i) => {
-					el.classList.remove("is-selected"); //todo: if matches PDRoleBasedSelect.roleViewPriority
-					el.onclick = () => {
+					const hash = (
+						(el.parentNode as HTMLAnchorElement).href || ""
+					).split("#")[1];
+					el.classList.remove("is-selected");
+					if (
+						hash &&
+						hash.replace("View-As-", "") ===
+							Utils.roleViewPriority(Utils.cachedGroupNames())
+					)
+						el.classList.add("is-selected");
+					el.onclick = (e) => {
+						if (!hash) return;
+						e.preventDefault();
+						location.hash = hash;
 						Array.from(
 							container.querySelectorAll("a span"),
-						).forEach((el: HTMLSpanElement, i) =>
-							el.classList.remove("is-selected"),
+						).forEach(($0: HTMLSpanElement, i) =>
+							$0.classList.remove("is-selected"),
 						);
 						el.classList.add("is-selected");
 					};

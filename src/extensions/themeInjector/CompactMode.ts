@@ -95,6 +95,7 @@ export function CompactMode(): void {
 		)
 			? "◼️"
 			: "🔳";
+		btn.id = "CompactModeBtn";
 		btn.style.fontSize = "18px";
 		btn.style.cursor = "pointer";
 		btn.style.textShadow = "0 0 4px #03787c";
@@ -106,14 +107,16 @@ export function CompactMode(): void {
 		return btn;
 	}
 
-	const getToolbar: () => HTMLElement | null = () =>
+	const getInsertContainer: () => HTMLElement | null = () =>
 		document.querySelector(
-			".fui-Toolbar .ms-OverflowSet:last-of-type, .fui-FluentProvider .ms-OverflowSet:last-of-type",
-		); // add after ↙↗ 'Expand Content' btn. fui-FluentProvider = Site Contents view
-	const toolbarInsertion: () => void = () =>
-		getToolbar()?.appendChild(CompactModeBtn());
+			"#moreActionsOverlayButton, .fui-Toolbar .ms-OverflowSet:last-of-type, .fui-FluentProvider .ms-OverflowSet:last-of-type",
+		); // add after Share ... / ↙↗ 'Expand Content' btn. fui-FluentProvider = Site Contents view
+	const toolbarInsertion: () => void = () => {
+		document.querySelector("#CompactModeBtn")?.remove();
+		getInsertContainer()?.appendChild(CompactModeBtn());
+	};
 	(function pollInsert() {
-		if (!getToolbar()) setTimeout(pollInsert, 333);
+		if (!getInsertContainer()) setTimeout(pollInsert, 333);
 		else setTimeout(toolbarInsertion, 666);
 	})();
 	const marginFlag =

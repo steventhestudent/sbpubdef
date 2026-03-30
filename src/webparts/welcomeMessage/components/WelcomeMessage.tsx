@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { IWelcomeMessageProps } from "./IWelcomeMessageProps";
 import { escape } from "@microsoft/sp-lodash-subset";
+import * as Utils from "@utils";
 import { WelcomeSearch } from "./WelcomeSearch";
 import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
@@ -44,60 +45,51 @@ function PDIntranetViewWrapper(
 									className="scrollbar-thin absolute left-[48px] max-h-full w-[calc(100%-48px)] overflow-auto p-0.5"
 								>
 									Groups ({userGroupNames.length}):
-									{
-										/* // todo: check if privileged (w/o hardcode) */
-										userGroupNames.includes(
-											"sharepoint administrator",
-										) ||
-										userGroupNames.includes("it") ||
-										userGroupNames.includes(
-											"csla dev project",
-										) ? (
-											<span
-												title="View Page As"
-												className="absolute top-[-0.2em] right-[0em] cursor-pointer text-xl text-gray-500 hover:text-black"
-												onClick={() => {
-													const res = parseInt(
-														prompt(
-															`View Page As:\n${ENV.ROLESELECT_ORDER.split(
-																" ",
+									{Utils.isIT(userGroupNames) ? (
+										<span
+											title="View Page As"
+											className="absolute top-[-0.2em] right-[0em] cursor-pointer text-xl text-gray-500 hover:text-black"
+											onClick={() => {
+												const res = parseInt(
+													prompt(
+														`View Page As:\n${ENV.ROLESELECT_ORDER.split(
+															" ",
+														)
+															.map(
+																(rk, i) =>
+																	`\t${i + 1}. ${(ENV as unknown as { [key: string]: string })["ROLE_" + rk]}`,
 															)
-																.map(
-																	(rk, i) =>
-																		`\t${i + 1}. ${(ENV as unknown as { [key: string]: string })["ROLE_" + rk]}`,
-																)
-																.join("\n")}`,
-														) || "",
-													);
-													if (isNaN(res)) return;
-													if (
-														res === 0 ||
-														res >
+															.join("\n")}`,
+													) || "",
+												);
+												if (isNaN(res)) return;
+												if (
+													res === 0 ||
+													res >
+														ENV.ROLESELECT_ORDER.split(
+															" ",
+														).length
+												)
+													return;
+												location.hash = `View-As-${
+													(
+														ENV as unknown as {
+															[
+																key: string
+															]: string;
+														}
+													)[
+														"ROLE_" +
 															ENV.ROLESELECT_ORDER.split(
 																" ",
-															).length
-													)
-														return;
-													location.hash = `View-As-${
-														(
-															ENV as unknown as {
-																[
-																	key: string
-																]: string;
-															}
-														)[
-															"ROLE_" +
-																ENV.ROLESELECT_ORDER.split(
-																	" ",
-																)[res - 1]
-														]
-													}`;
-												}}
-											>
-												⏿
-											</span>
-										) : null
-									}
+															)[res - 1]
+													]
+												}`;
+											}}
+										>
+											⏿
+										</span>
+									) : null}
 									{userGroupNames.map((userGroupName) => (
 										<li
 											className="ml-3 list-decimal"
@@ -138,11 +130,11 @@ export function WelcomeMessage(props: IWelcomeMessageProps): JSX.Element {
 				Everyone: PDIntranetViewWrapper(props.userDisplayName),
 				PDIntranet: PDIntranetViewWrapper(props.userDisplayName),
 				Attorney: PDIntranetViewWrapper(props.userDisplayName),
+				CDD: PDIntranetViewWrapper(props.userDisplayName),
 				LOP: PDIntranetViewWrapper(props.userDisplayName),
 				HR: PDIntranetViewWrapper(props.userDisplayName),
 				ComplianceOfficer: PDIntranetViewWrapper(props.userDisplayName),
 				IT: PDIntranetViewWrapper(props.userDisplayName),
-				CDD: PDIntranetViewWrapper(props.userDisplayName),
 				TrialSupervisor: PDIntranetViewWrapper(props.userDisplayName),
 			}}
 		/>

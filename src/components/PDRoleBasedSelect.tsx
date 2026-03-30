@@ -1,6 +1,6 @@
 import * as React from "react";
-import * as Utils from "@utils";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
+import * as Utils from "@utils";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
 
@@ -29,13 +29,12 @@ export function PDRoleBasedSelect({
 	selectLabel?: string | JSX.Element;
 	preventRoleForcing?: boolean;
 }): JSX.Element {
-	const cachedGroupNames: RoleKey[] =
-		JSON.parse(localStorage.getItem("userGroupNames") || '""') || [];
-	const [userGroups, setUserGroups] =
-		React.useState<string[]>(cachedGroupNames);
+	const [userGroups, setUserGroups] = React.useState<string[]>(
+		Utils.cachedGroupNames(),
+	);
 
 	const [role, setRole] = React.useState<RoleKey>(
-		roleViewPriority(cachedGroupNames),
+		Utils.roleViewPriority(Utils.cachedGroupNames()),
 	);
 
 	const pnpWrapper = new PNPWrapper(ctx, {
@@ -43,89 +42,12 @@ export function PDRoleBasedSelect({
 		cache: "true",
 	});
 
-	const hasRole: (role: RoleKey) => boolean = (role: RoleKey) => {
-		const matchDict: { [key: RoleKey]: boolean } = {
-			EVERYONE: true,
-			ATTORNEY: userGroups.some((x) => x.includes("attorney")),
-			CDD: userGroups.some((x) => x.includes("cdd")),
-			LOP: userGroups.some((x) => x.includes("lop")),
-			TRIALSUPERVISOR: userGroups.some((x) =>
-				x.includes("trialsupervisor"),
-			),
-			HR: userGroups.some((x) => x.includes("hr")),
-			COMPLIANCEOFFICER: userGroups.some((x) =>
-				x.includes("complianceofficer"),
-			),
-			IT: userGroups.some(
-				(x) =>
-					x.includes("it") ||
-					x.includes("administrator") ||
-					x.includes("csla dev project"),
-			),
-			PDINTRANET: userGroups.some((x) => x.includes("pdintranet")),
-		};
-		matchDict.PDIntranet =
-			matchDict.PDINTRANET ||
-			matchDict.ATTORNEY ||
-			matchDict.CDD ||
-			matchDict.LOP ||
-			matchDict.TRIALSUPERVISOR ||
-			matchDict.HR ||
-			matchDict.COMPLIANCEOFFICER ||
-			matchDict.IT;
-		return matchDict[role];
+	const isRoleEnabledForUser: (roles: RoleKey[], role: RoleKey) => boolean = (
+		roles: RoleKey[],
+		role: RoleKey,
+	) => {
+		return Utils.hasRole(roles, role);
 	};
-
-	const isRoleEnabledForUser: (role: RoleKey) => boolean = React.useCallback<
-		(role: RoleKey) => boolean
-	>(hasRole, [userGroups]);
-
-	/* duplicate of hasRole... for some reason can't reuse hasRole in roleViewPriority (is it linked to the react component? (since it's used in <option disabled={...}>???)) */
-	function _hasRole(roles: RoleKey[], role: RoleKey): boolean {
-		console.log(roles);
-		const matchDict: { [key: RoleKey]: boolean } = {
-			EVERYONE: true,
-			ATTORNEY: userGroups.some((x) => x.includes("attorney")),
-			CDD: userGroups.some((x) => x.includes("cdd")),
-			LOP: userGroups.some((x) => x.includes("lop")),
-			TRIALSUPERVISOR: userGroups.some((x) =>
-				x.includes("trialsupervisor"),
-			),
-			HR: userGroups.some((x) => x.includes("hr")),
-			COMPLIANCEOFFICER: userGroups.some((x) =>
-				x.includes("complianceofficer"),
-			),
-			IT: userGroups.some(
-				(x) =>
-					x.includes("it") ||
-					x.includes("administrator") ||
-					x.includes("csla dev project"),
-			),
-			PDINTRANET: userGroups.some((x) => x.includes("pdintranet")),
-		};
-		matchDict.PDIntranet =
-			matchDict.PDINTRANET ||
-			matchDict.ATTORNEY ||
-			matchDict.CDD ||
-			matchDict.LOP ||
-			matchDict.TRIALSUPERVISOR ||
-			matchDict.HR ||
-			matchDict.COMPLIANCEOFFICER ||
-			matchDict.IT;
-		return matchDict[role];
-	}
-
-	function roleViewPriority(roles: RoleKey[]): RoleKey {
-		if (_hasRole(roles, "IT")) return "IT";
-		if (_hasRole(roles, "COMPLIANCEOFFICER")) return "ComplianceOfficer";
-		if (_hasRole(roles, "HR")) return "HR";
-		if (_hasRole(roles, "ATTORNEY")) return "Attorney";
-		if (_hasRole(roles, "CDD")) return "CDD";
-		if (_hasRole(roles, "LOP")) return "LOP";
-		if (_hasRole(roles, "TRIALSUPERVISOR")) return "TrialSupervisor";
-		if (_hasRole(roles, "PDINTRANET")) return "PDIntranet";
-		return "Everyone";
-	}
 
 	function forceRole(role: string): void {
 		if (preventRoleForcing) return;
@@ -141,8 +63,8 @@ export function PDRoleBasedSelect({
 			}
 			const g = await Utils.userGroupNames(ctx);
 			localStorage.setItem("userGroupNames", JSON.stringify(g));
-			setRole(roleViewPriority(g));
-			setUserGroups(g.map((g) => g.toLowerCase()));
+			setRole(Utils.roleViewPriority(g));
+			setUserGroups(g);
 		});
 		window.addEventListener("hashchange", function () {
 			if (!location.hash.startsWith("#View-As-")) return;
@@ -179,9 +101,9 @@ export function PDRoleBasedSelect({
 								]
 							}
 							disabled={
-								isRoleEnabledForUser(rk) === true
+								isRoleEnabledForUser(userGroups, rk)
 									? false
-									: false
+									: true
 							}
 						>
 							{(ENV as unknown as { [key: string]: string })[
@@ -220,18 +142,17 @@ export function BlankGuestView({
 	return (
 		<div className="p-5">
 			<div>Welcome, Guest:</div>
-			<div className="mt-2">
+			<div className="my-2">
 				You must have some form of PDIntranet role (Attorney, IT, HR,
-				etc.) to have assignments.
+				etc.)
 			</div>
 			<ul>
-				<h5 className="font-bold">Groups:</h5>
+				<h5 className="font-bold">Groups ({userGroupNames.length}):</h5>
 				{userGroupNames.map((name: string, i) => (
 					<li className="ml-5 list-disc" key={i}>
 						{name}
 					</li>
 				))}
-				{!userGroupNames.length ? <div>N/A</div> : null}
 			</ul>
 		</div>
 	);

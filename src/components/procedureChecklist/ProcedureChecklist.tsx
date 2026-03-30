@@ -14,7 +14,7 @@ export function ProcedureChecklist({
 	pnpWrapper,
 	sourceRole,
 }: RoleBasedViewProps): JSX.Element {
-	const editorMode: boolean = sourceRole === "IT";
+	const editorMode: boolean = sourceRole === "IT"; //todo: check if user has group that can edit this list
 	const [procedures, setProcedures] = React.useState<
 		ProcedureChecklistItem[]
 	>([]);

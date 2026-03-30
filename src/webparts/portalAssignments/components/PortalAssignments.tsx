@@ -139,11 +139,13 @@ export default function PortalAssignments(
 			<PDRoleBasedSelect
 				ctx={props.context}
 				views={{
-					Everyone: BlankGuestView,
-					PDIntranet: PDIntranetView,
-					Attorney: PDIntranetView,
+					EVERYONE: BlankGuestView,
+					PDINTRANET: PDIntranetView,
+					ATTORNEY: PDIntranetView,
+					CDD: PDIntranetView,
 					LOP: PDIntranetView,
-					TrialSupervisor: PDIntranetView,
+					TRIALSUPERVISOR: PDIntranetView,
+					COMPLIANCEOFFICER: PDIntranetView,
 					HR: PDIntranetView,
 					IT: PDIntranetView,
 				}}

@@ -246,9 +246,12 @@ export function UpcomingEvents(props: IUpcomingEventsProps): JSX.Element {
 				selectLabel="Department"
 				views={{
 					Everyone: PDIntranetView,
-					PDIntranet: PDIntranetView,
-					Attorney: PDIntranetView,
+					PDINTRANET: PDIntranetView,
+					ATTORNEY: PDIntranetView,
+					CDD: PDIntranetView,
 					LOP: PDIntranetView,
+					TRIALSUPERVISOR: PDIntranetView,
+					COMPLIANCEOFFICER: PDIntranetView,
 					HR: PDIntranetView,
 					IT: PDIntranetView,
 				}}
