@@ -1,4 +1,5 @@
 import * as React from "react";
+import * as Utils from "@utils";
 
 export function NewPDAnnouncementDrawer({
 	open,
@@ -16,13 +17,13 @@ export function NewPDAnnouncementDrawer({
 	}) => void;
 }): JSX.Element {
 	const [title, setTitle] = React.useState("");
-	const [department, setDepartment] = React.useState("Everyone");
+	const [department, setDepartment] = React.useState("EVERYONE");
 	const editorRef = React.useRef<HTMLDivElement>(null);
 
 	React.useEffect(() => {
 		if (open) {
 			setTitle("");
-			setDepartment("Everyone");
+			setDepartment("EVERYONE");
 			if (editorRef.current) editorRef.current.innerHTML = "";
 		}
 	}, [open]);
@@ -62,7 +63,7 @@ export function NewPDAnnouncementDrawer({
 			/>
 
 			{/* Drawer (right). HelpDrawer uses z-50, so it will appear above this if opened */}
-			<aside className="absolute right-0 top-0 h-full w-[36rem] overflow-y-auto bg-white shadow-2xl">
+			<aside className="absolute top-0 right-0 h-full w-[36rem] overflow-y-auto bg-white shadow-2xl">
 				<header className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
 					<h2 className="text-base font-semibold text-slate-800">
 						New PD Announcement
@@ -96,7 +97,7 @@ export function NewPDAnnouncementDrawer({
 							value={title}
 							onChange={(e) => setTitle(e.target.value)}
 							placeholder="Announcement title"
-							className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+							className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
 						/>
 					</div>
 
@@ -113,16 +114,9 @@ export function NewPDAnnouncementDrawer({
 							onChange={(e) => setDepartment(e.target.value)}
 							className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
 						>
-							{[
-								"Everyone",
-								"PD-Intranet",
-								"HR",
-								"Attorney",
-								"LOP",
-								"Tech-Team",
-							].map((opt) => (
-								<option key={opt} value={opt}>
-									{opt}
+							{ENV.ROLESELECT_ORDER.split(" ").map((rk, i) => (
+								<option key={i} value={rk}>
+									{Utils.ENV_ROLE_DISPLAY(rk)}
 								</option>
 							))}
 						</select>

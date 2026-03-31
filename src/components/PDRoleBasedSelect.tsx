@@ -72,7 +72,7 @@ export function PDRoleBasedSelect({
 		});
 	}, []);
 
-	const CurrentView: RoleView | undefined = views[role] ?? views.Everyone;
+	const CurrentView: RoleView | undefined = views[role] ?? views.EVERYONE;
 	let shouldShowSelect = false;
 	if (showSelect !== undefined) shouldShowSelect = showSelect;
 	if (alwaysHideSelect !== undefined) shouldShowSelect = !alwaysHideSelect;
@@ -95,23 +95,14 @@ export function PDRoleBasedSelect({
 					{ENV.ROLESELECT_ORDER.split(" ").map((rk, i) => (
 						<option
 							key={i}
-							value={
-								(ENV as unknown as { [key: string]: string })[
-									"ROLE_" + rk
-								]
-							}
+							value={rk}
 							disabled={
 								isRoleEnabledForUser(userGroups, rk)
 									? false
 									: true
 							}
 						>
-							{(ENV as unknown as { [key: string]: string })[
-								"DISPLAY_" + rk
-							] ||
-								(ENV as unknown as { [key: string]: string })[
-									"ROLE_" + rk
-								]}
+							{Utils.ENV_ROLE_DISPLAY(rk)}
 						</option>
 					))}
 				</select>
@@ -126,7 +117,7 @@ export function PDRoleBasedSelect({
 						<CurrentView
 							userGroupNames={userGroups}
 							pnpWrapper={pnpWrapper}
-							sourceRole={role ?? "Everyone"}
+							sourceRole={role ?? "EVERYONE"}
 						/>
 					) : null}
 				</div>
@@ -138,6 +129,7 @@ export function PDRoleBasedSelect({
 export function BlankGuestView({
 	userGroupNames,
 	pnpWrapper,
+	sourceRole,
 }: RoleBasedViewProps): JSX.Element {
 	return (
 		<div className="p-5">
@@ -148,11 +140,17 @@ export function BlankGuestView({
 			</div>
 			<ul>
 				<h5 className="font-bold">Groups ({userGroupNames.length}):</h5>
-				{userGroupNames.map((name: string, i) => (
-					<li className="ml-5 list-disc" key={i}>
-						{name}
+				{userGroupNames.length ? (
+					userGroupNames.map((name: string, i) => (
+						<li className="ml-5 list-disc" key={i}>
+							{name}
+						</li>
+					))
+				) : (
+					<li className="ml-5 list-disc">
+						{Utils.ENV_ROLE_DISPLAY(sourceRole || "EVERYONE")}
 					</li>
-				))}
+				)}
 			</ul>
 		</div>
 	);

@@ -63,10 +63,10 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 							Utils.roleViewPriority(Utils.cachedGroupNames())
 					)
 						el.classList.add("is-selected");
-					el.onclick = (e) => {
+					el.onmousedown = (e) => {
 						if (!hash) return;
 						e.preventDefault();
-						location.hash = hash;
+						(el.parentNode as HTMLAnchorElement).href = "#" + hash;
 						Array.from(
 							container.querySelectorAll("a span"),
 						).forEach(($0: HTMLSpanElement, i) =>

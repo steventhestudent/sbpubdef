@@ -52,12 +52,12 @@ function PDIntranetViewWrapper(
 											onClick={() => {
 												const res = parseInt(
 													prompt(
-														`View Page As:\n${ENV.ROLESELECT_ORDER.split(
+														`View Page As (ENV.ROLE_):\n${ENV.ROLESELECT_ORDER.split(
 															" ",
 														)
 															.map(
 																(rk, i) =>
-																	`\t${i + 1}. ${(ENV as unknown as { [key: string]: string })["ROLE_" + rk]}`,
+																	`\t${i + 1}. ${Utils.ENV_ROLE(rk)}`,
 															)
 															.join("\n")}`,
 													) || "",
@@ -71,20 +71,11 @@ function PDIntranetViewWrapper(
 														).length
 												)
 													return;
-												location.hash = `View-As-${
-													(
-														ENV as unknown as {
-															[
-																key: string
-															]: string;
-														}
-													)[
-														"ROLE_" +
-															ENV.ROLESELECT_ORDER.split(
-																" ",
-															)[res - 1]
-													]
-												}`;
+												location.hash = `View-As-${Utils.ENV_ROLE(
+													ENV.ROLESELECT_ORDER.split(
+														" ",
+													)[res - 1],
+												)}`;
 											}}
 										>
 											⏿
@@ -127,15 +118,15 @@ export function WelcomeMessage(props: IWelcomeMessageProps): JSX.Element {
 			ctx={props.context}
 			preventRoleForcing={true}
 			views={{
-				Everyone: PDIntranetViewWrapper(props.userDisplayName),
+				EVERYONE: PDIntranetViewWrapper(props.userDisplayName),
 				PDIntranet: PDIntranetViewWrapper(props.userDisplayName),
-				Attorney: PDIntranetViewWrapper(props.userDisplayName),
+				ATTORNEY: PDIntranetViewWrapper(props.userDisplayName),
 				CDD: PDIntranetViewWrapper(props.userDisplayName),
 				LOP: PDIntranetViewWrapper(props.userDisplayName),
 				HR: PDIntranetViewWrapper(props.userDisplayName),
-				ComplianceOfficer: PDIntranetViewWrapper(props.userDisplayName),
+				COMPLIANCEOFFICER: PDIntranetViewWrapper(props.userDisplayName),
 				IT: PDIntranetViewWrapper(props.userDisplayName),
-				TrialSupervisor: PDIntranetViewWrapper(props.userDisplayName),
+				TRIALSUPERVISOR: PDIntranetViewWrapper(props.userDisplayName),
 			}}
 		/>
 	);

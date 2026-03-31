@@ -24,7 +24,7 @@ function PDIntranetView({
 		{
 			id: "",
 			title: "No Assignments",
-			PDDepartment: "Everyone",
+			PDDepartment: ENV.ROLE_EVERYONE,
 		},
 	];
 	const assignmentsApi = new AssignmentsApi(pnpWrapper);

@@ -55,7 +55,7 @@ export class AssignmentsApi extends ListApi<PDAssignment, AssignGetOpts> {
 					PDDepartment:
 						item[ENV.INTERNALCOLUMN_PDDEPARTMENT] ||
 						item.PDDepartment ||
-						"Everyone",
+						"EVERYONE",
 					caseNumber: item.Title, ///
 					client: item.Client,
 					court: item.Court,

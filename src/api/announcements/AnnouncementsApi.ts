@@ -142,7 +142,7 @@ export class AnnouncementsApi extends CustomContentApi<
 				author: r.Author,
 				thumbnailUrl: r.PictureThumbnailURL,
 				PDDepartment:
-					r.PDDepartment || r.x0020_Department || "Everyone",
+					r.PDDepartment || r.x0020_Department || "EVERYONE",
 			} as PDAnnouncement;
 		});
 	}

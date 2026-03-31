@@ -3,3 +3,5 @@ import hasRole from "./hasRole";
 import isIT from "./isIT";
 import cachedGroupNames from "./cachedGroupNames";
 export { roleViewPriority, hasRole, cachedGroupNames, isIT };
+
+export * from "./ENV";

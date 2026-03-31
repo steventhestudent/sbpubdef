@@ -6,6 +6,8 @@ import RoleBasedViewProps from "@type/RoleBasedViewProps";
 import { ProcedureChecklist } from "@components/procedureChecklist/ProcedureChecklist";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 import { CDDResourceGuides } from "@components/cddResourceGuides/CDDResourceGuides";
+import { ManualsAndHandbooks } from "@components/manualsAndHandbooks/ManualsAndHandbooks";
+import { MostCommonForms } from "@components/mostCommonForms/MostCommonForms";
 
 // a wrapper to pass other things we want from webpart props (context)
 function CollapsibleWrapper(
@@ -21,11 +23,15 @@ function CollapsibleWrapper(
 		sourceRole,
 	}: RoleBasedViewProps): JSX.Element {
 		const collapsibleTitles: { [key: string]: string } = {
-			IT: "IT",
-			ComplianceOfficer: "Compliance Officer",
+			EVERYONE: "Guest Resources",
+			PDINTRANET: "Intranet Resources",
+			ATTORNEY: "Attorney Resources",
+			CDD: "CDD Resources",
 			LOP: "LOPS - Legal Office Procedural System",
-			TrialSupervisor: "Attorney Workload",
-			CDD: "CDD",
+			TRIALSUPERVISOR: "Attorney Workload",
+			HR: "HR Resources",
+			COMPLIANCEOFFICER: "Compliance Officer",
+			IT: "IT Resources",
 		};
 		return (
 			<Collapsible
@@ -44,11 +50,11 @@ function CollapsibleWrapper(
 								sourceRole={sourceRole}
 							/>
 						);
-					if (sourceRole === "TrialSupervisor")
+					if (sourceRole === "TRIALSUPERVISOR")
 						return (
 							<div className="min-h-64">AttorneyWorkload...</div>
 						);
-					if (sourceRole === "LOP" || sourceRole === "IT")
+					if (sourceRole === "LOP")
 						return (
 							<ProcedureChecklist
 								userGroupNames={userGroupNames}
@@ -56,7 +62,22 @@ function CollapsibleWrapper(
 								sourceRole={sourceRole}
 							/>
 						);
-					return <span>mostCommonForms manualsAndHandbooks</span>;
+					if (sourceRole === "COMPLIANCEOFFICER")
+						return (
+							<div className="min-h-64">
+								Compliance officer resources...
+							</div>
+						);
+					if (sourceRole === "IT")
+						return <div className="min-h-64">IT resources...</div>;
+					return (
+						<>
+							<h2 className="m-4">Manuals and Handbooks:</h2>
+							<ManualsAndHandbooks />
+							<h2 className="m-4">Most Common Forms:</h2>
+							<MostCommonForms />
+						</>
+					);
 				})()}
 			</Collapsible>
 		);
