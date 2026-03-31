@@ -1,3 +1,5 @@
+import { WebPartContext } from "@microsoft/sp-webpart-base";
+
 export interface ICase {
 	CaseID: string;
 	CaseStatus: string;
@@ -19,5 +21,5 @@ export interface ILocationData {
 }
 
 export interface IAttorneyWorkloadProps {
-	locations: ILocationData[];
+	context: WebPartContext;
 }

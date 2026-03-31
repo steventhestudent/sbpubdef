@@ -3,11 +3,12 @@ import type { IPortalResourcesProps } from "./IPortalResourcesProps";
 import { Collapsible } from "@components/Collapsible";
 import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
-import { ProcedureChecklist } from "@components/procedureChecklist/ProcedureChecklist";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
-import { CDDResourceGuides } from "@components/cddResourceGuides/CDDResourceGuides";
 import { ManualsAndHandbooks } from "@components/manualsAndHandbooks/ManualsAndHandbooks";
 import { MostCommonForms } from "@components/mostCommonForms/MostCommonForms";
+import { CDDResourceGuides } from "@components/cddResourceGuides/CDDResourceGuides";
+import { ProcedureChecklist } from "@components/procedureChecklist/ProcedureChecklist";
+import { AttorneyWorkload } from "@components/attorneyWorkload/AttorneyWorkload";
 
 // a wrapper to pass other things we want from webpart props (context)
 function CollapsibleWrapper(
@@ -52,7 +53,11 @@ function CollapsibleWrapper(
 						);
 					if (sourceRole === "TRIALSUPERVISOR")
 						return (
-							<div className="min-h-64">AttorneyWorkload...</div>
+							<AttorneyWorkload
+								userGroupNames={userGroupNames}
+								pnpWrapper={pnpWrapper}
+								sourceRole={sourceRole}
+							/>
 						);
 					if (sourceRole === "LOP")
 						return (

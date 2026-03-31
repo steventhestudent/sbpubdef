@@ -4,7 +4,7 @@ import { WebPartContext } from "@microsoft/sp-webpart-base";
 export default function loadJSON<T>(
 	ctx: WebPartContext,
 	url: string,
-	cb: (data: T) => void,
+	cb: (data: T | undefined) => void,
 ): void {
 	ctx.httpClient
 		.get(url, SPHttpClient.configurations.v1)
@@ -16,5 +16,6 @@ export default function loadJSON<T>(
 		})
 		.catch((error: Error) => {
 			console.error("Error fetching JSON:", error);
+			cb(undefined);
 		});
 }
