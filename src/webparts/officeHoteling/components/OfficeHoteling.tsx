@@ -35,8 +35,13 @@ import "@pnp/sp/lists";
 import "@pnp/sp/items";
 import "@pnp/sp/files";
 import "@pnp/sp/folders";
+import * as Utils from "@utils";
 
 export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
+	const groups = Utils.cachedGroupNames();
+	if (!Utils.hasRole(groups, ["IT", "PDINTRANET", "ATTORNEY", "CDD", "LOP"]))
+		return <></>;
+
 	const [selectedLocation, setSelectedLocation] = React.useState(
 		OFFICE_LOCATIONS[0],
 	);

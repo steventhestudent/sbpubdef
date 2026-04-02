@@ -32,7 +32,7 @@ export function UrgencyPortal({
 	context,
 	visibleCount,
 	carouselMode,
-}: IUrgencyPortalWebPartProps) {
+}: IUrgencyPortalWebPartProps): JSX.Element {
 	const [popupItem, setPopupItem] = React.useState<
 		IParsedItemWithUrl | undefined
 	>(undefined);
