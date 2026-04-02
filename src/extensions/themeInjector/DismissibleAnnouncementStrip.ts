@@ -47,7 +47,11 @@ export async function DismissibleAnnouncementStrip(
 		document.querySelector("#DismissibleAnnouncementStrip")?.remove();
 		const strip = document.createElement("div");
 		strip.innerHTML = settings!.BannerMessage;
-		// strip.appendChild(document.createTextNode(settings!.BannerMessage));
+		(function removeFontColor(node: HTMLDivElement) {
+			if (node.style) node.style.color = "";
+			for (let child of Array.from(node.children))
+				removeFontColor(child as HTMLDivElement);
+		})(strip);
 		strip.id = "DismissibleAnnouncementStrip";
 		strip.style.textAlign = "center";
 		strip.style.backgroundColor = "rgb(0, 90, 158)";
