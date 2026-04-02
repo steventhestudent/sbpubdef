@@ -47,7 +47,7 @@ export async function DismissibleAnnouncementStrip(
 		document.querySelector("#DismissibleAnnouncementStrip")?.remove();
 		const strip = document.createElement("div");
 		strip.innerHTML = settings!.BannerMessage;
-		(function removeFontColor(node: HTMLDivElement) {
+		(function removeFontColor(node: HTMLDivElement): void {
 			if (node.style) node.style.color = "";
 			for (let child of Array.from(node.children))
 				removeFontColor(child as HTMLDivElement);

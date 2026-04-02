@@ -8,6 +8,7 @@ import { Collapsible } from "@components/Collapsible";
 
 import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
+import * as Utils from "@utils";
 
 // PDIntranetView (replace items shape + render)
 type AnnouncementWebPartItem = {
@@ -46,7 +47,8 @@ function PDIntranetView({
 			.filter(
 				(el) =>
 					sourceRole === "IT" ||
-					(el.PDDepartment ?? "").replace(/-/g, "") === sourceRole,
+					el.PDDepartment === Utils.ENV_ROLE_DISPLAY(sourceRole!) ||
+					el.PDDepartment === sourceRole,
 			)
 			.map((el) => ({
 				title: el.title ?? "(untitled)",

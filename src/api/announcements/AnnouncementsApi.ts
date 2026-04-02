@@ -141,8 +141,7 @@ export class AnnouncementsApi extends CustomContentApi<
 				siteUrl: r.SPSiteUrl,
 				author: r.Author,
 				thumbnailUrl: r.PictureThumbnailURL,
-				PDDepartment:
-					r.PDDepartment || r.x0020_Department || "EVERYONE",
+				PDDepartment: r.PDDepartment || "EVERYONE",
 			} as PDAnnouncement;
 		});
 	}
