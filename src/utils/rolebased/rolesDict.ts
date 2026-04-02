@@ -1,4 +1,4 @@
-import * as Utils from "@utils";
+import ENV_ROLE from "./ENV/ENV_ROLE";
 import ITRoles from "./ITRoles";
 
 export default function rolesDict(roles: RoleKey[]): {
@@ -11,7 +11,7 @@ export default function rolesDict(roles: RoleKey[]): {
 	roles.forEach((role) => {
 		roleKeys.forEach((rk) => {
 			if (rk === "IT" && itRoles.includes(role)) dict.IT = true;
-			else if (role === Utils.ENV_ROLE(rk)) dict[rk] = true;
+			else if (role === ENV_ROLE(rk)) dict[rk] = true;
 		});
 	});
 

@@ -1,6 +1,7 @@
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 
 export type EmbedKind = "report" | "visual";
+export type CarouselMode = "auto" | "horizontal" | "vertical";
 
 export interface IPowerBiLinkConfig {
 	title: string;
@@ -20,9 +21,12 @@ export interface IPowerBiParsedLink {
 	bookmarkName?: string;
 }
 
-export type CarouselMode = "auto" | "horizontal" | "vertical";
+export interface IParsedItemWithUrl extends IPowerBiParsedLink {
+	originalUrl: string;
+	thumbnailUrl?: string;
+}
 
-export interface IUrgencyPortalProps {
+export interface IUrgencyPortalWebPartProps {
 	context: WebPartContext;
 	links: IPowerBiLinkConfig[];
 	defaultUrl?: string;

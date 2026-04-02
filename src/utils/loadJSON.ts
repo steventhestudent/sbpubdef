@@ -1,20 +1,24 @@
-import { SPHttpClient, SPHttpClientResponse } from "@microsoft/sp-http";
-import { WebPartContext } from "@microsoft/sp-webpart-base";
-
 export default function loadJSON<T>(
-	ctx: WebPartContext,
 	url: string,
 	cb: (data: T | undefined) => void,
 ): void {
-	ctx.httpClient
-		.get(url, SPHttpClient.configurations.v1)
-		.then((response: SPHttpClientResponse) => {
-			return response.json();
+	fetch(url, {
+		method: "GET",
+		credentials: "same-origin",
+		headers: {
+			Accept: "application/json",
+		},
+	})
+		.then((response) => {
+			if (!response.ok) {
+				throw new Error(
+					`HTTP ${response.status} ${response.statusText}`,
+				);
+			}
+			return response.json() as Promise<T>;
 		})
-		.then((data: T) => {
-			cb(data);
-		})
-		.catch((error: Error) => {
+		.then(cb)
+		.catch((error: unknown) => {
 			console.error("Error fetching JSON:", error);
 			cb(undefined);
 		});

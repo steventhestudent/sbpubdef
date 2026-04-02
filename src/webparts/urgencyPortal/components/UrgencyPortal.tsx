@@ -1,9 +1,17 @@
 import * as React from "react";
-import { IUrgencyPortalProps } from "./IUrgencyPortalProps";
+import { IUrgencyPortalWebPartProps } from "./IUrgencyPortalWebPartProps";
 import { Collapsible } from "@components/Collapsible";
 import { UrgencyPortal as UrgencyPortalComponent } from "@components/urgencyPortal/UrgencyPortal";
+import * as Utils from "@utils";
 
-export default function UrgencyPortal(props: IUrgencyPortalProps): JSX.Element {
+export default function UrgencyPortal(
+	props: IUrgencyPortalWebPartProps,
+): JSX.Element {
+	const groups = Utils.cachedGroupNames();
+
+	if (!(Utils.isIT(groups) || Utils.hasRole(groups, "TRIALSUPERVISOR")))
+		return <></>;
+
 	return (
 		<Collapsible
 			instanceId={props.context.instanceId}

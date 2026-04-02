@@ -40,7 +40,6 @@ export function AttorneyWorkload({
 
 	const load = (): void => {
 		Utils.loadJSON<ISharePointData>(
-			pnpWrapper.ctx,
 			"https://csproject25.sharepoint.com/sites/PD-Intranet/Shared%20Documents/Intranet%20Form%20Database/Attorneys/Workload/attorneyWorkload.json",
 			(data) => {
 				if (data === undefined) return setLocations([]);

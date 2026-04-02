@@ -1,9 +1,9 @@
-import {
-	IPowerBiLinkConfig,
-	IPowerBiParsedLink,
-	IUrgencyPortalProps,
-} from "@webparts/urgencyPortal/components/IUrgencyPortalProps";
 import * as pbi from "powerbi-client";
+import { WebPartContext } from "@microsoft/sp-webpart-base";
+import {
+	IParsedItemWithUrl,
+	IPowerBiLinkConfig,
+} from "@webparts/urgencyPortal/components/IUrgencyPortalWebPartProps";
 
 export type PBIEventResponseType =
 	| { message?: string; error?: { message?: string } }
@@ -16,7 +16,7 @@ export const powerbiService = new pbi.service.Service(
 );
 
 export async function getPowerBiToken(
-	context: IUrgencyPortalProps["context"],
+	context: WebPartContext,
 ): Promise<string> {
 	const provider = await context.aadTokenProviderFactory.getTokenProvider();
 	return provider.getToken("https://analysis.windows.net/powerbi/api");
@@ -43,11 +43,6 @@ export async function getReportInfo(
 		webUrl: string;
 	};
 	return { embedUrl: json.embedUrl, webUrl: json.webUrl };
-}
-
-export interface IParsedItemWithUrl extends IPowerBiParsedLink {
-	originalUrl: string;
-	thumbnailUrl?: string;
 }
 
 export function normalizePageName(pageName?: string): string {

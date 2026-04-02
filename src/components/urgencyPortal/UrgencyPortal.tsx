@@ -5,10 +5,11 @@ import {
 import { EmbedPopup } from "@components/urgencyPortal/EmbedPopup";
 import * as React from "react";
 import {
+	IUrgencyPortalWebPartProps,
+	IParsedItemWithUrl,
 	IPowerBiLinkConfig,
-	IUrgencyPortalProps,
-} from "@webparts/urgencyPortal/components/IUrgencyPortalProps";
-import { getItemKey, IParsedItemWithUrl, parseLink } from "@utils/powerbi";
+} from "@webparts/urgencyPortal/components/IUrgencyPortalWebPartProps";
+import { getItemKey, parseLink } from "@utils/powerbi";
 
 function parseAll(links: IPowerBiLinkConfig[]): {
 	items: IParsedItemWithUrl[];
@@ -31,7 +32,7 @@ export function UrgencyPortal({
 	context,
 	visibleCount,
 	carouselMode,
-}: IUrgencyPortalProps) {
+}: IUrgencyPortalWebPartProps) {
 	const [popupItem, setPopupItem] = React.useState<
 		IParsedItemWithUrl | undefined
 	>(undefined);

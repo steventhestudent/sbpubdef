@@ -1,5 +1,5 @@
 import * as React from "react";
-import { CarouselMode } from "@webparts/urgencyPortal/components/IUrgencyPortalProps";
+import { CarouselMode } from "@webparts/urgencyPortal/components/IUrgencyPortalWebPartProps";
 
 export interface ICardItem {
 	key: string;

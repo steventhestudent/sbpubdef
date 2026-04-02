@@ -1,15 +1,16 @@
 import "@utils/CommonWebPartImports";
 import * as React from "react";
 import * as ReactDom from "react-dom";
-import {
-	BaseClientSideWebPart,
-	IPropertyPaneConfiguration,
-} from "@microsoft/sp-webpart-base";
+import { Version } from "@microsoft/sp-core-library";
+import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
+import { type IPropertyPaneConfiguration } from "@microsoft/sp-property-pane";
+import { IReadonlyTheme } from "@microsoft/sp-component-base";
+
+// import * as strings from "UrgencyPortalWebPartStrings";
 import {
 	PropertyPaneDropdown,
 	PropertyPaneSlider,
 } from "@microsoft/sp-property-pane";
-
 import {
 	PropertyFieldCollectionData,
 	CustomCollectionFieldType,
@@ -17,25 +18,10 @@ import {
 
 import UrgencyPortal from "./components/UrgencyPortal";
 import {
-	IUrgencyPortalProps,
+	IUrgencyPortalWebPartProps,
 	IPowerBiLinkConfig,
-	CarouselMode,
-} from "./components/IUrgencyPortalProps";
-
-export interface IUrgencyPortalWebPartProps {
-	links: IPowerBiLinkConfig[];
-	defaultUrl?: string;
-	carouselMode?: CarouselMode;
-	visibleCount?: number;
-}
-
-function normalizeBookmarkName(bookmarkName?: string): string {
-	return (bookmarkName || "").trim().toLowerCase();
-}
-
-function normalizePageName(pageName?: string): string {
-	return (pageName || "").trim();
-}
+} from "./components/IUrgencyPortalWebPartProps";
+import { normalizePageName, normalizeBookmarkName } from "@utils/powerbi";
 
 function buildLinkKey(link: IPowerBiLinkConfig): string {
 	const url: string = (link.url || "").trim();
@@ -51,7 +37,7 @@ function buildLinkKey(link: IPowerBiLinkConfig): string {
 
 export default class UrgencyPortalWebPart extends BaseClientSideWebPart<IUrgencyPortalWebPartProps> {
 	public render(): void {
-		const element: React.ReactElement<IUrgencyPortalProps> =
+		const element: React.ReactElement<IUrgencyPortalWebPartProps> =
 			React.createElement(UrgencyPortal, {
 				context: this.context,
 				links: this.properties.links || [],
@@ -63,8 +49,39 @@ export default class UrgencyPortalWebPart extends BaseClientSideWebPart<IUrgency
 		ReactDom.render(element, this.domElement);
 	}
 
+	protected onInit(): Promise<void> {
+		return new Promise((resolve) => resolve());
+	}
+
+	protected onThemeChanged(currentTheme: IReadonlyTheme | undefined): void {
+		if (!currentTheme) {
+			return;
+		}
+
+		const { semanticColors } = currentTheme;
+
+		if (semanticColors) {
+			this.domElement.style.setProperty(
+				"--bodyText",
+				semanticColors.bodyText || null,
+			);
+			this.domElement.style.setProperty(
+				"--link",
+				semanticColors.link || null,
+			);
+			this.domElement.style.setProperty(
+				"--linkHovered",
+				semanticColors.linkHovered || null,
+			);
+		}
+	}
+
 	protected onDispose(): void {
 		ReactDom.unmountComponentAtNode(this.domElement);
+	}
+
+	protected get dataVersion(): Version {
+		return Version.parse("1.0");
 	}
 
 	protected getPropertyPaneConfiguration(): IPropertyPaneConfiguration {
@@ -124,7 +141,7 @@ export default class UrgencyPortalWebPart extends BaseClientSideWebPart<IUrgency
 									label: "",
 									panelHeader: "Manage links",
 									manageBtnLabel: "Edit links",
-									value: this.properties.links,
+									value: this.properties.links || [],
 									fields: [
 										{
 											id: "title",

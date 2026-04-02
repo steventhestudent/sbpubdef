@@ -3,8 +3,9 @@ import { WebPartContext } from "@microsoft/sp-webpart-base";
 import * as pbi from "powerbi-client";
 import * as ReactDom from "react-dom";
 
+import { type IParsedItemWithUrl } from "@webparts/urgencyPortal/components/IUrgencyPortalWebPartProps";
+
 import {
-	type IParsedItemWithUrl,
 	type PBIEventResponseType,
 	getPowerBiToken,
 	powerbiService,

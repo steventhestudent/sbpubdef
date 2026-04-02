@@ -1,5 +1,5 @@
-import { MSGraphClientV3 } from "@microsoft/sp-http";
-import { WebPartContext } from "@microsoft/sp-webpart-base";
+import type { MSGraphClientV3 } from "@microsoft/sp-http";
+import type { WebPartContext } from "@microsoft/sp-webpart-base";
 
 async function GraphClient(
 	ctx: WebPartContext | MSGraphClientV3,
