@@ -34,7 +34,7 @@ function PDIntranetView({
 		{
 			title: "No announcements",
 			date: new Date().toDateString(),
-			url: "#",
+			url: "/sites/PD-Intranet/SitePages/CMS.aspx",
 		},
 	];
 
@@ -97,6 +97,36 @@ function PDIntranetView({
 										<span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-700">
 											{Utils.ENV_ROLE_DISPLAY(a.dept)}
 										</span>
+									)}
+									{Utils.isGlobalEditor(userGroupNames) ? (
+										items.length === 1 &&
+										a.title === "No announcements" ? (
+											<></>
+										) : (
+											<>
+												<span
+													className="rounded border-1 p-0.5 text-xs font-medium whitespace-pre text-gray-500 hover:text-red-800"
+													onClick={() => {
+														if (
+															confirm(
+																`Delete procedure '${a.title}'?`,
+															)
+														)
+															console.log(`del`);
+													}}
+												>
+													🗑
+												</span>
+												<span
+													className="rounded border-1 p-0.5 text-xs font-medium whitespace-pre text-gray-500 hover:text-blue-800"
+													onMouseDown={(e) => {}}
+												>
+													✎
+												</span>
+											</>
+										)
+									) : (
+										<></>
 									)}
 								</span>
 
