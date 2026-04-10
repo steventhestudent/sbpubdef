@@ -1,56 +1,66 @@
 {
-  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
-  "solution": {
-    "name": "sbpubdef-sol-client-side-solution",
-    "id": "83f74721-7ec5-417d-8255-f7d2fdc95d65",
-    "version": "1.0.0.3",
-    "includeClientSideAssets": true,
-    "skipFeatureDeployment": true,
-    "isDomainIsolated": false,
-    "webApiPermissionRequests": [
-      {
-        "resource": "c852c7d6-8c34-4b51-a368-92be5f2ac96a",
-        "scope": "access_as_entra_user"
-      },
-      {
-        "resource": "Microsoft Graph",
-        "scope": "Calendars.ReadWrite"
-      }
-    ],
-    "developer": {
-      "name": "",
-      "websiteUrl": "",
-      "privacyUrl": "",
-      "termsOfUseUrl": "",
-      "mpnId": "Undefined-1.21.1"
-    },
-    "metadata": {
-      "shortDescription": {
-        "default": "sbpubdef-sol description"
-      },
-      "longDescription": {
-        "default": "sbpubdef-sol description"
-      },
-      "screenshotPaths": [],
-      "videoUrl": "",
-      "categories": []
-    },
-    "features": [
-      {
-        "title": "Application Extension - Deployment of custom action",
-        "description": "Deploys a custom action with ClientSideComponentId association",
-        "id": "140e3431-adba-40e4-8d1d-2e69b6e74c7b",
-        "version": "1.0.0.3",
-        "assets": {
-          "elementManifests": [
-            "elements.xml",
-            "ClientSideInstance.xml"
-          ]
-        }
-      }
-    ]
-  },
-  "paths": {
-    "zippedPackage": "solution/sbpubdef-sol.sppkg"
-  }
+	"$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+	"solution": {
+		"name": "sbpubdef-sol-client-side-solution",
+		"id": "83f74721-7ec5-417d-8255-f7d2fdc95d65",
+		"version": "1.0.0.3",
+		"includeClientSideAssets": true,
+		"skipFeatureDeployment": true,
+		"isDomainIsolated": false,
+		"webApiPermissionRequests": [
+			{
+				"resource": "c852c7d6-8c34-4b51-a368-92be5f2ac96a",
+				"scope": "access_as_entra_user"
+			},
+			{
+				"resource": "Microsoft Graph",
+				"scope": "Calendars.ReadWrite"
+			}
+		],
+		"developer": {
+			"name": "CSULA CS Senior Design Team",
+			"websiteUrl": "https://github.com/steventhestudent/sbpubdef/tree/main/docs/sharepoint-store",
+			"privacyUrl": "https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/privacy.md",
+			"termsOfUseUrl": "https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/terms.md",
+			"mpnId": "Undefined-1.21.1"
+		},
+		"metadata": {
+			"shortDescription": {
+				"default": "Enterprise SharePoint Framework solution for the Santa Barbara County Public Defender intranet with staff resources, announcements, events, assignments, calendars, and office hoteling tools."
+			},
+			"longDescription": {
+				"default": "SBPubDef is an enterprise SharePoint Framework solution designed for the Santa Barbara County Public Defender intranet. It provides a set of integrated web parts and extensions that support internal communication, staff resource access, event visibility, assignments, directories, content publishing, and office hoteling workflows.\n\nThe solution includes intranet experiences for announcements, upcoming events, portal calendar views, staff directory, office information, manuals and handbooks, common forms, portal resources, assignments, CMS features, and office hoteling. Selected components integrate with organization-managed Microsoft 365 and Azure services to support internal business workflows.\n\nThis solution is intended for organization-managed deployment and configuration by administrators. It is not intended as a consumer application or self-service public app.\n\nFor support or deployment questions, contact xnavarro@countyofsb.org."
+			},
+			"screenshotPaths": [
+				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/ATTORNEY.jpg",
+				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/CDD.jpg",
+				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/COMPLIANCEOFFICER.jpg",
+				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/EVERYONE.jpg",
+				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/HR.jpg",
+				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/IT.jpg",
+				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/LOP.jpg",
+				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/PDINTRANET.jpg",
+				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/TRIALSUPERVISOR.jpg"
+			],
+			"videoUrl": "",
+			"categories": ["Productivity", "Collaboration"]
+		},
+		"features": [
+			{
+				"title": "Application Extension - Deployment of custom action",
+				"description": "Deploys a custom action with ClientSideComponentId association",
+				"id": "140e3431-adba-40e4-8d1d-2e69b6e74c7b",
+				"version": "1.0.0.3",
+				"assets": {
+					"elementManifests": [
+						"elements.xml",
+						"ClientSideInstance.xml"
+					]
+				}
+			}
+		]
+	},
+	"paths": {
+		"zippedPackage": "solution/sbpubdef-sol.sppkg"
+	}
 }

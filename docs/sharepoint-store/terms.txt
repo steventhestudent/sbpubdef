@@ -1,0 +1,3 @@
+Terms of Use
+
+This application is provided for authorized internal business use by the Santa Barbara County Public Defender Office and related approved administrators. Use of the application is subject to organization policies, Microsoft 365 tenant administration, and applicable security requirements. Features and availability may change as the solution evolves. For support, contact [support email].

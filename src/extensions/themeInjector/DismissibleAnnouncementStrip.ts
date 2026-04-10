@@ -49,7 +49,7 @@ export async function DismissibleAnnouncementStrip(
 		strip.innerHTML = settings!.BannerMessage;
 		(function removeFontColor(node: HTMLDivElement): void {
 			if (node.style) node.style.color = "";
-			for (let child of Array.from(node.children))
+			for (const child of Array.from(node.children))
 				removeFontColor(child as HTMLDivElement);
 		})(strip);
 		strip.id = "DismissibleAnnouncementStrip";
