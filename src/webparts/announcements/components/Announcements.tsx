@@ -44,12 +44,9 @@ function PDIntranetView({
 		const data = await announcementsApi.get(12);
 		if (!data) return;
 		const items: AnnouncementWebPartItem[] = data
-			.filter(
-				(el) =>
-					sourceRole === "IT" ||
-					el.PDDepartment === Utils.ENV_ROLE_DISPLAY(sourceRole!) ||
-					el.PDDepartment === sourceRole,
-			)
+			.filter((el) => {
+				return sourceRole === "IT" || el.PDDepartment === sourceRole;
+			})
 			.map((el) => ({
 				title: el.title ?? "(untitled)",
 				date: el.published ? el.published.toDateString() : undefined,
@@ -98,7 +95,7 @@ function PDIntranetView({
 									</span>
 									{a.dept && (
 										<span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-700">
-											{a.dept}
+											{Utils.ENV_ROLE_DISPLAY(a.dept)}
 										</span>
 									)}
 								</span>
