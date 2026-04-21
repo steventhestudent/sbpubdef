@@ -9,8 +9,11 @@ function asDateLabel(iso?: string): string {
   return d.toLocaleDateString();
 }
 
-function isOverdue(item: UserAssignmentItem): boolean {
-  if (String(item.status || "").toLowerCase() === "completed") return false;
+function rawStatusLower(item: UserAssignmentItem): string {
+  return String(item.status || "").trim().toLowerCase();
+}
+
+function isPastDue(item: UserAssignmentItem): boolean {
   if (!item.dueDate) return false;
   const d = new Date(item.dueDate);
   if (Number.isNaN(d.getTime())) return false;
@@ -21,17 +24,31 @@ function isOverdue(item: UserAssignmentItem): boolean {
 
 type NormalizedStatus = "Not Started" | "In Progress" | "Completed" | "Overdue";
 
+function listStatusLabel(item: UserAssignmentItem): string {
+  const s = String(item.status || "").trim();
+  return s || "—";
+}
+
 function normalizedStatus(item: UserAssignmentItem): NormalizedStatus {
-  const raw = String(item.status || "").trim().toLowerCase();
+  const raw = rawStatusLower(item);
   if (raw === "completed") return "Completed";
-  if (isOverdue(item) || raw === "overdue") return "Overdue";
+  if (raw === "overdue") return "Overdue";
   if (raw === "in progress") return "In Progress";
   if (raw === "not started") return "Not Started";
-  // fallbacks
+
+  // If the list doesn't carry an explicit lifecycle status, infer cautiously.
+  if (raw === "" && isPastDue(item)) return "Overdue";
+
   const pct = item.percentComplete ?? 0;
   const step = item.currentStepOrder ?? 0;
   if (pct > 0 || step > 0) return "In Progress";
   return "Not Started";
+}
+
+function showOverdueCornerBadge(item: UserAssignmentItem): boolean {
+  const raw = rawStatusLower(item);
+  if (raw === "completed") return false;
+  return raw === "overdue";
 }
 
 function statusPillClasses(s: NormalizedStatus): string {
@@ -154,6 +171,7 @@ export function AssignmentsCenter({
         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           {items.map((a) => {
             const s = normalizedStatus(a);
+            const listStatus = listStatusLabel(a);
             const progress = Math.max(0, Math.min(100, a.percentComplete ?? 0));
             return (
               <div key={a.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -164,17 +182,19 @@ export function AssignmentsCenter({
                       <div className="mt-1 line-clamp-2 text-sm text-slate-600">{a.reason}</div>
                     ) : null}
                   </div>
-                  <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${statusPillClasses(s)}`}>
-                    {s}
-                  </span>
+                  {showOverdueCornerBadge(a) ? (
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${statusPillClasses("Overdue")}`}>
+                      Overdue
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-600">
                   <span className="rounded-full bg-slate-100 px-2 py-1">
                     Due <span className="font-semibold text-slate-800">{asDateLabel(a.dueDate)}</span>
                   </span>
-                  <span className="rounded-full bg-slate-100 px-2 py-1">
-                    Status <span className="font-semibold text-slate-800">{s}</span>
+                  <span className={`rounded-full px-2 py-1 ${statusPillClasses(s)}`}>
+                    Status <span className="font-semibold">{listStatus}</span>
                   </span>
                   <span className="rounded-full bg-slate-100 px-2 py-1">
                     Progress <span className="font-semibold text-slate-800">{progress}%</span>

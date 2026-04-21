@@ -40,6 +40,7 @@ from azure_function.sbpubdef.local_upload import (
     lookup_id_field,
     update_list_item,
     get_sharepoint_user_lookup_id,
+    graph_get_user_object_id,
 )
 
 
@@ -580,6 +581,7 @@ def main() -> None:
     ]
 
     assign_lookup = lookup_id_field("AssignmentCatalogId")
+    entra_ids_by_email: dict[str, str] = {}
     for a in seed_assignments:
         cat_title = a["catalog"]
         cat_id = catalog_ids_by_title[cat_title]
@@ -591,21 +593,29 @@ def main() -> None:
             continue
         title = f"{cat_title} - {email}"
 
+        if email not in entra_ids_by_email:
+            try:
+                entra_ids_by_email[email] = graph_get_user_object_id(email)
+            except Exception as e:
+                print(f"[Assignment] warn: could not resolve Entra object id for {email}: {e}")
+
         fields: dict[str, Any] = {
             "Title": title,
             assign_lookup: cat_id,
             "EmployeeLookupId": employee_lookup_id,
             "EmployeeEmail": email,
-            # Dev-friendly: we don't resolve real Entra object ids here; store email so the field isn't blank.
-            "EmployeeObjectId": email,
             "Reason": a["reason"],
             "AssignedDate": iso(now - timedelta(days=1)),
             "DueDate": iso(a["due"]),
             status_col: a["status"],
             "CurrentStepOrder": a["currentStep"],
-            "PercentComplete": a["percent"],
+            # SharePoint "Number" columns shown as % are typically stored as a 0..1 fraction in Graph.
+            "PercentComplete": float(a["percent"]) / 100.0,
             "LastOpenedOn": iso(now),
         }
+        oid = entra_ids_by_email.get(email)
+        if oid:
+            fields["EmployeeObjectId"] = oid
         if a.get("completed"):
             fields["CompletedOn"] = iso(a["completed"])
 

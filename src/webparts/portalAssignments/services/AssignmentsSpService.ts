@@ -33,6 +33,39 @@ function safeNumber(v: unknown): number | undefined {
   return undefined;
 }
 
+/**
+ * SharePoint "percentage" number fields are inconsistent across tenants/API layers:
+ * - sometimes stored as 0..1 (Graph)
+ * - sometimes stored as 0..100
+ * - bad writes can stack-scale (e.g. 100 -> 10000)
+ *
+ * This normalizes to a UI-friendly 0..100 number.
+ */
+function normalizePercentCompleteFromSharePoint(raw: number | undefined): number | undefined {
+  if (raw === undefined) return undefined;
+  if (!Number.isFinite(raw)) return undefined;
+
+  let n = raw;
+  // Unwind accidental repeated "% scaling" (10000 -> 100, 5000 -> 50, etc.)
+  while (n > 100) {
+    n = n / 100;
+  }
+
+  // 0..1 (inclusive) => percent
+  if (n > 0 && n <= 1) {
+    return Math.round(n * 100);
+  }
+
+  return Math.round(n);
+}
+
+function percentCompleteToSharePoint(uiPercent: number | undefined): number | undefined {
+  if (uiPercent === undefined) return undefined;
+  if (!Number.isFinite(uiPercent)) return undefined;
+  const clamped = Math.max(0, Math.min(100, uiPercent));
+  return clamped / 100;
+}
+
 function normalizeEmbedUrls(raw: unknown): string[] {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw.map(String).map((s) => s.trim()).filter(Boolean);
@@ -218,7 +251,9 @@ export class AssignmentsSpService {
         dueDate: getProp<string>(r, "DueDate"),
         status: status,
         currentStepOrder: safeNumber(getProp<unknown>(r, "CurrentStepOrder")),
-        percentComplete: safeNumber(getProp<unknown>(r, "PercentComplete")),
+        percentComplete: normalizePercentCompleteFromSharePoint(
+          safeNumber(getProp<unknown>(r, "PercentComplete")),
+        ),
         lastOpenedOn: getProp<string>(r, "LastOpenedOn"),
         completedOn: getProp<string>(r, "CompletedOn"),
       };
@@ -264,7 +299,9 @@ export class AssignmentsSpService {
       dueDate: getProp<string>(r, "DueDate"),
       status: status,
       currentStepOrder: safeNumber(getProp<unknown>(r, "CurrentStepOrder")),
-      percentComplete: safeNumber(getProp<unknown>(r, "PercentComplete")),
+      percentComplete: normalizePercentCompleteFromSharePoint(
+        safeNumber(getProp<unknown>(r, "PercentComplete")),
+      ),
       lastOpenedOn: getProp<string>(r, "LastOpenedOn"),
       completedOn: getProp<string>(r, "CompletedOn"),
     };
@@ -344,7 +381,18 @@ export class AssignmentsSpService {
     fields: Record<string, unknown>,
   ): Promise<void> {
     const list = await this.getListByTitle(this.lists.assignments);
-    await list.items.getById(id).update(fields);
+    const outgoing = { ...fields };
+    if (Object.prototype.hasOwnProperty.call(outgoing, "PercentComplete")) {
+      const raw = outgoing.PercentComplete;
+      const asNum =
+        typeof raw === "number"
+          ? raw
+          : typeof raw === "string" && raw.trim() !== ""
+            ? Number(raw)
+            : NaN;
+      outgoing.PercentComplete = Number.isFinite(asNum) ? percentCompleteToSharePoint(asNum) : raw;
+    }
+    await list.items.getById(id).update(outgoing);
   }
 }
 

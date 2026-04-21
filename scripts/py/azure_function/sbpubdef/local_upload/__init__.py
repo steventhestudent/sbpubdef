@@ -190,6 +190,28 @@ def update_list_item(site_id: str, list_id: str, item_id: str | int, field_data:
         raise Exception(f"Graph update_list_item failed: {resp.status_code} {resp.text}")
     return True
 
+
+def graph_get_user_object_id(email: str) -> str:
+    """
+    Minimal Entra object id lookup via Microsoft Graph.
+
+    Requires appropriate Microsoft Graph application permissions (commonly User.Read.All).
+    """
+    if not session_headers.get("Authorization"):
+        raise Exception("Graph session_headers missing Authorization (call authenticate() first).")
+
+    safe = requests.utils.quote(email, safe="")
+    url = f"https://graph.microsoft.com/v1.0/users/{safe}?$select=id"
+    resp = requests.get(url, headers=session_headers)
+    if resp.status_code >= 300:
+        raise Exception(f"Graph user lookup failed for {email}: {resp.status_code} {resp.text}")
+    data = resp.json()
+    oid = data.get("id")
+    if not oid:
+        raise Exception(f"Graph user lookup missing id for {email}: {data}")
+    return str(oid)
+
+
 """
 SharePoint REST helpers (minimal, dev-focused)
 """

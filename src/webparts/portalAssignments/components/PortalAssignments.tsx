@@ -77,7 +77,8 @@ function MyAssignmentsView({
 	const admin = isAdmin(userGroupNames);
 	const selectionId = selectedId;
 	const hasSelection = !!selectionId;
-	const openHrefForId = (id: number): string => `${pageUrl}#assignmentId=${id}`;
+	const openHrefForId = (id: number): string =>
+		`${pageUrl}#assignmentId=${id}`;
 
 	const loadMine = React.useCallback(async () => {
 		if (!email) {
@@ -101,8 +102,9 @@ function MyAssignmentsView({
 	}, [email, svc]);
 
 	React.useEffect(() => {
+		// void loadMine();
 		pnpWrapper.loadCachedThenFresh(() => loadMine());
-	}, [loadMine, pnpWrapper]);
+	}, [loadMine]);
 
 	React.useEffect(() => {
 		const onHash = (): void => setSelectedId(getAssignmentIdFromLocation());
@@ -234,14 +236,10 @@ function MyAssignmentsView({
 				</div>
 			) : (
 				<div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
-					<table className="min-w-[520px] w-full divide-y divide-slate-200">
+					<table className="w-full min-w-[520px] divide-y divide-slate-200">
 						<thead className="bg-slate-50">
 							<tr>
-								{[
-									"Assignment",
-									"Due",
-									"",
-								].map((h) => (
+								{["Assignment", "Due", ""].map((h) => (
 									<th
 										key={h}
 										className="px-3 py-2 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase"
