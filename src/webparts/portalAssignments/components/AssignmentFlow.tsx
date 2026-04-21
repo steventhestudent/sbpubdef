@@ -35,7 +35,7 @@ export function AssignmentFlow({
   const [err, setErr] = React.useState<string | undefined>(undefined);
 
   const [activeOrder, setActiveOrder] = React.useState<number>(assignment.currentStepOrder ?? 1);
-  const [finalEmbedDone, setFinalEmbedDone] = React.useState<boolean>(!!assignment.finalEmbedCompleted);
+  const [finalEmbedDone, setFinalEmbedDone] = React.useState<boolean>(false);
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
@@ -54,7 +54,7 @@ export function AssignmentFlow({
         setSteps(s);
         const maxOrder = s.length ? Math.max(...s.map((x) => x.stepOrder)) : 1;
         setActiveOrder(clamp(assignment.currentStepOrder ?? 1, 1, maxOrder));
-        setFinalEmbedDone(!!assignment.finalEmbedCompleted);
+        setFinalEmbedDone(false);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "Failed to load assignment.";
         setErr(msg);
@@ -92,7 +92,8 @@ export function AssignmentFlow({
 
   async function persistProgress(nextOrder: number): Promise<void> {
     if (!assignment.id) return;
-    const nextMax = Math.max(assignment.maxStepOrderViewed ?? 0, nextOrder);
+    const statusField = svc.statusFieldName();
+    const nextMax = Math.max(assignment.currentStepOrder ?? 0, nextOrder);
     const percent =
       maxStepOrder > 0 ? Math.round((nextMax / maxStepOrder) * 100) : undefined;
 
@@ -100,10 +101,9 @@ export function AssignmentFlow({
     try {
       await svc.updateAssignment(assignment.id, {
         CurrentStepOrder: nextOrder,
-        MaxStepOrderViewed: nextMax,
         PercentComplete: percent,
         LastOpenedOn: new Date().toISOString(),
-        Status:
+        [statusField]:
           assignment.status === "Completed"
             ? "Completed"
             : nextMax >= 1
@@ -114,7 +114,6 @@ export function AssignmentFlow({
       const next: UserAssignmentItem = {
         ...assignment,
         currentStepOrder: nextOrder,
-        maxStepOrderViewed: nextMax,
         percentComplete: percent,
         lastOpenedOn: new Date().toISOString(),
         status:
@@ -131,22 +130,15 @@ export function AssignmentFlow({
   async function persistFinalEmbedDone(): Promise<void> {
     if (finalEmbedDone) return;
     setFinalEmbedDone(true);
-    try {
-      await svc.updateAssignment(assignment.id, {
-        FinalEmbedCompleted: true,
-      });
-      onUpdated({ ...assignment, finalEmbedCompleted: true });
-    } catch {
-      // if it fails, keep UI state but don't block demo
-    }
   }
 
   async function markComplete(): Promise<void> {
     if (!canMarkComplete) return;
+    const statusField = svc.statusFieldName();
     setSaving(true);
     try {
       await svc.updateAssignment(assignment.id, {
-        Status: "Completed",
+        [statusField]: "Completed",
         CompletedOn: new Date().toISOString(),
         PercentComplete: 100,
       });
@@ -224,7 +216,7 @@ export function AssignmentFlow({
           <ul className="p-2">
             {steps.map((s) => {
               const active = s.stepOrder === activeOrder;
-              const viewed = (assignment.maxStepOrderViewed ?? 0) >= s.stepOrder;
+              const viewed = (assignment.currentStepOrder ?? 0) >= s.stepOrder;
               return (
                 <li key={s.id}>
                   <button

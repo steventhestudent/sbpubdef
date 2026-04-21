@@ -30,15 +30,13 @@ export type UserAssignmentItem = {
   id: number;
   title: string;
   assignmentCatalogId?: number;
-  assignmentKeySnapshot?: string;
   employeeEmail?: string;
+  reason?: string;
   dueDate?: string;
   status?: AssignmentStatus | string;
   currentStepOrder?: number;
-  maxStepOrderViewed?: number;
   percentComplete?: number;
   lastOpenedOn?: string;
   completedOn?: string;
-  finalEmbedCompleted?: boolean;
 };
 

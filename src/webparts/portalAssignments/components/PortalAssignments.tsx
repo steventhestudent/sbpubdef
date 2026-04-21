@@ -53,7 +53,10 @@ function MyAssignmentsView({
 	pnpWrapper,
 }: RoleBasedViewProps): JSX.Element {
 	const email = (pnpWrapper.ctx.pageContext.user.email || "").trim();
-	const svc = React.useMemo(() => new AssignmentsSpService(pnpWrapper), [pnpWrapper]);
+	const svc = React.useMemo(
+		() => new AssignmentsSpService(pnpWrapper),
+		[pnpWrapper],
+	);
 
 	const [items, setItems] = React.useState<UserAssignmentItem[]>([]);
 	const [loading, setLoading] = React.useState(true);
@@ -62,9 +65,9 @@ function MyAssignmentsView({
 	const [selectedId, setSelectedId] = React.useState<number | undefined>(() =>
 		getAssignmentIdFromLocation(),
 	);
-	const [selected, setSelected] = React.useState<UserAssignmentItem | undefined>(
-		undefined,
-	);
+	const [selected, setSelected] = React.useState<
+		UserAssignmentItem | undefined
+	>(undefined);
 
 	const pageUrl = assignmentsPageUrl(pnpWrapper.ctx);
 	const admin = isAdmin(userGroupNames);
@@ -111,7 +114,11 @@ function MyAssignmentsView({
 				const a = await svc.getAssignmentById(selectedId);
 				if (cancelled) return;
 				// Soft security: only show if it matches current user's email
-				if (a && a.employeeEmail && a.employeeEmail.toLowerCase() !== email.toLowerCase()) {
+				if (
+					a &&
+					a.employeeEmail &&
+					a.employeeEmail.toLowerCase() !== email.toLowerCase()
+				) {
 					setErr("That assignment is not assigned to your account.");
 					setSelected(undefined);
 					return;
@@ -119,7 +126,9 @@ function MyAssignmentsView({
 				setSelected(a);
 			} catch (e: unknown) {
 				const msg =
-					e instanceof Error ? e.message : "Failed to load selected assignment.";
+					e instanceof Error
+						? e.message
+						: "Failed to load selected assignment.";
 				setErr(msg);
 				setSelected(undefined);
 			}
@@ -158,7 +167,8 @@ function MyAssignmentsView({
 						My Assignments
 					</div>
 					<div className="mt-1 text-sm text-slate-600">
-						Signed in as <span className="font-medium">{email || "—"}</span>
+						Signed in as{" "}
+						<span className="font-medium">{email || "—"}</span>
 					</div>
 				</div>
 
@@ -199,21 +209,27 @@ function MyAssignmentsView({
 					<table className="min-w-full divide-y divide-slate-200">
 						<thead className="bg-slate-50">
 							<tr>
-								{["Assignment", "Due", "Status", "Progress", ""].map(
-									(h) => (
-										<th
-											key={h}
-											className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
-										>
-											{h}
-										</th>
-									),
-								)}
+								{[
+									"Assignment",
+									"Due",
+									"Status",
+									"Progress",
+									"",
+								].map((h) => (
+									<th
+										key={h}
+										className="px-3 py-2 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase"
+									>
+										{h}
+									</th>
+								))}
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-slate-200">
 							{items.map((a) => {
-								const due = a.dueDate ? new Date(a.dueDate) : undefined;
+								const due = a.dueDate
+									? new Date(a.dueDate)
+									: undefined;
 								const dueLabel =
 									due && !Number.isNaN(due.getTime())
 										? due.toLocaleDateString()
@@ -221,7 +237,10 @@ function MyAssignmentsView({
 								const progress = a.percentComplete ?? 0;
 								const openHref = `${pageUrl}#assignmentId=${a.id}`;
 								return (
-									<tr key={a.id} className="hover:bg-slate-50">
+									<tr
+										key={a.id}
+										className="hover:bg-slate-50"
+									>
 										<td className="px-3 py-3 text-sm font-medium text-slate-900">
 											{a.title}
 										</td>
@@ -256,22 +275,38 @@ function MyAssignmentsView({
 export default function PortalAssignments(
 	props: IPortalAssignmentsProps,
 ): JSX.Element {
+	const isAssignmentsPage = /\/sitepages\/assignments\.aspx$/i.test(
+		window.location.pathname,
+	);
+
+	const body = (
+		<PDRoleBasedSelect
+			ctx={props.context}
+			views={{
+				EVERYONE: BlankGuestView,
+				PDINTRANET: MyAssignmentsView,
+				ATTORNEY: MyAssignmentsView,
+				CDD: MyAssignmentsView,
+				LOP: MyAssignmentsView,
+				TRIALSUPERVISOR: MyAssignmentsView,
+				COMPLIANCEOFFICER: MyAssignmentsView,
+				HR: MyAssignmentsView,
+				IT: MyAssignmentsView,
+			}}
+		/>
+	);
+
+	if (isAssignmentsPage) {
+		return (
+			<section className="rounded-xl border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm">
+				{body}
+			</section>
+		);
+	}
+
 	return (
 		<Collapsible instanceId={props.context.instanceId} title="Assignments">
-			<PDRoleBasedSelect
-				ctx={props.context}
-				views={{
-					EVERYONE: BlankGuestView,
-					PDINTRANET: MyAssignmentsView,
-					ATTORNEY: MyAssignmentsView,
-					CDD: MyAssignmentsView,
-					LOP: MyAssignmentsView,
-					TRIALSUPERVISOR: MyAssignmentsView,
-					COMPLIANCEOFFICER: MyAssignmentsView,
-					HR: MyAssignmentsView,
-					IT: MyAssignmentsView,
-				}}
-			/>
+			{body}
 		</Collapsible>
 	);
 }
