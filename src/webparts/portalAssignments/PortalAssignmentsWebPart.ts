@@ -22,6 +22,7 @@ export default class PortalAssignmentsWebPart extends BaseClientSideWebPart<IPor
 	private _environmentMessage: string = "";
 
 	public render(): void {
+		this.domElement.classList.add("pd-portal-assignments");
 		const element: React.ReactElement<IPortalAssignmentsProps> =
 			React.createElement(PortalAssignments, {
 				description: this.properties.description,
