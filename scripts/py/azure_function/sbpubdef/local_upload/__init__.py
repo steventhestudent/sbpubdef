@@ -181,7 +181,13 @@ def lookup_id_field(lookup_col_name: str) -> str:
 CRUD: Update
 """
 def update_list_item(site_id: str, list_id: str, item_id: str | int, field_data: dict):
-    requests.patch(f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/{item_id}/fields", headers={**session_headers, "Content-Type": "application/json"}, json=field_data)
+    resp = requests.patch(
+        f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/{item_id}/fields",
+        headers={**session_headers, "Content-Type": "application/json"},
+        json=field_data,
+    )
+    if resp.status_code >= 300:
+        raise Exception(f"Graph update_list_item failed: {resp.status_code} {resp.text}")
     return True
 
 """

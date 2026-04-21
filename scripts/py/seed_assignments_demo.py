@@ -81,7 +81,9 @@ def catalog_seed_rows() -> list[dict[str, Any]]:
                 "</ul>"
             ),
             "Active": True,
-            "TargetMode": "Roles",
+            # TargetMode is a checkbox-choice in this dev list -> must be a string collection.
+            "TargetMode@odata.type": "Collection(Edm.String)",
+            "TargetMode": ["Roles"],
             # SharePoint checkbox-choice fields via Graph require the OData type annotation.
             "TargetRoles@odata.type": "Collection(Edm.String)",
             "TargetRoles": [
@@ -124,7 +126,8 @@ def catalog_seed_rows() -> list[dict[str, Any]]:
                 "</ul>"
             ),
             "Active": True,
-            "TargetMode": "Roles",
+            "TargetMode@odata.type": "Collection(Edm.String)",
+            "TargetMode": ["Roles"],
             "TargetRoles@odata.type": "Collection(Edm.String)",
             "TargetRoles": [
                 "ATTORNEY",
@@ -166,7 +169,8 @@ def catalog_seed_rows() -> list[dict[str, Any]]:
                 "</ul>"
             ),
             "Active": True,
-            "TargetMode": "Roles",
+            "TargetMode@odata.type": "Collection(Edm.String)",
+            "TargetMode": ["Roles"],
             "TargetRoles@odata.type": "Collection(Edm.String)",
             "TargetRoles": [
                 "ATTORNEY",
@@ -208,7 +212,8 @@ def catalog_seed_rows() -> list[dict[str, Any]]:
                 "</ul>"
             ),
             "Active": True,
-            "TargetMode": "Roles",
+            "TargetMode@odata.type": "Collection(Edm.String)",
+            "TargetMode": ["Roles"],
             "TargetRoles@odata.type": "Collection(Edm.String)",
             "TargetRoles": [
                 "ATTORNEY",
@@ -476,8 +481,29 @@ def main() -> None:
         if not item_id:
             # Shouldn't happen, but keep going
             raise Exception(f"Failed to resolve catalog item id for {title}")
-        # Then patch full fields (this path supports checkbox-choice updates).
-        update_list_item(site_id, catalog_list_id, item_id, row)
+        # Then patch fields. In this tenant, some checkbox-choice fields must be patched separately.
+        simple_patch = dict(row)
+        # remove the collection annotations/values for the second patch
+        for k in [
+            "TargetMode@odata.type",
+            "TargetMode",
+            "TargetRoles@odata.type",
+            "TargetRoles",
+            "TargetRoles0@odata.type",
+            "TargetRoles0",
+        ]:
+            simple_patch.pop(k, None)
+        update_list_item(site_id, catalog_list_id, item_id, simple_patch)
+
+        choice_patch = {
+            "TargetMode@odata.type": row.get("TargetMode@odata.type"),
+            "TargetMode": row.get("TargetMode"),
+            "TargetRoles@odata.type": row.get("TargetRoles@odata.type"),
+            "TargetRoles": row.get("TargetRoles"),
+            "TargetRoles0@odata.type": row.get("TargetRoles0@odata.type"),
+            "TargetRoles0": row.get("TargetRoles0"),
+        }
+        update_list_item(site_id, catalog_list_id, item_id, choice_patch)
         catalog_ids_by_title[title] = item_id
         print(f"[Catalog] {res['mode']}+patch: {title} -> {item_id}")
 

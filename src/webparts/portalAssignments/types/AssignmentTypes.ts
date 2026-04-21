@@ -15,7 +15,6 @@ export type AssignmentCatalogItem = {
 export type AssignmentStepItem = {
   id: number;
   assignmentCatalogId: number;
-  stepKey?: string;
   stepOrder: number;
   stepTitle?: string;
   bodyHtml?: string;
