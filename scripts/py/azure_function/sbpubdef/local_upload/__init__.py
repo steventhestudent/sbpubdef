@@ -123,9 +123,42 @@ def get_list_items(site_id: str, list_id: str, *, fields_filter: str = "", top: 
         "$top": str(top),
     }
     if fields_filter: params["$filter"] = fields_filter
-    resp = requests.get(url, headers=session_headers, params=params)
+    headers = {**session_headers}
+    # Dev-friendly: allow non-indexed field filters (Graph otherwise 400s).
+    if fields_filter:
+        headers["Prefer"] = "HonorNonIndexedQueriesWarningMayFailRandomly"
+    resp = requests.get(url, headers=headers, params=params)
     if resp.status_code >= 300: raise Exception(f"Graph get_list_items failed: {resp.status_code} {resp.text}")
     return resp.json().get("value", [])
+
+def upsert_list_item(site_id: str, list_id: str, *, unique_filter: str, field_data: dict, fields_select: list[str] | None = None):
+    """
+    Upsert by querying list items with a Graph fields filter.
+
+    unique_filter examples:
+      - "fields/Title eq 'Some Title'"
+      - "fields/EmployeeEmail eq 'a@b.com' and fields/AssignmentCatalogIdLookupId eq 12"
+    """
+    rows = get_list_items(site_id, list_id, fields_filter=unique_filter, top=1, fields_select=fields_select)
+    if rows and len(rows) > 0:
+        item_id = rows[0].get("id")
+        update_list_item(site_id, list_id, item_id, field_data)
+        return {"mode": "update", "id": item_id, "existing": rows[0]}
+    created = add_list_item(site_id, list_id, field_data)
+    if isinstance(created, dict) and created.get("error"):
+        raise Exception(f"Graph add_list_item failed: {created}")
+    created_id = created.get("id")
+    if created_id:
+        return {"mode": "create", "id": created_id, "created": created}
+    # Some Graph responses don't include listItem.id reliably; re-query by the unique filter.
+    rows2 = get_list_items(site_id, list_id, fields_filter=unique_filter, top=1, fields_select=fields_select)
+    if rows2 and len(rows2) > 0:
+        return {"mode": "create", "id": rows2[0].get("id"), "created": created, "refetched": rows2[0]}
+    return {"mode": "create", "id": None, "created": created}
+
+def lookup_id_field(lookup_col_name: str) -> str:
+    # SharePoint lookup columns in Graph fields commonly expose "<ColName>LookupId"
+    return f"{lookup_col_name}LookupId"
 
 """
 CRUD: Update
