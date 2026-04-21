@@ -11,6 +11,7 @@ import type RoleBasedViewProps from "@type/RoleBasedViewProps";
 import { AssignmentsSpService } from "../services/AssignmentsSpService";
 import type { UserAssignmentItem } from "../types/AssignmentTypes";
 import { AssignmentFlow } from "./AssignmentFlow";
+import { AssignmentsCenter } from "./AssignmentsCenter";
 
 function getAssignmentIdFromLocation(): number | undefined {
 	// Supported:
@@ -52,6 +53,9 @@ function MyAssignmentsView({
 	userGroupNames,
 	pnpWrapper,
 }: RoleBasedViewProps): JSX.Element {
+	const isAssignmentsPage = /\/sitepages\/assignments\.aspx$/i.test(
+		window.location.pathname,
+	);
 	const email = (pnpWrapper.ctx.pageContext.user.email || "").trim();
 	const svc = React.useMemo(
 		() => new AssignmentsSpService(pnpWrapper),
@@ -71,6 +75,9 @@ function MyAssignmentsView({
 
 	const pageUrl = assignmentsPageUrl(pnpWrapper.ctx);
 	const admin = isAdmin(userGroupNames);
+	const selectionId = selectedId;
+	const hasSelection = !!selectionId;
+	const openHrefForId = (id: number): string => `${pageUrl}#assignmentId=${id}`;
 
 	const loadMine = React.useCallback(async () => {
 		if (!email) {
@@ -159,6 +166,22 @@ function MyAssignmentsView({
 		);
 	}
 
+	// Full page with no selection: show Assignments Center (not the compact dashboard).
+	if (isAssignmentsPage && !hasSelection) {
+		return (
+			<AssignmentsCenter
+				ctx={pnpWrapper.ctx}
+				email={email}
+				items={items}
+				loading={loading}
+				error={err}
+				isAdmin={admin}
+				openHrefForId={openHrefForId}
+				assignmentsListTitle={ENV.LIST_ASSIGNMENTS || "Assignments"}
+			/>
+		);
+	}
+
 	return (
 		<div className="p-4">
 			<div className="flex items-start justify-between gap-3">
@@ -206,14 +229,12 @@ function MyAssignmentsView({
 				</div>
 			) : (
 				<div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
-					<table className="min-w-full divide-y divide-slate-200">
+					<table className="min-w-[520px] w-full divide-y divide-slate-200">
 						<thead className="bg-slate-50">
 							<tr>
 								{[
 									"Assignment",
 									"Due",
-									"Status",
-									"Progress",
 									"",
 								].map((h) => (
 									<th
@@ -234,8 +255,7 @@ function MyAssignmentsView({
 									due && !Number.isNaN(due.getTime())
 										? due.toLocaleDateString()
 										: "—";
-								const progress = a.percentComplete ?? 0;
-								const openHref = `${pageUrl}#assignmentId=${a.id}`;
+								const openHref = openHrefForId(Number(a.id));
 								return (
 									<tr
 										key={a.id}
@@ -246,12 +266,6 @@ function MyAssignmentsView({
 										</td>
 										<td className="px-3 py-3 text-sm text-slate-700">
 											{dueLabel}
-										</td>
-										<td className="px-3 py-3 text-sm text-slate-700">
-											{a.status ?? "—"}
-										</td>
-										<td className="px-3 py-3 text-sm text-slate-700">
-											{progress}%
 										</td>
 										<td className="px-3 py-3 text-right">
 											<a

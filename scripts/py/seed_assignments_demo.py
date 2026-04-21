@@ -39,6 +39,7 @@ from azure_function.sbpubdef.local_upload import (
     upsert_list_item,
     lookup_id_field,
     update_list_item,
+    get_sharepoint_user_lookup_id,
 )
 
 
@@ -68,6 +69,7 @@ def catalog_seed_rows() -> list[dict[str, Any]]:
     return [
         {
             "Title": "Sexual Harassment Prevention",
+            "AssignmentKey": "sexual-harassment-prevention",
             "AssignmentType": "Training",
             "Category": "Compliance",
             "Summary": "Annual prevention training covering prohibited conduct, reporting obligations, and office expectations.",
@@ -110,6 +112,7 @@ def catalog_seed_rows() -> list[dict[str, Any]]:
         },
         {
             "Title": "Cybersecurity Awareness",
+            "AssignmentKey": "cybersecurity-awareness",
             "AssignmentType": "Training",
             "Category": "IT",
             "Summary": "Practical training on password hygiene, phishing, and safe data handling in M365.",
@@ -151,6 +154,7 @@ def catalog_seed_rows() -> list[dict[str, Any]]:
         },
         {
             "Title": "New Hire Orientation",
+            "AssignmentKey": "new-hire-orientation",
             "AssignmentType": "Training",
             "Category": "Onboarding",
             "Summary": "Orientation to office mission, intranet usage, and confidentiality expectations.",
@@ -192,6 +196,7 @@ def catalog_seed_rows() -> list[dict[str, Any]]:
         },
         {
             "Title": "Remote Work Acknowledgment",
+            "AssignmentKey": "remote-work-acknowledgment",
             "AssignmentType": "Acknowledgment",
             "Category": "Policy",
             "Summary": "Acknowledgment of remote work expectations, security requirements, and privacy safeguards.",
@@ -437,7 +442,8 @@ def steps_seed_rows(final_video_url: str) -> dict[str, list[dict[str, Any]]]:
 
 def main() -> None:
     authenticate()
-    site_id = get_site_id(env_required("HUB_NAME"))
+    hub_name = env_required("HUB_NAME")
+    site_id = get_site_id(hub_name)
 
     catalog_title, catalog_list_id = ensure_list(site_id, "LIST_ASSIGNMENTCATALOG", "AssignmentCatalog")
     steps_title, steps_list_id = ensure_list(site_id, "LIST_ASSIGNMENTSTEPS", "AssignmentSteps")
@@ -497,19 +503,16 @@ def main() -> None:
     # 3) Assignments rows (per-user)
     now = datetime.now(timezone.utc)
 
-    tenant_domain = os.getenv("TENANT_NAME") or "csproject25"
-    # Use stable dev/demo emails in the tenant domain. Include the current dev user if provided.
+    # Prefer seeding for real users that exist in the site user-info list.
     current_user_email = os.getenv("DEV_CURRENT_USER_EMAIL") or "sgonzales@csproject25.onmicrosoft.com"
-    demo_users = [
-        current_user_email,
-        f"dev.attorney1@{tenant_domain}.onmicrosoft.com",
-        f"dev.staff1@{tenant_domain}.onmicrosoft.com",
-        f"dev.supervisor1@{tenant_domain}.onmicrosoft.com",
-    ]
+    demo_users = [current_user_email]
+    extra = (os.getenv("DEV_DEMO_EMAILS") or "").strip()
+    if extra:
+        demo_users.extend([e.strip() for e in extra.split(";") if e.strip()])
 
     # Seed rows designed to exercise: not started, in progress mid-step, completed, overdue, and final-step gating.
     seed_assignments = [
-        # Current user: multiple assignments
+        # One user with multiple assignments and varied statuses (enough to exercise UI)
         {
             "email": demo_users[0],
             "catalog": "Sexual Harassment Prevention",
@@ -522,15 +525,14 @@ def main() -> None:
         {
             "email": demo_users[0],
             "catalog": "Cybersecurity Awareness",
-            "status": "Not Started",
-            "currentStep": 0,
-            "percent": 0,
-            "due": now + timedelta(days=3),
-            "reason": "Office-wide security training (dev seed).",
+            "status": "Overdue",
+            "currentStep": 1,
+            "percent": 25,
+            "due": now - timedelta(days=5),
+            "reason": "Past-due security training (dev seed).",
         },
-        # Completed assignment
         {
-            "email": demo_users[1],
+            "email": demo_users[0],
             "catalog": "Remote Work Acknowledgment",
             "status": "Completed",
             "currentStep": 3,
@@ -538,16 +540,6 @@ def main() -> None:
             "due": now - timedelta(days=1),
             "completed": now - timedelta(days=2),
             "reason": "Policy acknowledgment (dev seed).",
-        },
-        # Overdue assignment
-        {
-            "email": demo_users[2],
-            "catalog": "Cybersecurity Awareness",
-            "status": "Overdue",
-            "currentStep": 1,
-            "percent": 25,
-            "due": now - timedelta(days=5),
-            "reason": "Past-due security training (dev seed).",
         },
         # Final-step gating candidate (open and watch)
         {
@@ -566,11 +558,17 @@ def main() -> None:
         cat_title = a["catalog"]
         cat_id = catalog_ids_by_title[cat_title]
         email = a["email"]
+        try:
+            employee_lookup_id = get_sharepoint_user_lookup_id(site_id, email)
+        except Exception as e:
+            print(f"[Assignment] skip: could not resolve Employee person for {email}: {e}")
+            continue
         title = f"{cat_title} - {email}"
 
         fields: dict[str, Any] = {
             "Title": title,
             assign_lookup: cat_id,
+            "EmployeeLookupId": employee_lookup_id,
             "EmployeeEmail": email,
             "Reason": a["reason"],
             "AssignedDate": iso(now - timedelta(days=1)),

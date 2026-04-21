@@ -10,6 +10,7 @@ SHAREPOINT_LIST_COLUMNS = ["LinkTitle", "_ColorTag", "ComplianceAssetId", "ID", 
 if (os.getenv('AZURE_FUNCTIONS_ENVIRONMENT') == None) or (os.getenv('AZURE_FUNCTIONS_ENVIRONMENT') == "Development"): # not in azure functions environment (module call/func start) -> use .env files
     [load_dotenv(Path(__file__).resolve().parents[5] / f"config/{env}") for env in ["env.public", ".env.public.dev", ".env.dev"]]
 session_headers = {}
+sharepoint_session_headers = {}
 
 """
 utils
@@ -19,16 +20,25 @@ def odata_escape(s: str) -> str: # OData (REST) is single quote only (and escape
 
 def authenticate():
     global session_headers
+    global sharepoint_session_headers
     print("authenticating...")
     TENANT_ID = os.getenv("AZURE_TENANT_ID")
     CLIENT_ID = os.getenv("AZURE_CLIENT_ID")
     CLIENT_SECRET = os.getenv("AZURE_CLIENT_SECRET")
     AUTHORITY = f"https://login.microsoftonline.com/{TENANT_ID}"
-    SCOPE = ["https://graph.microsoft.com/.default"]
+    GRAPH_SCOPE = ["https://graph.microsoft.com/.default"]
     app = msal.ConfidentialClientApplication(CLIENT_ID, authority=AUTHORITY, client_credential=CLIENT_SECRET)
-    result = app.acquire_token_for_client(scopes=SCOPE)
+    result = app.acquire_token_for_client(scopes=GRAPH_SCOPE)
     if "access_token" not in result: raise Exception(result)
     session_headers = {"Authorization": f"Bearer {result['access_token']}"}
+
+    # SharePoint REST token (needed for ensureuser / siteuser lookup ids)
+    tenant = os.getenv("TENANT_NAME")
+    if tenant:
+        sp_scope = [f"https://{tenant}.sharepoint.com/.default"]
+        sp_result = app.acquire_token_for_client(scopes=sp_scope)
+        if "access_token" in sp_result:
+            sharepoint_session_headers = {"Authorization": f"Bearer {sp_result['access_token']}"}
 
 def get_site_id(site_name):
     TENANT_NAME = os.getenv("TENANT_NAME")
@@ -90,12 +100,19 @@ def add_list_item(site_id, list_id, field_data: dict):
 CRUD: Read
 """
 # lists
-def get_site_lists(site_id):
-    resp = requests.get(f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists", headers=session_headers)
+def get_site_lists(site_id, *, include_hidden: bool = True):
+    url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists"
+    params = {}
+    # Including `system` in $select returns hidden/system lists too (needed for User Information List).
+    if include_hidden:
+        params["$select"] = "id,name,system"
+    resp = requests.get(url, headers=session_headers, params=params)
+    if resp.status_code >= 300:
+        raise Exception(f"Graph get_site_lists failed: {resp.status_code} {resp.text}")
     return resp.json()["value"]
 
 def get_list_id(site_id, list_name):
-    for lst in get_site_lists(site_id):
+    for lst in get_site_lists(site_id, include_hidden=True):
         if lst["name"] == list_name: return lst["id"]
     return ""
 
@@ -166,6 +183,76 @@ CRUD: Update
 def update_list_item(site_id: str, list_id: str, item_id: str | int, field_data: dict):
     requests.patch(f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/{item_id}/fields", headers={**session_headers, "Content-Type": "application/json"}, json=field_data)
     return True
+
+"""
+SharePoint REST helpers (minimal, dev-focused)
+"""
+
+def _sp_site_url(site_name: str) -> str:
+    tenant = os.getenv("TENANT_NAME")
+    if not tenant:
+        raise Exception("Missing TENANT_NAME env var for SharePoint REST calls.")
+    return f"https://{tenant}.sharepoint.com/sites/{site_name}"
+
+def ensure_user(site_name: str, email: str) -> int:
+    """
+    Resolve a SharePoint user and return the numeric user Id used by Person fields as <FieldName>LookupId.
+
+    Uses SharePoint REST: POST .../_api/web/ensureuser
+    """
+    if not sharepoint_session_headers:
+        raise Exception("Missing sharepoint_session_headers (SharePoint token). Check app permissions and TENANT_NAME.")
+    site_url = _sp_site_url(site_name)
+    url = f"{site_url}/_api/web/ensureuser"
+    # Common claims format for SPO. Using email directly also works in many tenants, but claims is safest.
+    login = f"i:0#.f|membership|{email}"
+    resp = requests.post(
+        url,
+        headers={
+            **sharepoint_session_headers,
+            "Accept": "application/json;odata=nometadata",
+            "Content-Type": "application/json;odata=nometadata",
+        },
+        json={"logonName": login},
+    )
+    if resp.status_code >= 300:
+        raise Exception(f"SharePoint ensureuser failed: {resp.status_code} {resp.text}")
+    data = resp.json()
+    user_id = data.get("Id") or data.get("id")
+    if not user_id:
+        raise Exception(f"SharePoint ensureuser missing Id: {data}")
+    return int(user_id)
+
+def get_sharepoint_user_lookup_id(site_id: str, email: str) -> int:
+    """
+    Resolve SharePoint person/lookup id for a user by querying the built-in 'User Information List'.
+
+    This works with Graph app-only tokens and avoids SharePoint REST (which may reject app-only tokens).
+    The returned value can be used for Person fields as: <FieldName>LookupId
+    """
+    # Common internal list names for the SharePoint user info list (often hidden)
+    user_list_candidates = ["User Information List", "users", "SiteUserInfoList"]
+    user_list_id = ""
+    used_name = ""
+    for name in user_list_candidates:
+        lid = get_list_id(site_id, name)
+        if lid:
+            user_list_id = lid
+            used_name = name
+            break
+    if not user_list_id:
+        raise Exception(f"Could not find a user info list on site_id={site_id}. Tried: {user_list_candidates}")
+    rows = get_list_items(
+        site_id,
+        user_list_id,
+        fields_filter=f"fields/EMail eq '{odata_escape(email)}'",
+        top=1,
+        fields_select=["EMail"],
+    )
+    if not rows:
+        raise Exception(f"User not found in '{used_name}' for email={email}")
+    # Graph list item 'id' is the SharePoint list item id, which matches the user lookup id in SharePoint.
+    return int(rows[0].get("id"))
 
 """
 CRUD: Delete

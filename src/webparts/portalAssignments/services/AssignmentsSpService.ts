@@ -318,9 +318,7 @@ export class AssignmentsSpService {
         "StepTitle",
         "BodyHtml",
         "EmbedUrl",
-        "EmbedUrls",
         "RequireEmbedCompletion",
-        "RequireStepView",
         "AllowMarkCompleteHere",
         "EstimatedMinutes",
       )
@@ -337,9 +335,9 @@ export class AssignmentsSpService {
         stepOrder,
         stepTitle: getFirstDefined<string>(getProp<string>(r, "StepTitle"), getProp<string>(r, "Title")),
         bodyHtml: getProp<string>(r, "BodyHtml"),
-        embedUrls: normalizeEmbedUrls(getFirstDefined<unknown>(getProp<unknown>(r, "EmbedUrls"), getProp<unknown>(r, "EmbedUrl"))),
+        embedUrls: normalizeEmbedUrls(getProp<unknown>(r, "EmbedUrl")),
         requireEmbedCompletion: toYesNo(getProp<unknown>(r, "RequireEmbedCompletion")),
-        requireStepView: toYesNo(getProp<unknown>(r, "RequireStepView")),
+        requireStepView: undefined,
         allowMarkCompleteHere: toYesNo(getProp<unknown>(r, "AllowMarkCompleteHere")),
         estimatedMinutes: safeNumber(getProp<unknown>(r, "EstimatedMinutes")),
       };

@@ -109,7 +109,7 @@ export function PDRoleBasedSelect({
 			</header>
 
 			<div
-				className="overflow-hidden transition-[grid-template-rows] duration-300 ease-in-out"
+				className="overflow-x-visible overflow-y-hidden transition-[grid-template-rows] duration-300 ease-in-out"
 				style={{ display: "grid", gridTemplateRows: "1fr" }}
 			>
 				<div className="min-h-0">
