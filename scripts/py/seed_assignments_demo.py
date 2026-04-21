@@ -596,6 +596,8 @@ def main() -> None:
             assign_lookup: cat_id,
             "EmployeeLookupId": employee_lookup_id,
             "EmployeeEmail": email,
+            # Dev-friendly: we don't resolve real Entra object ids here; store email so the field isn't blank.
+            "EmployeeObjectId": email,
             "Reason": a["reason"],
             "AssignedDate": iso(now - timedelta(days=1)),
             "DueDate": iso(a["due"]),

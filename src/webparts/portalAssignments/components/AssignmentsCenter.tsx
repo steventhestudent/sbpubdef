@@ -19,6 +19,49 @@ function isOverdue(item: UserAssignmentItem): boolean {
   return d.getTime() < today.getTime();
 }
 
+type NormalizedStatus = "Not Started" | "In Progress" | "Completed" | "Overdue";
+
+function normalizedStatus(item: UserAssignmentItem): NormalizedStatus {
+  const raw = String(item.status || "").trim().toLowerCase();
+  if (raw === "completed") return "Completed";
+  if (isOverdue(item) || raw === "overdue") return "Overdue";
+  if (raw === "in progress") return "In Progress";
+  if (raw === "not started") return "Not Started";
+  // fallbacks
+  const pct = item.percentComplete ?? 0;
+  const step = item.currentStepOrder ?? 0;
+  if (pct > 0 || step > 0) return "In Progress";
+  return "Not Started";
+}
+
+function statusPillClasses(s: NormalizedStatus): string {
+  switch (s) {
+    case "Completed":
+      return "bg-green-50 text-green-800";
+    case "Overdue":
+      return "bg-red-50 text-red-800";
+    case "In Progress":
+      return "bg-blue-50 text-blue-800";
+    case "Not Started":
+    default:
+      return "bg-slate-100 text-slate-700";
+  }
+}
+
+function progressBarClasses(s: NormalizedStatus): string {
+  switch (s) {
+    case "Completed":
+      return "bg-green-600";
+    case "Overdue":
+      return "bg-red-600";
+    case "In Progress":
+      return "bg-blue-600";
+    case "Not Started":
+    default:
+      return "bg-slate-400";
+  }
+}
+
 export function AssignmentsCenter({
   ctx,
   email,
@@ -43,9 +86,16 @@ export function AssignmentsCenter({
   const catalogUrl = `${window.location.origin}${webRel}/Lists/${ENV.LIST_ASSIGNMENTCATALOG || "AssignmentCatalog"}/AllItems.aspx`;
   const stepsUrl = `${window.location.origin}${webRel}/Lists/${ENV.LIST_ASSIGNMENTSTEPS || "AssignmentSteps"}/AllItems.aspx`;
 
-  const overdue = items.filter((i) => isOverdue(i) || String(i.status || "").toLowerCase() === "overdue");
-  const active = items.filter((i) => String(i.status || "").toLowerCase() !== "completed");
-  const completed = items.filter((i) => String(i.status || "").toLowerCase() === "completed");
+  const counts = React.useMemo(() => {
+    const c: Record<NormalizedStatus, number> = {
+      "Not Started": 0,
+      "In Progress": 0,
+      Completed: 0,
+      Overdue: 0,
+    };
+    for (const it of items) c[normalizedStatus(it)] += 1;
+    return c;
+  }, [items]);
 
   return (
     <div className="p-6">
@@ -56,14 +106,17 @@ export function AssignmentsCenter({
             Signed in as <span className="font-medium text-slate-800">{email || "—"}</span>
           </div>
           <div className="mt-2 flex flex-wrap gap-2 text-xs">
-            <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-700">
-              Active: <span className="font-semibold">{active.length}</span>
+            <span className={`rounded-full px-2 py-1 ${statusPillClasses("Not Started")}`}>
+              Not Started: <span className="font-semibold">{counts["Not Started"]}</span>
             </span>
-            <span className="rounded-full bg-red-50 px-2 py-1 text-red-800">
-              Overdue: <span className="font-semibold">{overdue.length}</span>
+            <span className={`rounded-full px-2 py-1 ${statusPillClasses("In Progress")}`}>
+              In Progress: <span className="font-semibold">{counts["In Progress"]}</span>
             </span>
-            <span className="rounded-full bg-green-50 px-2 py-1 text-green-800">
-              Completed: <span className="font-semibold">{completed.length}</span>
+            <span className={`rounded-full px-2 py-1 ${statusPillClasses("Overdue")}`}>
+              Overdue: <span className="font-semibold">{counts.Overdue}</span>
+            </span>
+            <span className={`rounded-full px-2 py-1 ${statusPillClasses("Completed")}`}>
+              Completed: <span className="font-semibold">{counts.Completed}</span>
             </span>
           </div>
         </div>
@@ -100,8 +153,8 @@ export function AssignmentsCenter({
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           {items.map((a) => {
-            const overdueFlag = isOverdue(a) || String(a.status || "").toLowerCase() === "overdue";
-            const progress = a.percentComplete ?? 0;
+            const s = normalizedStatus(a);
+            const progress = Math.max(0, Math.min(100, a.percentComplete ?? 0));
             return (
               <div key={a.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
@@ -111,11 +164,9 @@ export function AssignmentsCenter({
                       <div className="mt-1 line-clamp-2 text-sm text-slate-600">{a.reason}</div>
                     ) : null}
                   </div>
-                  {overdueFlag ? (
-                    <span className="shrink-0 rounded-full bg-red-50 px-2 py-1 text-xs font-semibold text-red-800">
-                      Overdue
-                    </span>
-                  ) : null}
+                  <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${statusPillClasses(s)}`}>
+                    {s}
+                  </span>
                 </div>
 
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-600">
@@ -123,7 +174,7 @@ export function AssignmentsCenter({
                     Due <span className="font-semibold text-slate-800">{asDateLabel(a.dueDate)}</span>
                   </span>
                   <span className="rounded-full bg-slate-100 px-2 py-1">
-                    Status <span className="font-semibold text-slate-800">{a.status ?? "—"}</span>
+                    Status <span className="font-semibold text-slate-800">{s}</span>
                   </span>
                   <span className="rounded-full bg-slate-100 px-2 py-1">
                     Progress <span className="font-semibold text-slate-800">{progress}%</span>
@@ -133,7 +184,7 @@ export function AssignmentsCenter({
                 <div className="mt-4 flex items-center justify-between gap-3">
                   <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
                     <div
-                      className="h-full rounded-full bg-blue-600"
+                      className={`h-full rounded-full ${progressBarClasses(s)}`}
                       style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
                     />
                   </div>

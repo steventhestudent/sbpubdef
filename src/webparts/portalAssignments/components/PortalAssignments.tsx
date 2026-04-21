@@ -182,6 +182,11 @@ function MyAssignmentsView({
 		);
 	}
 
+	// Compact (portal/home) mode: show incomplete only.
+	const compactItems = items.filter(
+		(i) => String(i.status || "").toLowerCase() !== "completed",
+	);
+
 	return (
 		<div className="p-4">
 			<div className="flex items-start justify-between gap-3">
@@ -223,9 +228,9 @@ function MyAssignmentsView({
 
 			{loading ? (
 				<div className="mt-3 text-sm text-slate-600">Loading…</div>
-			) : items.length === 0 ? (
+			) : compactItems.length === 0 ? (
 				<div className="mt-3 text-sm text-slate-500 italic">
-					No assignments found.
+					No incomplete assignments found.
 				</div>
 			) : (
 				<div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
@@ -247,7 +252,7 @@ function MyAssignmentsView({
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-slate-200">
-							{items.map((a) => {
+							{compactItems.map((a) => {
 								const due = a.dueDate
 									? new Date(a.dueDate)
 									: undefined;
