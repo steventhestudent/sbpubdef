@@ -279,7 +279,7 @@ def _score_quiz(
 ) -> tuple[int, bool]:
     """
     - MultipleChoice: graded by matching CorrectAnswer (trimmed, case-insensitive)
-    - OpenAnswer: auto-correct (ungraded)
+    - OpenAnswer: auto-correct (ungraded). Counts as correct even if blank.
     """
     if not questions:
         return 0, False
@@ -291,13 +291,13 @@ def _score_quiz(
         except (TypeError, ValueError):
             continue
         qtype = str(q.get("QuestionType") or "MultipleChoice").strip()
-        ans = str(answers_by_order.get(order, "") or "").strip()
-        if not ans:
-            continue
         if qtype.lower() == "openanswer":
             # ungraded (auto-correct)
             total += 1
             correct += 1
+            continue
+        ans = str(answers_by_order.get(order, "") or "").strip()
+        if not ans:
             continue
         total += 1
         expected = str(q.get("CorrectAnswer") or "").strip()
