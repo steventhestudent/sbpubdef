@@ -47,6 +47,17 @@ function isDirectVideo(url: string): boolean {
   return /\.(mp4|webm|ogg)(\?|#|$)/i.test(url);
 }
 
+function youTubeEmbedSrcForVideoId(videoId: string): string {
+  const base = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}`;
+  const params = new URLSearchParams({
+    enablejsapi: "1",
+    origin: window.location.origin,
+    rel: "0",
+    modestbranding: "1",
+  });
+  return `${base}?${params.toString()}`;
+}
+
 let youTubeApiLoadPromise: Promise<void> | undefined;
 function ensureYouTubeApi(): Promise<void> {
   const w = window as unknown as {
@@ -120,6 +131,10 @@ export function EmbedPlayer({ url, title, onCompleted }: Props): JSX.Element {
       () => `yt-${Math.random().toString(36).slice(2)}`,
       [],
     );
+    const iframeId = React.useMemo(
+      () => `yt-iframe-${Math.random().toString(36).slice(2)}`,
+      [],
+    );
 
     React.useEffect(() => {
       let player:
@@ -173,9 +188,13 @@ export function EmbedPlayer({ url, title, onCompleted }: Props): JSX.Element {
         };
         if (!w.YT?.Player) return;
 
-        player = new w.YT.Player(hostId, {
+        // Bind to the visible iframe so we always render a player frame even if YT.Player
+        // doesn't size correctly in SharePoint page layout.
+        player = new w.YT.Player(iframeId, {
           host: "https://www.youtube-nocookie.com",
           videoId,
+          width: "100%",
+          height: "100%",
           playerVars: {
             origin: window.location.origin,
             rel: 0,
@@ -237,7 +256,19 @@ export function EmbedPlayer({ url, title, onCompleted }: Props): JSX.Element {
     return (
       <div className="w-full" ref={containerRef}>
         <div className="aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-black">
-          <div className="w-full h-full" id={hostId} />
+          {videoId ? (
+            <iframe
+              id={iframeId}
+              className="w-full h-full"
+              src={youTubeEmbedSrcForVideoId(videoId)}
+              title={title ?? "YouTube"}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+            />
+          ) : (
+            <div className="w-full h-full" id={hostId} />
+          )}
         </div>
         <div className="mt-1 text-xs text-slate-500">{title ?? "YouTube"}</div>
       </div>

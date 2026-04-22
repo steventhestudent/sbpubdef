@@ -5,6 +5,7 @@ from typing import Any
 from dotenv import load_dotenv
 import requests
 import msal
+import time
 
 SHAREPOINT_LIST_COLUMNS = ["LinkTitle", "_ColorTag", "ComplianceAssetId", "ID", "ContentType", "Modified", "Created", "Author", "Editor", "_UIVersionString", "Attachments", "Edit", "LinkTitleNoMenu", "DocIcon", "ItemChildCount", "FolderChildCount", "_ComplianceFlags", "_ComplianceTag", "_ComplianceTagWrittenTime", "_ComplianceTagUserId", "_IsRecord", "AppAuthor", "AppEditor"]
 if (os.getenv('AZURE_FUNCTIONS_ENVIRONMENT') == None) or (os.getenv('AZURE_FUNCTIONS_ENVIRONMENT') == "Development"): # not in azure functions environment (module call/func start) -> use .env files
@@ -89,11 +90,20 @@ def upload_file(site_id, drive_id, file_path, subfolder):
 
 # Create SharePoint List Item
 def add_list_item(site_id, list_id, field_data: dict):
-    resp = requests.post(
-        f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items",
-        headers={**session_headers, "Content-Type": "application/json"},
-        json={"fields": field_data}
-    )
+    url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items"
+    headers = {**session_headers, "Content-Type": "application/json"}
+    payload = {"fields": field_data}
+
+    # Graph can intermittently 503/429; retry with backoff.
+    for attempt in range(6):
+        resp = requests.post(url, headers=headers, json=payload)
+        if resp.status_code < 300:
+            return resp.json()
+        if resp.status_code in (429, 500, 502, 503, 504):
+            delay = min(8.0, 0.5 * (2 ** attempt))
+            time.sleep(delay)
+            continue
+        return resp.json()
     return resp.json()
 
 """
@@ -181,14 +191,22 @@ def lookup_id_field(lookup_col_name: str) -> str:
 CRUD: Update
 """
 def update_list_item(site_id: str, list_id: str, item_id: str | int, field_data: dict):
-    resp = requests.patch(
-        f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/{item_id}/fields",
-        headers={**session_headers, "Content-Type": "application/json"},
-        json=field_data,
-    )
-    if resp.status_code >= 300:
-        raise Exception(f"Graph update_list_item failed: {resp.status_code} {resp.text}")
-    return True
+    url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/{item_id}/fields"
+    headers = {**session_headers, "Content-Type": "application/json"}
+
+    # Graph can intermittently 503/429; retry with backoff.
+    last = None
+    for attempt in range(6):
+        resp = requests.patch(url, headers=headers, json=field_data)
+        last = resp
+        if resp.status_code < 300:
+            return True
+        if resp.status_code in (429, 500, 502, 503, 504):
+            delay = min(8.0, 0.5 * (2 ** attempt))
+            time.sleep(delay)
+            continue
+        break
+    raise Exception(f"Graph update_list_item failed: {last.status_code if last else 'n/a'} {last.text if last else ''}")
 
 
 def get_list_item(site_id: str, list_id: str, item_id: str | int, *, fields_select: list[str]) -> dict:

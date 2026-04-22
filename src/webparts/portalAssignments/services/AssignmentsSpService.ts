@@ -354,21 +354,33 @@ export class AssignmentsSpService {
     limit = 200,
   ): Promise<AssignmentQuizQuestion[]> {
     const list = await this.getListByTitle("AssignmentQuizQuestions");
-    const rows: Array<Record<string, unknown>> = await list.items
-      .select(
-        "Id",
-        "AssignmentCatalogIdId",
-        "QuestionOrder",
-        "QuestionText",
-        "QuestionType",
-        "ChoicesText",
-        "CorrectAnswer",
-        "Explanation",
-        "Active",
-      )
-      .filter(`AssignmentCatalogIdId eq ${catalogId}`)
-      .orderBy("QuestionOrder", true)
-      .top(limit)();
+    const baseQuery = list.items.select(
+      "Id",
+      // Support either Lookup (`AssignmentCatalogIdId`) or Number (`AssignmentCatalogId`)
+      "AssignmentCatalogIdId",
+      "AssignmentCatalogId",
+      "QuestionOrder",
+      "QuestionText",
+      "QuestionType",
+      "ChoicesText",
+      "CorrectAnswer",
+      "Explanation",
+      "Active",
+    );
+
+    let rows: Array<Record<string, unknown>> = [];
+    try {
+      rows = await baseQuery
+        .filter(`AssignmentCatalogIdId eq ${catalogId}`)
+        .orderBy("QuestionOrder", true)
+        .top(limit)();
+    } catch {
+      // Fallback: Number column schema
+      rows = await baseQuery
+        .filter(`AssignmentCatalogId eq ${catalogId}`)
+        .orderBy("QuestionOrder", true)
+        .top(limit)();
+    }
 
     return (rows || [])
       .map((r) => {

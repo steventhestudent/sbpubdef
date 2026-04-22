@@ -42,6 +42,13 @@ from azure_function.sbpubdef.local_upload import (
     get_sharepoint_user_lookup_id,
 )
 
+def resolve_first(existing: list[str], candidates: list[str]) -> str | None:
+    s = set(existing)
+    for c in candidates:
+        if c in s:
+            return c
+    return None
+
 
 def iso(dt: datetime) -> str:
     return dt.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -569,7 +576,7 @@ def main() -> None:
             "email": demo_users[0],
             "catalog": "Remote Work Acknowledgment",
             "status": "Completed",
-            "FinalEmbedCompleted": True,
+            "finalEmbedCompleted": True,
             "currentStep": 3,
             "percent": 100,
             "due": now - timedelta(days=1),
@@ -613,7 +620,7 @@ def main() -> None:
             # SharePoint "Number" columns shown as % are typically stored as a 0..1 fraction in Graph.
             "PercentComplete": float(a["percent"]) / 100.0,
             "LastOpenedOn": iso(now),
-            "FinalEmbedCompleted": a["finalEmbedCompleted"] or False
+            "FinalEmbedCompleted": a.get("finalEmbedCompleted", False)
         }
         if a.get("completed"):
             fields["CompletedOn"] = iso(a["completed"])
@@ -628,7 +635,23 @@ def main() -> None:
         print(f"[Assignment] {res['mode']}: {email} -> {cat_title} ({a['status']})")
 
     # 4) Quiz questions (seed a few for Sexual Harassment Prevention)
-    quiz_lookup = lookup_id_field("AssignmentCatalogId")
+    quiz_cols = get_list_column_names(site_id, quiz_q_list_id, include_sp_cols=True)
+    quiz_lookup = resolve_first(
+        quiz_cols,
+        [
+            "AssignmentCatalogId",
+            lookup_id_field("AssignmentCatalogId"),
+            lookup_id_field("AssignmentCatalog"),
+            lookup_id_field("Catalog"),
+            "AssignmentCatalogIdLookupId",
+        ],
+    )
+    if not quiz_lookup:
+        raise Exception(f"Quiz questions list missing AssignmentCatalog lookup id field. Columns: {sorted(quiz_cols)}")
+    question_order_col = resolve_first(quiz_cols, ["QuestionOrder", "Order"])
+    if not question_order_col:
+        raise Exception(f"Quiz questions list missing QuestionOrder column. Columns: {sorted(quiz_cols)}")
+
     shp_id = catalog_ids_by_title.get("Sexual Harassment Prevention")
     if shp_id:
         questions = [
@@ -656,9 +679,9 @@ def main() -> None:
             resq = upsert_list_item(
                 site_id,
                 quiz_q_list_id,
-                unique_filter=f"fields/{quiz_lookup} eq {shp_id} and fields/QuestionOrder eq {q['QuestionOrder']}",
+                unique_filter=f"fields/{quiz_lookup} eq {shp_id} and fields/{question_order_col} eq {q['QuestionOrder']}",
                 field_data=fields,
-                fields_select=["QuestionOrder"],
+                fields_select=[question_order_col],
             )
             print(f"[QuizQ] {resq['mode']}: Sexual Harassment Q{q['QuestionOrder']}")
 

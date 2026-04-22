@@ -21,6 +21,7 @@ from .local_upload import (
     get_list_id,
     get_list_item,
     get_list_items,
+    get_list_column_names,
     get_site_id,
     lookup_id_field,
     odata_escape,
@@ -101,6 +102,13 @@ def _quiz_lists() -> tuple[str, str]:
         (os.getenv("LIST_ASSIGNMENTQUIZQUESTIONS") or "AssignmentQuizQuestions").strip(),
         (os.getenv("LIST_ASSIGNMENTQUIZATTEMPTS") or "AssignmentQuizAttempts").strip(),
     )
+
+def _resolve_first(existing: list[str], candidates: list[str]) -> str | None:
+    s = set(existing)
+    for c in candidates:
+        if c in s:
+            return c
+    return None
 
 
 def _catalog_lookup_field() -> str:
@@ -226,10 +234,20 @@ def _assignment_payload(
     }
 
 def _quiz_questions(site_id: str, quiz_questions_list_id: str, catalog_item_id: int) -> list[dict[str, Any]]:
+    cols = get_list_column_names(site_id, quiz_questions_list_id, include_sp_cols=True)
+    catalog_fk = _resolve_first(
+        cols,
+        [
+            "AssignmentCatalogId",
+            "AssignmentCatalogIdLookupId",
+            lookup_id_field("AssignmentCatalogId"),
+            lookup_id_field("AssignmentCatalog"),
+        ],
+    ) or "AssignmentCatalogId"
     rows = get_list_items(
         site_id,
         quiz_questions_list_id,
-        fields_filter=f"fields/AssignmentCatalogIdLookupId eq {catalog_item_id} and fields/Active eq true",
+        fields_filter=f"fields/{catalog_fk} eq {catalog_item_id} and fields/Active eq true",
         top=200,
         fields_select=[
             "QuestionOrder",
@@ -394,6 +412,15 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         if action == "submit_quiz":
             if not quiz_questions_list_id or not quiz_attempts_list_id:
                 return _json_response({"error": "Quiz lists not found (AssignmentQuizQuestions / AssignmentQuizAttempts)."}, status=500)
+            attempt_cols = get_list_column_names(site_id, quiz_attempts_list_id, include_sp_cols=True)
+            assignment_fk = _resolve_first(
+                attempt_cols,
+                [
+                    "AssignmentId",
+                    "AssignmentIdLookupId",
+                    lookup_id_field("AssignmentId"),
+                ],
+            ) or "AssignmentId"
 
             # must be on final step
             max_order = _max_step_order(site_id, steps_list_id, catalog_item_id)
@@ -432,7 +459,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             # record attempt (upsert latest per assignment+employee)
             attempt_fields = {
                 "Title": f"{item_id} - {caller_email}",
-                lookup_id_field("AssignmentId"): item_id,
+                assignment_fk: item_id,
                 "EmployeeEmail": caller_email,
                 "ScorePercent": score,
                 "Passed": passed,
@@ -441,7 +468,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             upsert_list_item(
                 site_id,
                 quiz_attempts_list_id,
-                unique_filter=f"fields/EmployeeEmail eq '{odata_escape(caller_email)}' and fields/{lookup_id_field('AssignmentId')} eq {item_id}",
+                unique_filter=f"fields/EmployeeEmail eq '{odata_escape(caller_email)}' and fields/{assignment_fk} eq {item_id}",
                 field_data=attempt_fields,
                 fields_select=["EmployeeEmail"],
             )
@@ -587,11 +614,20 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         if require_quiz:
             if not quiz_attempts_list_id:
                 return _json_response({"error": "Quiz attempts list not found."}, status=500)
+            attempt_cols = get_list_column_names(site_id, quiz_attempts_list_id, include_sp_cols=True)
+            assignment_fk = _resolve_first(
+                attempt_cols,
+                [
+                    "AssignmentId",
+                    "AssignmentIdLookupId",
+                    lookup_id_field("AssignmentId"),
+                ],
+            ) or "AssignmentId"
             # require latest attempt passed
             rows = get_list_items(
                 site_id,
                 quiz_attempts_list_id,
-                fields_filter=f"fields/EmployeeEmail eq '{odata_escape(caller_email)}' and fields/{lookup_id_field('AssignmentId')} eq {item_id} and fields/Passed eq true",
+                fields_filter=f"fields/EmployeeEmail eq '{odata_escape(caller_email)}' and fields/{assignment_fk} eq {item_id} and fields/Passed eq true",
                 top=1,
                 fields_select=["Passed"],
             )
