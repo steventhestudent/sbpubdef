@@ -6,6 +6,10 @@ type Props = {
   onCompleted?: () => void;
 };
 
+const YT_STATE_ENDED = 0;
+const YT_STATE_PLAYING = 1;
+const YT_STATE_PAUSED = 2;
+
 function isYouTube(url: string): boolean {
   try {
     const u = new URL(url);
@@ -19,19 +23,19 @@ function isYouTube(url: string): boolean {
   }
 }
 
-function toYouTubeEmbedUrl(url: string): string | undefined {
+function toYouTubeVideoId(url: string): string | undefined {
   try {
     const u = new URL(url);
     if (u.hostname === "youtu.be") {
       const id = u.pathname.replace("/", "");
-      return id ? `https://www.youtube-nocookie.com/embed/${id}?enablejsapi=1` : undefined;
+      return id || undefined;
     }
     if (u.hostname.includes("youtube.com") || u.hostname.includes("youtube-nocookie.com")) {
       const id = u.searchParams.get("v");
-      if (id) return `https://www.youtube-nocookie.com/embed/${id}?enablejsapi=1`;
+      if (id) return id;
       const parts = u.pathname.split("/").filter(Boolean);
       const maybe = parts[0] === "embed" && parts[1] ? parts[1] : undefined;
-      return maybe ? `https://www.youtube-nocookie.com/embed/${maybe}?enablejsapi=1` : undefined;
+      return maybe || undefined;
     }
     return undefined;
   } catch {
@@ -80,10 +84,12 @@ function ensureYouTubeApi(): Promise<void> {
 
 export function EmbedPlayer({ url, title, onCompleted }: Props): JSX.Element {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const [completed, setCompleted] = React.useState(false);
+  const [, setCompleted] = React.useState(false);
+  const completedRef = React.useRef(false);
 
   React.useEffect(() => {
     setCompleted(false);
+    completedRef.current = false;
   }, [url]);
 
   // HTML5 video: reliable onEnded
@@ -94,8 +100,9 @@ export function EmbedPlayer({ url, title, onCompleted }: Props): JSX.Element {
           className="w-full rounded-lg border border-slate-200 bg-black"
           controls
           onEnded={() => {
-            if (completed) return;
+            if (completedRef.current) return;
             setCompleted(true);
+            completedRef.current = true;
             onCompleted?.();
           }}
         >
@@ -108,22 +115,55 @@ export function EmbedPlayer({ url, title, onCompleted }: Props): JSX.Element {
 
   // YouTube: lightweight ended detection via IFrame API
   if (isYouTube(url)) {
-    const embedUrl = toYouTubeEmbedUrl(url) ?? url;
+    const videoId = toYouTubeVideoId(url);
+    const hostId = React.useMemo(
+      () => `yt-${Math.random().toString(36).slice(2)}`,
+      [],
+    );
 
     React.useEffect(() => {
-      let player: { destroy?: () => void } | undefined;
+      let player:
+        | {
+            destroy?: () => void;
+            getDuration?: () => number;
+            getCurrentTime?: () => number;
+          }
+        | undefined;
       let cancelled = false;
+      let tick: number | undefined;
+      let lastT = 0;
+      let playedSeconds = 0;
+
+      const stopTick = (): void => {
+        if (tick) {
+          window.clearInterval(tick);
+          tick = undefined;
+        }
+      };
+
+      const complete = (): void => {
+        if (completedRef.current) return;
+        completedRef.current = true;
+        setCompleted(true);
+        onCompleted?.();
+      };
 
       (async (): Promise<void> => {
         if (!containerRef.current) return;
+        if (!videoId) return;
         await ensureYouTubeApi();
         if (cancelled) return;
 
         const w = window as unknown as {
           YT?: {
             Player?: new (
-              el: HTMLElement,
+              el: HTMLElement | string,
               opts: {
+                height?: string;
+                width?: string;
+                host?: string;
+                videoId?: string;
+                playerVars?: Record<string, unknown>;
                 events?: {
                   onStateChange?: (ev: { data?: number }) => void;
                 };
@@ -131,18 +171,51 @@ export function EmbedPlayer({ url, title, onCompleted }: Props): JSX.Element {
             ) => { destroy?: () => void };
           };
         };
-        const el = containerRef.current.querySelector<HTMLDivElement>("[data-youtube-host]");
-        if (!el) return;
         if (!w.YT?.Player) return;
 
-        player = new w.YT.Player(el, {
+        player = new w.YT.Player(hostId, {
+          host: "https://www.youtube-nocookie.com",
+          videoId,
+          playerVars: {
+            origin: window.location.origin,
+            rel: 0,
+            modestbranding: 1,
+            enablejsapi: 1,
+          },
           events: {
             onStateChange: (ev: { data?: number }) => {
-              // 0 == ended
-              if (ev?.data === 0) {
-                if (completed) return;
-                setCompleted(true);
-                onCompleted?.();
+              if (cancelled) return;
+              if (ev?.data === YT_STATE_ENDED) {
+                stopTick();
+                complete();
+                return;
+              }
+
+              if (ev?.data === YT_STATE_PLAYING) {
+                stopTick();
+                lastT = player?.getCurrentTime?.() ?? 0;
+                tick = window.setInterval(() => {
+                  const cur = player?.getCurrentTime?.() ?? 0;
+                  const dt = Math.max(0, cur - lastT);
+                  // Ignore giant jumps caused by seeking.
+                  if (dt <= 2.5) playedSeconds += dt;
+                  lastT = cur;
+
+                  const dur = player?.getDuration?.() ?? 0;
+                  if (dur > 0) {
+                    // "Good enough" threshold to avoid never-firing ended events.
+                    const threshold = Math.max(1, dur * 0.95);
+                    if (playedSeconds >= threshold) {
+                      stopTick();
+                      complete();
+                    }
+                  }
+                }, 500);
+                return;
+              }
+
+              if (ev?.data === YT_STATE_PAUSED) {
+                stopTick();
               }
             },
           },
@@ -151,6 +224,7 @@ export function EmbedPlayer({ url, title, onCompleted }: Props): JSX.Element {
 
       return () => {
         cancelled = true;
+        stopTick();
         try {
           player?.destroy?.();
         } catch {
@@ -158,21 +232,12 @@ export function EmbedPlayer({ url, title, onCompleted }: Props): JSX.Element {
         }
       };
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [embedUrl]);
+    }, [hostId, videoId]);
 
     return (
       <div className="w-full" ref={containerRef}>
         <div className="aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-black">
-          <div className="w-full h-full" data-youtube-host>
-            <iframe
-              className="w-full h-full"
-              src={embedUrl}
-              title={title ?? "YouTube"}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              referrerPolicy="strict-origin-when-cross-origin"
-              allowFullScreen
-            />
-          </div>
+          <div className="w-full h-full" id={hostId} />
         </div>
         <div className="mt-1 text-xs text-slate-500">{title ?? "YouTube"}</div>
       </div>

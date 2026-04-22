@@ -23,6 +23,8 @@ from .local_upload import (
     get_list_items,
     get_site_id,
     lookup_id_field,
+    odata_escape,
+    upsert_list_item,
     update_list_item,
 )
 
@@ -93,6 +95,12 @@ def _status_field_name() -> str:
 def _embed_field_name_optional() -> str:
     """Only when this env var is set do we $select / PATCH the final-embed flag column."""
     return (os.getenv("INTERNALCOLUMN_FINALEMBEDCOMPLETED") or "").strip()
+
+def _quiz_lists() -> tuple[str, str]:
+    return (
+        (os.getenv("LIST_ASSIGNMENTQUIZQUESTIONS") or "AssignmentQuizQuestions").strip(),
+        (os.getenv("LIST_ASSIGNMENTQUIZATTEMPTS") or "AssignmentQuizAttempts").strip(),
+    )
 
 
 def _catalog_lookup_field() -> str:
@@ -188,7 +196,7 @@ def _catalog_fields(site_id: str, catalog_list_id: str, catalog_item_id: int) ->
         site_id,
         catalog_list_id,
         catalog_item_id,
-        fields_select=["FinalStepCompletionMode", "Title"],
+        fields_select=["FinalStepCompletionMode", "QuizPassingScore", "Title"],
     )
     return body.get("fields") or {}
 
@@ -216,6 +224,71 @@ def _assignment_payload(
         "status": _read_status(f, status_col),
         "finalEmbedCompleted": _truthy(raw_embed) if embed_col else False,
     }
+
+def _quiz_questions(site_id: str, quiz_questions_list_id: str, catalog_item_id: int) -> list[dict[str, Any]]:
+    rows = get_list_items(
+        site_id,
+        quiz_questions_list_id,
+        fields_filter=f"fields/AssignmentCatalogIdLookupId eq {catalog_item_id} and fields/Active eq true",
+        top=200,
+        fields_select=[
+            "QuestionOrder",
+            "QuestionText",
+            "QuestionType",
+            "ChoicesText",
+            "CorrectAnswer",
+        ],
+    )
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        f = r.get("fields") or {}
+        try:
+            order = int(f.get("QuestionOrder") or 0)
+        except (TypeError, ValueError):
+            order = 0
+        if order <= 0:
+            continue
+        qtext = str(f.get("QuestionText") or "").strip()
+        if not qtext:
+            continue
+        out.append({**f, "QuestionOrder": order})
+    out.sort(key=lambda x: int(x.get("QuestionOrder") or 0))
+    return out
+
+def _score_quiz(
+    questions: list[dict[str, Any]],
+    answers_by_order: dict[int, str],
+) -> tuple[int, bool]:
+    """
+    - MultipleChoice: graded by matching CorrectAnswer (trimmed, case-insensitive)
+    - OpenAnswer: auto-correct (ungraded)
+    """
+    if not questions:
+        return 0, False
+    total = 0
+    correct = 0
+    for q in questions:
+        try:
+            order = int(q.get("QuestionOrder") or 0)
+        except (TypeError, ValueError):
+            continue
+        qtype = str(q.get("QuestionType") or "MultipleChoice").strip()
+        ans = str(answers_by_order.get(order, "") or "").strip()
+        if not ans:
+            continue
+        if qtype.lower() == "openanswer":
+            # ungraded (auto-correct)
+            total += 1
+            correct += 1
+            continue
+        total += 1
+        expected = str(q.get("CorrectAnswer") or "").strip()
+        if expected and expected.lower() == ans.lower():
+            correct += 1
+    if total <= 0:
+        return 0, False
+    score = int(round((correct / total) * 100))
+    return score, True
 
 
 def _require_owner(fields: dict[str, Any], caller_email: str) -> None:
@@ -256,9 +329,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         except (TypeError, ValueError):
             return _json_response({"error": "assignmentId must be an integer"}, status=400)
 
-        if action not in ("start", "progress", "final_embed", "complete"):
+        if action not in ("start", "progress", "final_embed", "complete", "submit_quiz"):
             return _json_response(
-                {"error": "action must be one of: start, progress, final_embed, complete"},
+                {"error": "action must be one of: start, progress, final_embed, complete, submit_quiz"},
                 status=400,
             )
 
@@ -272,10 +345,13 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         assignments_title = os.getenv("LIST_ASSIGNMENTS") or "Assignments"
         steps_title = os.getenv("LIST_ASSIGNMENTSTEPS") or "AssignmentSteps"
         catalog_title = os.getenv("LIST_ASSIGNMENTCATALOG") or "AssignmentCatalog"
+        quiz_q_title, quiz_a_title = _quiz_lists()
 
         assignments_list_id = get_list_id(site_id, assignments_title)
         steps_list_id = get_list_id(site_id, steps_title)
         catalog_list_id = get_list_id(site_id, catalog_title)
+        quiz_questions_list_id = get_list_id(site_id, quiz_q_title)
+        quiz_attempts_list_id = get_list_id(site_id, quiz_a_title)
         if not assignments_list_id or not steps_list_id or not catalog_list_id:
             return _json_response({"error": "Could not resolve list id(s) from env titles"}, status=500)
 
@@ -314,6 +390,94 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             return _json_response({"error": "Assignment is missing catalog lookup"}, status=400)
 
         now_iso = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+        if action == "submit_quiz":
+            if not quiz_questions_list_id or not quiz_attempts_list_id:
+                return _json_response({"error": "Quiz lists not found (AssignmentQuizQuestions / AssignmentQuizAttempts)."}, status=500)
+
+            # must be on final step
+            max_order = _max_step_order(site_id, steps_list_id, catalog_item_id)
+            cur = fields.get("CurrentStepOrder")
+            try:
+                cur_i = int(cur) if cur is not None else 0
+            except (TypeError, ValueError):
+                cur_i = 0
+            if cur_i < max_order:
+                return _json_response({"error": "Quiz can only be submitted on the final step."}, status=400)
+
+            answers = body.get("answers") or {}
+            if not isinstance(answers, dict):
+                return _json_response({"error": "answers must be an object keyed by questionOrder."}, status=400)
+            answers_by_order: dict[int, str] = {}
+            for k, v in answers.items():
+                try:
+                    order = int(k)
+                except Exception:
+                    continue
+                answers_by_order[order] = str(v or "").strip()
+
+            questions = _quiz_questions(site_id, quiz_questions_list_id, catalog_item_id)
+            score, has_graded = _score_quiz(questions, answers_by_order)
+            if not has_graded:
+                return _json_response({"error": "No valid quiz answers submitted."}, status=400)
+
+            cat_fields = _catalog_fields(site_id, catalog_list_id, catalog_item_id)
+            passing = cat_fields.get("QuizPassingScore")
+            try:
+                passing_i = int(passing) if passing is not None else 70
+            except (TypeError, ValueError):
+                passing_i = 70
+            passed = score >= passing_i
+
+            # record attempt (upsert latest per assignment+employee)
+            attempt_fields = {
+                "Title": f"{item_id} - {caller_email}",
+                lookup_id_field("AssignmentId"): item_id,
+                "EmployeeEmail": caller_email,
+                "ScorePercent": score,
+                "Passed": passed,
+                "SubmittedOn": now_iso,
+            }
+            upsert_list_item(
+                site_id,
+                quiz_attempts_list_id,
+                unique_filter=f"fields/EmployeeEmail eq '{odata_escape(caller_email)}' and fields/{lookup_id_field('AssignmentId')} eq {item_id}",
+                field_data=attempt_fields,
+                fields_select=["EmployeeEmail"],
+            )
+
+            # If mode allows auto-complete after quiz pass, do it here.
+            mode = str(cat_fields.get("FinalStepCompletionMode") or "").strip()
+            if passed and mode.lower() in ("afterquizpass",):
+                update_list_item(
+                    site_id,
+                    assignments_list_id,
+                    item_id,
+                    {
+                        status_col: "Completed",
+                        "CompletedOn": now_iso,
+                        "PercentComplete": _percent_ui_to_graph(100),
+                        "LastOpenedOn": now_iso,
+                    },
+                )
+
+            view = _assignment_payload(
+                site_id=site_id,
+                assignments_list_id=assignments_list_id,
+                item_id=item_id,
+                status_col=status_col,
+                embed_col=embed_opt,
+            )
+            return _json_response(
+                {
+                    "assignment": view,
+                    "attempt": {
+                        "scorePercent": score,
+                        "passed": passed,
+                        "submittedOn": now_iso,
+                    },
+                }
+            )
 
         if action == "start":
             next_status = _workflow_status(due_iso)
@@ -402,8 +566,11 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 
         final_fields = _final_step_fields(site_id, steps_list_id, catalog_item_id, max_order)
         cat_fields = _catalog_fields(site_id, catalog_list_id, catalog_item_id)
-        mode = str(cat_fields.get("FinalStepCompletionMode") or "").lower()
-        require_embed = ("require" in mode) or _truthy(final_fields.get("RequireEmbedCompletion"))
+        mode = str(cat_fields.get("FinalStepCompletionMode") or "")
+
+        mode_l = mode.strip().lower()
+        require_embed = mode_l in ("afterfinalembed", "afterfinalembedandquizpass") or _truthy(final_fields.get("RequireEmbedCompletion"))
+        require_quiz = mode_l in ("afterquizpass", "afterfinalembedandquizpass")
         allow_here = _truthy(final_fields.get("AllowMarkCompleteHere")) if final_fields else True
         if not allow_here:
             return _json_response({"error": "Final step does not allow completion here"}, status=400)
@@ -416,6 +583,20 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 )
             if not _truthy(fields.get(embed_opt)):
                 return _json_response({"error": "Final embed completion is required before completing"}, status=400)
+
+        if require_quiz:
+            if not quiz_attempts_list_id:
+                return _json_response({"error": "Quiz attempts list not found."}, status=500)
+            # require latest attempt passed
+            rows = get_list_items(
+                site_id,
+                quiz_attempts_list_id,
+                fields_filter=f"fields/EmployeeEmail eq '{odata_escape(caller_email)}' and fields/{lookup_id_field('AssignmentId')} eq {item_id} and fields/Passed eq true",
+                top=1,
+                fields_select=["Passed"],
+            )
+            if not rows:
+                return _json_response({"error": "Quiz must be submitted and passed before completing."}, status=400)
 
         patch = {
             status_col: "Completed",

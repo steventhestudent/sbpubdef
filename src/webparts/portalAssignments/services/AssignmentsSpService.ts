@@ -4,6 +4,7 @@ import type { PNPWrapper } from "@utils/PNPWrapper";
 import type {
   AssignmentCatalogItem,
   AssignmentStepItem,
+  AssignmentQuizQuestion,
   UserAssignmentItem,
 } from "../types/AssignmentTypes";
 
@@ -327,6 +328,7 @@ export class AssignmentsSpService {
         "Active",
         "EstimatedMinutes",
         "FinalStepCompletionMode",
+        "QuizPassingScore",
         ENV.INTERNALCOLUMN_CONTENTVERSION || "ContentVersion",
       )();
 
@@ -339,11 +341,51 @@ export class AssignmentsSpService {
       active: toYesNo(getProp<unknown>(r, "Active")),
       estimatedMinutes: safeNumber(getProp<unknown>(r, "EstimatedMinutes")),
       finalStepCompletionMode: getProp<string>(r, "FinalStepCompletionMode"),
+      quizPassingScore: safeNumber(getProp<unknown>(r, "QuizPassingScore")),
       contentVersion:
         (ENV.INTERNALCOLUMN_CONTENTVERSION
           ? getProp<string | number>(r, ENV.INTERNALCOLUMN_CONTENTVERSION)
           : undefined) ?? getProp<string | number>(r, "ContentVersion"),
     };
+  }
+
+  public async getQuizQuestionsForCatalog(
+    catalogId: number,
+    limit = 200,
+  ): Promise<AssignmentQuizQuestion[]> {
+    const list = await this.getListByTitle("AssignmentQuizQuestions");
+    const rows: Array<Record<string, unknown>> = await list.items
+      .select(
+        "Id",
+        "AssignmentCatalogIdId",
+        "QuestionOrder",
+        "QuestionText",
+        "QuestionType",
+        "ChoicesText",
+        "CorrectAnswer",
+        "Explanation",
+        "Active",
+      )
+      .filter(`AssignmentCatalogIdId eq ${catalogId}`)
+      .orderBy("QuestionOrder", true)
+      .top(limit)();
+
+    return (rows || [])
+      .map((r) => {
+        const order = safeNumber(getProp<unknown>(r, "QuestionOrder")) ?? 0;
+        return {
+          id: getProp<number>(r, "Id") ?? 0,
+          assignmentCatalogId: catalogId,
+          questionOrder: order,
+          questionText: getProp<string>(r, "QuestionText") ?? "",
+          questionType: (getProp<string>(r, "QuestionType") ?? "MultipleChoice") as any,
+          choicesText: getProp<string>(r, "ChoicesText"),
+          correctAnswer: getProp<string>(r, "CorrectAnswer"),
+          explanation: getProp<string>(r, "Explanation"),
+          active: toYesNo(getProp<unknown>(r, "Active")),
+        } satisfies AssignmentQuizQuestion;
+      })
+      .filter((q) => q.questionOrder > 0 && q.questionText.trim() !== "");
   }
 
   public async getStepsForCatalog(catalogId: number, limit = 200): Promise<AssignmentStepItem[]> {

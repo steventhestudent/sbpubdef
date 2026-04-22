@@ -6,6 +6,7 @@ import type {
 } from "../services/AssignmentsMutationsApi";
 import type {
   AssignmentCatalogItem,
+  AssignmentQuizQuestion,
   AssignmentStepItem,
   UserAssignmentItem,
 } from "../types/AssignmentTypes";
@@ -35,6 +36,8 @@ function mergeAssignment(
     lastOpenedOn: patch.lastOpenedOn ?? prev.lastOpenedOn,
     completedOn: patch.completedOn ?? prev.completedOn,
     finalEmbedCompleted: patch.finalEmbedCompleted ?? prev.finalEmbedCompleted,
+    quizPassed: patch.quizPassed ?? prev.quizPassed,
+    quizScorePercent: patch.quizScorePercent ?? prev.quizScorePercent,
   };
 }
 
@@ -53,6 +56,10 @@ export function AssignmentFlow({
 }): JSX.Element {
   const [catalog, setCatalog] = React.useState<AssignmentCatalogItem | undefined>(undefined);
   const [steps, setSteps] = React.useState<AssignmentStepItem[]>([]);
+  const [quiz, setQuiz] = React.useState<AssignmentQuizQuestion[]>([]);
+  const [answers, setAnswers] = React.useState<Record<number, string>>({});
+  const [quizResult, setQuizResult] = React.useState<{ passed: boolean; scorePercent: number } | undefined>(undefined);
+  const [submittingQuiz, setSubmittingQuiz] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
   const [err, setErr] = React.useState<string | undefined>(undefined);
 
@@ -81,6 +88,9 @@ export function AssignmentFlow({
         if (cancelled) return;
         setCatalog(c);
         setSteps(s);
+        setQuiz([]);
+        setAnswers({});
+        setQuizResult(undefined);
         const maxOrder = s.length ? Math.max(...s.map((x) => x.stepOrder)) : 1;
         setActiveOrder(clamp(assignment.currentStepOrder ?? 1, 1, maxOrder));
       } catch (e: unknown) {
@@ -126,14 +136,44 @@ export function AssignmentFlow({
   const activeStep = stepByOrder.get(activeOrder);
   const isFinalStep = activeOrder === maxStepOrder;
 
+  React.useEffect(() => {
+    const catalogId = assignment.assignmentCatalogId;
+    if (!catalogId) return;
+    if (!isFinalStep) return;
+    let cancelled = false;
+    (async (): Promise<void> => {
+      try {
+        const qs = await svc.getQuizQuestionsForCatalog(catalogId);
+        if (cancelled) return;
+        const active = (qs || []).filter((q) => q.active !== false);
+        setQuiz(active);
+      } catch {
+        // quiz is optional
+        setQuiz([]);
+      }
+    })().catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [assignment.assignmentCatalogId, isFinalStep, svc]);
+
   const requiresFinalEmbed =
     (catalog?.finalStepCompletionMode ?? "").toLowerCase().includes("require") ||
     (activeStep?.requireEmbedCompletion && isFinalStep);
 
+  const completionMode = String(catalog?.finalStepCompletionMode ?? "Manual").trim();
+  const requiresQuizPass = /afterquizpass/i.test(completionMode) || /afterfinalembedandquizpass/i.test(completionMode);
+  const requiresEmbed =
+    /afterfinalembed/i.test(completionMode) || /afterfinalembedandquizpass/i.test(completionMode) || requiresFinalEmbed;
+
+  const passingScore = catalog?.quizPassingScore ?? 70;
+  const quizPassed = quizResult?.passed ?? assignment.quizPassed ?? false;
+
   const canMarkComplete =
     isFinalStep &&
     (activeStep?.allowMarkCompleteHere ?? true) &&
-    (!requiresFinalEmbed || finalEmbedDone);
+    (!requiresEmbed || finalEmbedDone) &&
+    (!requiresQuizPass || quizPassed);
 
   async function persistProgress(nextOrder: number): Promise<void> {
     if (!assignment.id) return;
@@ -166,6 +206,27 @@ export function AssignmentFlow({
       onUpdated(mergeAssignment(assignment, patch));
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function submitQuiz(): Promise<void> {
+    if (!assignment.id) return;
+    setSubmittingQuiz(true);
+    setErr(undefined);
+    try {
+      const { assignment: patch, attempt } = await mutations.submitQuiz(assignment.id, answers);
+      setQuizResult({ passed: attempt.passed, scorePercent: attempt.scorePercent });
+      onUpdated(mergeAssignment(assignment, patch));
+
+      // Auto-complete mode
+      if (String(catalog?.finalStepCompletionMode ?? "").toLowerCase() === "afterquizpass" && attempt.passed) {
+        // backend may have auto-completed; refresh local model from patch
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to submit quiz.";
+      setErr(msg);
+    } finally {
+      setSubmittingQuiz(false);
     }
   }
 
@@ -321,6 +382,92 @@ export function AssignmentFlow({
                   Finish the final embed to unlock <span className="font-semibold">Mark Complete</span>.
                 </div>
               ) : null}
+            </div>
+          ) : null}
+
+          {isFinalStep && quiz.length ? (
+            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <div className="text-sm font-semibold text-slate-900">Quiz</div>
+              <div className="mt-1 text-xs text-slate-600">
+                Passing score: <span className="font-semibold">{passingScore}%</span>
+              </div>
+
+              <div className="mt-3 space-y-4">
+                {quiz.map((q) => {
+                  const val = answers[q.questionOrder] ?? "";
+                  const type = String(q.questionType || "MultipleChoice");
+                  const choices = (q.choicesText || "")
+                    .split(/\r?\n/g)
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                  return (
+                    <div key={q.id} className="rounded-md border border-slate-200 bg-white p-3">
+                      <div className="text-sm font-semibold text-slate-900">
+                        {q.questionOrder}. {q.questionText}
+                      </div>
+                      {type.toLowerCase() === "openanswer" ? (
+                        <textarea
+                          className="mt-2 w-full rounded-md border border-slate-200 p-2 text-sm"
+                          rows={3}
+                          value={val}
+                          onChange={(e) =>
+                            setAnswers((prev) => ({ ...prev, [q.questionOrder]: e.target.value }))
+                          }
+                          placeholder="Type your answer…"
+                        />
+                      ) : (
+                        <div className="mt-2 space-y-2">
+                          {choices.map((c) => {
+                            const key = c.split(".")[0]?.trim() || c;
+                            return (
+                              <label key={c} className="flex items-start gap-2 text-sm text-slate-800">
+                                <input
+                                  type="radio"
+                                  name={`q-${q.id}`}
+                                  checked={val === key}
+                                  onChange={() =>
+                                    setAnswers((prev) => ({ ...prev, [q.questionOrder]: key }))
+                                  }
+                                />
+                                <span>{c}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <div className="text-xs text-slate-600">
+                  {quizResult ? (
+                    <>
+                      Score: <span className="font-semibold">{quizResult.scorePercent}%</span>{" "}
+                      {quizResult.passed ? (
+                        <span className="font-semibold text-green-700">Passed</span>
+                      ) : (
+                        <span className="font-semibold text-red-700">Not passed</span>
+                      )}
+                    </>
+                  ) : (
+                    <span>Submit your answers to score this quiz.</span>
+                  )}
+                </div>
+                <button
+                  className={[
+                    "rounded-md px-3 py-2 text-sm font-semibold",
+                    submittingQuiz
+                      ? "bg-slate-200 text-slate-500 cursor-wait"
+                      : "bg-blue-600 text-white hover:bg-blue-700",
+                  ].join(" ")}
+                  disabled={submittingQuiz}
+                  onClick={() => submitQuiz().catch(() => undefined)}
+                >
+                  {submittingQuiz ? "Submitting…" : "Submit Quiz"}
+                </button>
+              </div>
             </div>
           ) : null}
 

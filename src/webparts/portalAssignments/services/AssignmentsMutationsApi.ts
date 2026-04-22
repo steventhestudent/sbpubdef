@@ -12,12 +12,20 @@ export type AssignmentMutationResult = {
 	lastOpenedOn?: string;
 	completedOn?: string;
 	finalEmbedCompleted?: boolean;
+	quizPassed?: boolean;
+	quizScorePercent?: number;
+};
+
+export type QuizAttemptResult = {
+	scorePercent: number;
+	passed: boolean;
+	submittedOn: string;
 };
 
 export class AssignmentsMutationsApi {
 	constructor(private readonly context: WebPartContext) {}
 
-	private async post(body: Record<string, unknown>): Promise<AssignmentMutationResult> {
+	private async post<T>(body: Record<string, unknown>): Promise<T> {
 		const client: AadHttpClient = await this.context.aadHttpClientFactory.getClient(
 			ENV.FUNCTION_API_APP_ID,
 		);
@@ -41,26 +49,60 @@ export class AssignmentsMutationsApi {
 			}
 			throw new Error(msg || `Assignment mutation failed (${res.status})`);
 		}
-		const json = JSON.parse(text) as { assignment?: AssignmentMutationResult };
-		if (!json.assignment) {
-			throw new Error("Assignment mutation returned no assignment payload.");
-		}
+		return JSON.parse(text) as T;
+	}
+
+	async start(assignmentId: number): Promise<AssignmentMutationResult> {
+		const json = await this.post<{ assignment?: AssignmentMutationResult }>({
+			action: "start",
+			assignmentId,
+		});
+		if (!json.assignment) throw new Error("Assignment mutation returned no assignment payload.");
 		return json.assignment;
 	}
 
-	start(assignmentId: number): Promise<AssignmentMutationResult> {
-		return this.post({ action: "start", assignmentId });
+	async progress(assignmentId: number, currentStepOrder: number): Promise<AssignmentMutationResult> {
+		const json = await this.post<{ assignment?: AssignmentMutationResult }>({
+			action: "progress",
+			assignmentId,
+			currentStepOrder,
+		});
+		if (!json.assignment) throw new Error("Assignment mutation returned no assignment payload.");
+		return json.assignment;
 	}
 
-	progress(assignmentId: number, currentStepOrder: number): Promise<AssignmentMutationResult> {
-		return this.post({ action: "progress", assignmentId, currentStepOrder });
+	async finalEmbed(assignmentId: number): Promise<AssignmentMutationResult> {
+		const json = await this.post<{ assignment?: AssignmentMutationResult }>({
+			action: "final_embed",
+			assignmentId,
+		});
+		if (!json.assignment) throw new Error("Assignment mutation returned no assignment payload.");
+		return json.assignment;
 	}
 
-	finalEmbed(assignmentId: number): Promise<AssignmentMutationResult> {
-		return this.post({ action: "final_embed", assignmentId });
+	async complete(assignmentId: number): Promise<AssignmentMutationResult> {
+		const json = await this.post<{ assignment?: AssignmentMutationResult }>({
+			action: "complete",
+			assignmentId,
+		});
+		if (!json.assignment) throw new Error("Assignment mutation returned no assignment payload.");
+		return json.assignment;
 	}
 
-	complete(assignmentId: number): Promise<AssignmentMutationResult> {
-		return this.post({ action: "complete", assignmentId });
+	async submitQuiz(
+		assignmentId: number,
+		answersByOrder: Record<number, string>,
+	): Promise<{ assignment: AssignmentMutationResult; attempt: QuizAttemptResult }> {
+		const json = await this.post<{
+			assignment?: AssignmentMutationResult;
+			attempt?: QuizAttemptResult;
+		}>({
+			action: "submit_quiz",
+			assignmentId,
+			answers: answersByOrder,
+		});
+		if (!json.assignment) throw new Error("Quiz submission returned no assignment payload.");
+		if (!json.attempt) throw new Error("Quiz submission returned no attempt payload.");
+		return { assignment: json.assignment, attempt: json.attempt };
 	}
 }

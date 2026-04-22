@@ -110,7 +110,8 @@ def catalog_seed_rows() -> list[dict[str, Any]]:
             "SendAssignmentEmail": True,
             "DisplayOrder": 10,
             "EstimatedMinutes": 25,
-            "FinalStepCompletionMode": "MarkCompleteAfterEmbedFinish",
+            "FinalStepCompletionMode": "AfterFinalEmbedAndQuizPass",
+            "QuizPassingScore": 70,
         },
         {
             "Title": "Cybersecurity Awareness",
@@ -153,7 +154,8 @@ def catalog_seed_rows() -> list[dict[str, Any]]:
             "SendAssignmentEmail": True,
             "DisplayOrder": 20,
             "EstimatedMinutes": 20,
-            "FinalStepCompletionMode": "MarkCompleteAfterEmbedFinish",
+            "FinalStepCompletionMode": "AfterFinalEmbed",
+            "QuizPassingScore": 70,
         },
         {
             "Title": "New Hire Orientation",
@@ -196,7 +198,8 @@ def catalog_seed_rows() -> list[dict[str, Any]]:
             "SendAssignmentEmail": True,
             "DisplayOrder": 30,
             "EstimatedMinutes": 30,
-            "FinalStepCompletionMode": "MarkCompleteAfterEmbedFinish",
+            "FinalStepCompletionMode": "Manual",
+            "QuizPassingScore": 70,
         },
         {
             "Title": "Remote Work Acknowledgment",
@@ -239,7 +242,8 @@ def catalog_seed_rows() -> list[dict[str, Any]]:
             "SendAssignmentEmail": True,
             "DisplayOrder": 40,
             "EstimatedMinutes": 10,
-            "FinalStepCompletionMode": "MarkCompleteAfterEmbedFinish",
+            "FinalStepCompletionMode": "AfterQuizPass",
+            "QuizPassingScore": 70,
         },
     ]
 
@@ -453,6 +457,8 @@ def main() -> None:
     catalog_title, catalog_list_id = ensure_list(site_id, "LIST_ASSIGNMENTCATALOG", "AssignmentCatalog")
     steps_title, steps_list_id = ensure_list(site_id, "LIST_ASSIGNMENTSTEPS", "AssignmentSteps")
     assignments_title, assignments_list_id = ensure_list(site_id, "LIST_ASSIGNMENTS", "Assignments")
+    quiz_q_title, quiz_q_list_id = ensure_list(site_id, "LIST_ASSIGNMENTQUIZQUESTIONS", "AssignmentQuizQuestions")
+    quiz_a_title, quiz_a_list_id = ensure_list(site_id, "LIST_ASSIGNMENTQUIZATTEMPTS", "AssignmentQuizAttempts")
 
     status_col = os.getenv("INTERNALCOLUMN_ASSIGNMENTSTATUS") or "Status"
 
@@ -460,6 +466,8 @@ def main() -> None:
     print(f"Catalog list: {catalog_title} ({catalog_list_id})")
     print(f"Steps list: {steps_title} ({steps_list_id})")
     print(f"Assignments list: {assignments_title} ({assignments_list_id}) status_col={status_col}")
+    print(f"Quiz questions list: {quiz_q_title} ({quiz_q_list_id})")
+    print(f"Quiz attempts list: {quiz_a_title} ({quiz_a_list_id})")
 
     # Optional: allow you to swap in a tenant-hosted MP4 later.
     # Must be a direct .mp4 or YouTube URL for front-end gating to work.
@@ -618,6 +626,41 @@ def main() -> None:
             fields_select=["EmployeeEmail"],
         )
         print(f"[Assignment] {res['mode']}: {email} -> {cat_title} ({a['status']})")
+
+    # 4) Quiz questions (seed a few for Sexual Harassment Prevention)
+    quiz_lookup = lookup_id_field("AssignmentCatalogId")
+    shp_id = catalog_ids_by_title.get("Sexual Harassment Prevention")
+    if shp_id:
+        questions = [
+            {
+                "QuestionOrder": 1,
+                "QuestionText": "What is the best first step if you witness conduct that may violate harassment policy?",
+                "QuestionType": "MultipleChoice",
+                "ChoicesText": "A. Report concerns immediately\nB. Ignore conduct if no one complains\nC. Share confidential details with coworkers",
+                "CorrectAnswer": "A",
+                "Explanation": "Timely reporting helps protect staff and clients, and supports consistent enforcement.",
+                "Active": True,
+            },
+            {
+                "QuestionOrder": 2,
+                "QuestionText": "Name one office-approved channel for reporting concerns (open answer).",
+                "QuestionType": "OpenAnswer",
+                "ChoicesText": "",
+                "CorrectAnswer": "",
+                "Explanation": "",
+                "Active": True,
+            },
+        ]
+        for q in questions:
+            fields = {**q, quiz_lookup: shp_id, "Title": f"Sexual Harassment Q{q['QuestionOrder']}"}
+            resq = upsert_list_item(
+                site_id,
+                quiz_q_list_id,
+                unique_filter=f"fields/{quiz_lookup} eq {shp_id} and fields/QuestionOrder eq {q['QuestionOrder']}",
+                field_data=fields,
+                fields_select=["QuestionOrder"],
+            )
+            print(f"[QuizQ] {resq['mode']}: Sexual Harassment Q{q['QuestionOrder']}")
 
     print("Done.")
 

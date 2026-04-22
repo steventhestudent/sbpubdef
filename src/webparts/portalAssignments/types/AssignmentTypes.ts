@@ -9,6 +9,7 @@ export type AssignmentCatalogItem = {
   active?: boolean;
   estimatedMinutes?: number;
   finalStepCompletionMode?: string;
+  quizPassingScore?: number;
   contentVersion?: string | number;
 };
 
@@ -39,5 +40,28 @@ export type UserAssignmentItem = {
   completedOn?: string;
   /** When list column INTERNALCOLUMN_FINALEMBEDCOMPLETED exists and is selected */
   finalEmbedCompleted?: boolean;
+  /** Set by backend when quiz attempt passes for this assignment */
+  quizPassed?: boolean;
+  quizScorePercent?: number;
+};
+
+export type QuizQuestionType = "MultipleChoice" | "OpenAnswer";
+
+export type AssignmentQuizQuestion = {
+  id: number;
+  assignmentCatalogId: number;
+  questionOrder: number;
+  questionText: string;
+  questionType: QuizQuestionType;
+  choicesText?: string;
+  correctAnswer?: string;
+  explanation?: string;
+  active?: boolean;
+};
+
+export type QuizAttemptResult = {
+  scorePercent: number;
+  passed: boolean;
+  submittedOn: string;
 };
 
