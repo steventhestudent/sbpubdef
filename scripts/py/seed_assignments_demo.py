@@ -561,6 +561,7 @@ def main() -> None:
             "email": demo_users[0],
             "catalog": "Remote Work Acknowledgment",
             "status": "Completed",
+            "FinalEmbedCompleted": True,
             "currentStep": 3,
             "percent": 100,
             "due": now - timedelta(days=1),
@@ -604,6 +605,7 @@ def main() -> None:
             # SharePoint "Number" columns shown as % are typically stored as a 0..1 fraction in Graph.
             "PercentComplete": float(a["percent"]) / 100.0,
             "LastOpenedOn": iso(now),
+            "FinalEmbedCompleted": a["finalEmbedCompleted"] or False
         }
         if a.get("completed"):
             fields["CompletedOn"] = iso(a["completed"])
