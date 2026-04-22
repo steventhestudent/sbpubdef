@@ -37,5 +37,7 @@ export type UserAssignmentItem = {
   percentComplete?: number;
   lastOpenedOn?: string;
   completedOn?: string;
+  /** When list column INTERNALCOLUMN_FINALEMBEDCOMPLETED exists and is selected */
+  finalEmbedCompleted?: boolean;
 };
 

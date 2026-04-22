@@ -59,13 +59,6 @@ function normalizePercentCompleteFromSharePoint(raw: number | undefined): number
   return Math.round(n);
 }
 
-function percentCompleteToSharePoint(uiPercent: number | undefined): number | undefined {
-  if (uiPercent === undefined) return undefined;
-  if (!Number.isFinite(uiPercent)) return undefined;
-  const clamped = Math.max(0, Math.min(100, uiPercent));
-  return clamped / 100;
-}
-
 function normalizeEmbedUrls(raw: unknown): string[] {
   if (!raw) return [];
   if (Array.isArray(raw)) return raw.map(String).map((s) => s.trim()).filter(Boolean);
@@ -205,9 +198,14 @@ export class AssignmentsSpService {
     return ENV.INTERNALCOLUMN_ASSIGNMENTSTATUS?.trim() || "Status";
   }
 
+  private embedCompletionFieldName(): string {
+    return ENV.INTERNALCOLUMN_FINALEMBEDCOMPLETED?.trim() || "";
+  }
+
   public async getMyAssignments(email: string, limit = 200): Promise<UserAssignmentItem[]> {
     const list = await this.getListByTitle(this.lists.assignments);
     const statusField = this.statusFieldName();
+    const embedField = this.embedCompletionFieldName();
 
     // Column names are not yet normalized in dev; select broadly and map defensively.
     const rows: Array<Record<string, unknown>> = await list.items
@@ -223,6 +221,7 @@ export class AssignmentsSpService {
         "PercentComplete",
         "LastOpenedOn",
         "CompletedOn",
+        ...(embedField ? [embedField] : []),
       )
       .filter(`EmployeeEmail eq '${email.replace(/'/g, "''")}'`)
       .orderBy("DueDate", true)
@@ -256,6 +255,9 @@ export class AssignmentsSpService {
         ),
         lastOpenedOn: getProp<string>(r, "LastOpenedOn"),
         completedOn: getProp<string>(r, "CompletedOn"),
+        finalEmbedCompleted: embedField
+          ? toYesNo(getProp<unknown>(r, embedField))
+          : undefined,
       };
     });
   }
@@ -263,6 +265,7 @@ export class AssignmentsSpService {
   public async getAssignmentById(id: number): Promise<UserAssignmentItem | undefined> {
     const list = await this.getListByTitle(this.lists.assignments);
     const statusField = this.statusFieldName();
+    const embedField = this.embedCompletionFieldName();
     const r: Record<string, unknown> = await list.items.getById(id).select(
       "Id",
       "Title",
@@ -275,6 +278,7 @@ export class AssignmentsSpService {
       "PercentComplete",
       "LastOpenedOn",
       "CompletedOn",
+      ...(embedField ? [embedField] : []),
     )();
 
     const status =
@@ -304,6 +308,9 @@ export class AssignmentsSpService {
       ),
       lastOpenedOn: getProp<string>(r, "LastOpenedOn"),
       completedOn: getProp<string>(r, "CompletedOn"),
+      finalEmbedCompleted: embedField
+        ? toYesNo(getProp<unknown>(r, embedField))
+        : undefined,
     };
   }
 
@@ -376,23 +383,5 @@ export class AssignmentsSpService {
     });
   }
 
-  public async updateAssignment(
-    id: number,
-    fields: Record<string, unknown>,
-  ): Promise<void> {
-    const list = await this.getListByTitle(this.lists.assignments);
-    const outgoing = { ...fields };
-    if (Object.prototype.hasOwnProperty.call(outgoing, "PercentComplete")) {
-      const raw = outgoing.PercentComplete;
-      const asNum =
-        typeof raw === "number"
-          ? raw
-          : typeof raw === "string" && raw.trim() !== ""
-            ? Number(raw)
-            : NaN;
-      outgoing.PercentComplete = Number.isFinite(asNum) ? percentCompleteToSharePoint(asNum) : raw;
-    }
-    await list.items.getById(id).update(outgoing);
-  }
 }
 

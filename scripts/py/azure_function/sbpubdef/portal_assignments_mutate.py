@@ -1,0 +1,439 @@
+"""
+Portal Assignments — user mutations via Microsoft Graph (app-only), authorized by
+the caller's Entra access token (delegated) from SPFx AadHttpClient.
+
+POST JSON body:
+  { "action": "start" | "progress" | "final_embed" | "complete", "assignmentId": <int>, "currentStepOrder"?: <int> }
+"""
+
+from __future__ import annotations
+
+import json
+import os
+from datetime import datetime, timezone
+from typing import Any
+
+import azure.functions as func
+
+from .entra_jwt import caller_email_from_claims, decode_and_validate_access_token
+from .local_upload import (
+    authenticate,
+    get_list_id,
+    get_list_item,
+    get_list_items,
+    get_site_id,
+    lookup_id_field,
+    update_list_item,
+)
+
+
+def _json_response(body: dict[str, Any], *, status: int = 200) -> func.HttpResponse:
+    return func.HttpResponse(
+        json.dumps(body),
+        status_code=status,
+        mimetype="application/json",
+    )
+
+
+def _truthy(v: Any) -> bool:
+    if v is True:
+        return True
+    if v is False or v is None:
+        return False
+    if isinstance(v, (int, float)):
+        return v != 0
+    if isinstance(v, str):
+        s = v.strip().lower()
+        return s in ("true", "yes", "1", "y")
+    return bool(v)
+
+
+def _normalize_percent_ui(raw: Any) -> int | None:
+    if raw is None:
+        return None
+    try:
+        n = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if not n == n:  # NaN
+        return None
+    while n > 100:
+        n /= 100.0
+    if 0 < n <= 1:
+        return int(round(n * 100))
+    return int(round(n))
+
+
+def _percent_ui_to_graph(ui: int) -> float:
+    c = max(0, min(100, int(ui)))
+    return c / 100.0
+
+
+def _parse_iso_date(due: str | None) -> datetime | None:
+    if not due or not isinstance(due, str):
+        return None
+    try:
+        return datetime.fromisoformat(due.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _is_past_due(due_iso: str | None) -> bool:
+    d = _parse_iso_date(due_iso)
+    if not d:
+        return False
+    today = datetime.now(timezone.utc).date()
+    return d.date() < today
+
+
+def _status_field_name() -> str:
+    return (os.getenv("INTERNALCOLUMN_ASSIGNMENTSTATUS") or "Status").strip()
+
+
+def _embed_field_name_optional() -> str:
+    """Only when this env var is set do we $select / PATCH the final-embed flag column."""
+    return (os.getenv("INTERNALCOLUMN_FINALEMBEDCOMPLETED") or "").strip()
+
+
+def _catalog_lookup_field() -> str:
+    return lookup_id_field("AssignmentCatalogId")
+
+
+def _assignment_select_fields(status_col: str, embed_col: str) -> list[str]:
+    cols = [
+        "EmployeeEmail",
+        "DueDate",
+        "CurrentStepOrder",
+        "PercentComplete",
+        "LastOpenedOn",
+        "CompletedOn",
+        status_col,
+        "Status",
+        "AssignmentStatus",
+        _catalog_lookup_field(),
+    ]
+    if embed_col:
+        cols.append(embed_col)
+    seen: set[str] = set()
+    out: list[str] = []
+    for c in cols:
+        c = str(c).strip()
+        if not c or c in seen:
+            continue
+        seen.add(c)
+        out.append(c)
+    return out
+
+
+def _read_status(fields: dict[str, Any], status_col: str) -> str:
+    return str(
+        fields.get(status_col)
+        or fields.get("Status")
+        or fields.get("AssignmentStatus")
+        or ""
+    ).strip()
+
+
+def _is_completed_status(s: str) -> bool:
+    return s.strip().lower() == "completed"
+
+
+def _workflow_status(due_iso: str | None) -> str:
+    """Status for in-flight user work: past due stays Overdue; otherwise In Progress."""
+    return "Overdue" if _is_past_due(due_iso) else "In Progress"
+
+
+def _max_step_order(site_id: str, steps_list_id: str, catalog_lookup_id: int) -> int:
+    rows = get_list_items(
+        site_id,
+        steps_list_id,
+        fields_filter=f"fields/AssignmentCatalogIdLookupId eq {catalog_lookup_id}",
+        top=200,
+        fields_select=["StepOrder"],
+    )
+    m = 1
+    for r in rows:
+        f = r.get("fields") or {}
+        so = f.get("StepOrder")
+        if so is not None:
+            try:
+                m = max(m, int(so))
+            except (TypeError, ValueError):
+                continue
+    return m
+
+
+def _final_step_fields(
+    site_id: str, steps_list_id: str, catalog_lookup_id: int, max_order: int
+) -> dict[str, Any]:
+    rows = get_list_items(
+        site_id,
+        steps_list_id,
+        fields_filter=f"fields/AssignmentCatalogIdLookupId eq {catalog_lookup_id}",
+        top=200,
+        fields_select=["StepOrder", "RequireEmbedCompletion", "AllowMarkCompleteHere", "StepTitle"],
+    )
+    for r in rows:
+        f = r.get("fields") or {}
+        try:
+            if int(f.get("StepOrder") or 0) == max_order:
+                return f
+        except (TypeError, ValueError):
+            continue
+    return {}
+
+
+def _catalog_fields(site_id: str, catalog_list_id: str, catalog_item_id: int) -> dict[str, Any]:
+    body = get_list_item(
+        site_id,
+        catalog_list_id,
+        catalog_item_id,
+        fields_select=["FinalStepCompletionMode", "Title"],
+    )
+    return body.get("fields") or {}
+
+
+def _assignment_payload(
+    *,
+    site_id: str,
+    assignments_list_id: str,
+    item_id: int,
+    status_col: str,
+    embed_col: str,
+) -> dict[str, Any]:
+    sel = _assignment_select_fields(status_col, embed_col)
+    body = get_list_item(site_id, assignments_list_id, item_id, fields_select=sel)
+    f = body.get("fields") or {}
+    raw_embed = f.get(embed_col) if embed_col else None
+    return {
+        "id": int(body.get("id") or item_id),
+        "employeeEmail": f.get("EmployeeEmail"),
+        "dueDate": f.get("DueDate"),
+        "currentStepOrder": f.get("CurrentStepOrder"),
+        "percentComplete": _normalize_percent_ui(f.get("PercentComplete")),
+        "lastOpenedOn": f.get("LastOpenedOn"),
+        "completedOn": f.get("CompletedOn"),
+        "status": _read_status(f, status_col),
+        "finalEmbedCompleted": _truthy(raw_embed) if embed_col else False,
+    }
+
+
+def _require_owner(fields: dict[str, Any], caller_email: str) -> None:
+    owner = str(fields.get("EmployeeEmail") or "").strip().lower()
+    if not owner or owner != caller_email.strip().lower():
+        raise PermissionError("Assignment is not assigned to the signed-in user.")
+
+
+def main(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        auth = req.headers.get("Authorization") or ""
+        if not auth.lower().startswith("bearer "):
+            return _json_response({"error": "Missing Authorization: Bearer token"}, status=401)
+        token = auth.split(" ", 1)[1].strip()
+
+        tenant_id = os.getenv("AZURE_TENANT_ID") or ""
+        api_app_id = os.getenv("FUNCTION_API_APP_ID") or ""
+        if not tenant_id or not api_app_id:
+            return _json_response({"error": "Function app missing AZURE_TENANT_ID or FUNCTION_API_APP_ID"}, status=500)
+
+        try:
+            claims = decode_and_validate_access_token(token, tenant_id=tenant_id, api_app_id=api_app_id)
+            caller_email = caller_email_from_claims(claims)
+        except Exception as e:
+            return _json_response({"error": f"Unauthorized: {e}"}, status=401)
+
+        try:
+            body = req.get_json()
+        except Exception:
+            body = {}
+        if not isinstance(body, dict):
+            body = {}
+
+        action = str(body.get("action") or "").strip().lower()
+        assignment_id = body.get("assignmentId")
+        try:
+            item_id = int(assignment_id)
+        except (TypeError, ValueError):
+            return _json_response({"error": "assignmentId must be an integer"}, status=400)
+
+        if action not in ("start", "progress", "final_embed", "complete"):
+            return _json_response(
+                {"error": "action must be one of: start, progress, final_embed, complete"},
+                status=400,
+            )
+
+        authenticate()
+
+        hub = os.getenv("HUB_NAME") or ""
+        if not hub:
+            return _json_response({"error": "Missing HUB_NAME"}, status=500)
+        site_id = get_site_id(hub)
+
+        assignments_title = os.getenv("LIST_ASSIGNMENTS") or "Assignments"
+        steps_title = os.getenv("LIST_ASSIGNMENTSTEPS") or "AssignmentSteps"
+        catalog_title = os.getenv("LIST_ASSIGNMENTCATALOG") or "AssignmentCatalog"
+
+        assignments_list_id = get_list_id(site_id, assignments_title)
+        steps_list_id = get_list_id(site_id, steps_title)
+        catalog_list_id = get_list_id(site_id, catalog_title)
+        if not assignments_list_id or not steps_list_id or not catalog_list_id:
+            return _json_response({"error": "Could not resolve list id(s) from env titles"}, status=500)
+
+        status_col = _status_field_name()
+        embed_opt = _embed_field_name_optional()
+        sel = _assignment_select_fields(status_col, embed_opt)
+        item = get_list_item(site_id, assignments_list_id, item_id, fields_select=sel)
+        fields: dict[str, Any] = item.get("fields") or {}
+
+        _require_owner(fields, caller_email)
+
+        current_status = _read_status(fields, status_col)
+        if _is_completed_status(current_status):
+            if action == "complete":
+                view = _assignment_payload(
+                    site_id=site_id,
+                    assignments_list_id=assignments_list_id,
+                    item_id=item_id,
+                    status_col=status_col,
+                    embed_col=embed_opt,
+                )
+                return _json_response({"assignment": view})
+            return _json_response({"error": "Assignment is completed"}, status=409)
+
+        due_iso = fields.get("DueDate")
+        if isinstance(due_iso, str):
+            pass
+        else:
+            due_iso = None
+
+        cat_key = _catalog_lookup_field()
+        cat_lookup_raw = fields.get(cat_key)
+        try:
+            catalog_item_id = int(cat_lookup_raw)
+        except (TypeError, ValueError):
+            return _json_response({"error": "Assignment is missing catalog lookup"}, status=400)
+
+        now_iso = datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+        if action == "start":
+            next_status = _workflow_status(due_iso)
+            patch: dict[str, Any] = {
+                "LastOpenedOn": now_iso,
+                status_col: next_status,
+            }
+            update_list_item(site_id, assignments_list_id, item_id, patch)
+            view = _assignment_payload(
+                site_id=site_id,
+                assignments_list_id=assignments_list_id,
+                item_id=item_id,
+                status_col=status_col,
+                embed_col=embed_opt,
+            )
+            return _json_response({"assignment": view})
+
+        if action == "final_embed":
+            if not embed_opt:
+                return _json_response(
+                    {
+                        "error": "Configure INTERNALCOLUMN_FINALEMBEDCOMPLETED to your list column internal name "
+                        "(Yes/No) before calling final_embed.",
+                    },
+                    status=400,
+                )
+            next_status = _workflow_status(due_iso)
+            patch = {embed_opt: True, status_col: next_status, "LastOpenedOn": now_iso}
+            update_list_item(site_id, assignments_list_id, item_id, patch)
+            view = _assignment_payload(
+                site_id=site_id,
+                assignments_list_id=assignments_list_id,
+                item_id=item_id,
+                status_col=status_col,
+                embed_col=embed_opt,
+            )
+            return _json_response({"assignment": view})
+
+        if action == "progress":
+            step_raw = body.get("currentStepOrder")
+            try:
+                next_order = int(step_raw)
+            except (TypeError, ValueError):
+                return _json_response({"error": "currentStepOrder is required for progress"}, status=400)
+            if next_order < 1:
+                return _json_response({"error": "currentStepOrder must be >= 1"}, status=400)
+
+            max_order = _max_step_order(site_id, steps_list_id, catalog_item_id)
+            if next_order > max_order:
+                return _json_response({"error": "currentStepOrder exceeds configured steps"}, status=400)
+
+            prev_max = fields.get("CurrentStepOrder")
+            try:
+                prev_i = int(prev_max) if prev_max is not None else 0
+            except (TypeError, ValueError):
+                prev_i = 0
+            merged_max = max(prev_i, next_order)
+            ui_pct = int(round((merged_max / max_order) * 100)) if max_order > 0 else 0
+
+            next_status = _workflow_status(due_iso)
+            patch = {
+                "CurrentStepOrder": next_order,
+                "PercentComplete": _percent_ui_to_graph(ui_pct),
+                "LastOpenedOn": now_iso,
+                status_col: next_status,
+            }
+            update_list_item(site_id, assignments_list_id, item_id, patch)
+            view = _assignment_payload(
+                site_id=site_id,
+                assignments_list_id=assignments_list_id,
+                item_id=item_id,
+                status_col=status_col,
+                embed_col=embed_opt,
+            )
+            return _json_response({"assignment": view})
+
+        # complete
+        max_order = _max_step_order(site_id, steps_list_id, catalog_item_id)
+        cur = fields.get("CurrentStepOrder")
+        try:
+            cur_i = int(cur) if cur is not None else 0
+        except (TypeError, ValueError):
+            cur_i = 0
+        if cur_i < max_order:
+            return _json_response({"error": "Assignment is not on the final step"}, status=400)
+
+        final_fields = _final_step_fields(site_id, steps_list_id, catalog_item_id, max_order)
+        cat_fields = _catalog_fields(site_id, catalog_list_id, catalog_item_id)
+        mode = str(cat_fields.get("FinalStepCompletionMode") or "").lower()
+        require_embed = ("require" in mode) or _truthy(final_fields.get("RequireEmbedCompletion"))
+        allow_here = _truthy(final_fields.get("AllowMarkCompleteHere")) if final_fields else True
+        if not allow_here:
+            return _json_response({"error": "Final step does not allow completion here"}, status=400)
+
+        if require_embed:
+            if not embed_opt:
+                return _json_response(
+                    {"error": "Final embed is required but INTERNALCOLUMN_FINALEMBEDCOMPLETED is not configured"},
+                    status=500,
+                )
+            if not _truthy(fields.get(embed_opt)):
+                return _json_response({"error": "Final embed completion is required before completing"}, status=400)
+
+        patch = {
+            status_col: "Completed",
+            "CompletedOn": now_iso,
+            "PercentComplete": _percent_ui_to_graph(100),
+            "LastOpenedOn": now_iso,
+        }
+        update_list_item(site_id, assignments_list_id, item_id, patch)
+        view = _assignment_payload(
+            site_id=site_id,
+            assignments_list_id=assignments_list_id,
+            item_id=item_id,
+            status_col=status_col,
+            embed_col=embed_opt,
+        )
+        return _json_response({"assignment": view})
+
+    except PermissionError as e:
+        return _json_response({"error": str(e)}, status=403)
+    except Exception as e:
+        return _json_response({"error": str(e)}, status=500)

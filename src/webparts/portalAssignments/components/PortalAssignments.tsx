@@ -9,6 +9,7 @@ import {
 } from "@components/PDRoleBasedSelect";
 import type RoleBasedViewProps from "@type/RoleBasedViewProps";
 import { AssignmentsSpService } from "../services/AssignmentsSpService";
+import { AssignmentsMutationsApi } from "../services/AssignmentsMutationsApi";
 import type { UserAssignmentItem } from "../types/AssignmentTypes";
 import { AssignmentFlow } from "./AssignmentFlow";
 import { AssignmentsCenter } from "./AssignmentsCenter";
@@ -61,6 +62,10 @@ function MyAssignmentsView({
 		() => new AssignmentsSpService(pnpWrapper),
 		[pnpWrapper],
 	);
+	const mutations = React.useMemo(
+		() => new AssignmentsMutationsApi(pnpWrapper.ctx),
+		[pnpWrapper.ctx],
+	);
 
 	const [items, setItems] = React.useState<UserAssignmentItem[]>([]);
 	const [loading, setLoading] = React.useState(true);
@@ -105,6 +110,14 @@ function MyAssignmentsView({
 		// void loadMine();
 		pnpWrapper.loadCachedThenFresh(() => loadMine());
 	}, [loadMine]);
+
+	const onAssignmentUpdated = React.useCallback(
+		(next: UserAssignmentItem) => {
+			setSelected(next);
+			setItems((prev) => prev.map((p) => (p.id === next.id ? next : p)));
+		},
+		[],
+	);
 
 	React.useEffect(() => {
 		const onHash = (): void => setSelectedId(getAssignmentIdFromLocation());
@@ -151,6 +164,7 @@ function MyAssignmentsView({
 		return (
 			<AssignmentFlow
 				svc={svc}
+				mutations={mutations}
 				assignment={selected}
 				onBack={() => {
 					setSelectedId(undefined);
@@ -158,12 +172,7 @@ function MyAssignmentsView({
 					// keep URL clean on page-back
 					if (window.location.hash) window.location.hash = "";
 				}}
-				onUpdated={(next) => {
-					setSelected(next);
-					setItems((prev) =>
-						prev.map((p) => (p.id === next.id ? next : p)),
-					);
-				}}
+				onUpdated={onAssignmentUpdated}
 			/>
 		);
 	}

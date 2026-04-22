@@ -1,6 +1,10 @@
 import * as React from "react";
 import type { AssignmentsSpService } from "../services/AssignmentsSpService";
 import type {
+  AssignmentMutationResult,
+  AssignmentsMutationsApi,
+} from "../services/AssignmentsMutationsApi";
+import type {
   AssignmentCatalogItem,
   AssignmentStepItem,
   UserAssignmentItem,
@@ -18,13 +22,31 @@ function asDateLabel(iso?: string): string {
   return d.toLocaleDateString();
 }
 
+function mergeAssignment(
+  prev: UserAssignmentItem,
+  patch: AssignmentMutationResult,
+): UserAssignmentItem {
+  return {
+    ...prev,
+    id: patch.id,
+    currentStepOrder: patch.currentStepOrder ?? prev.currentStepOrder,
+    percentComplete: patch.percentComplete ?? prev.percentComplete,
+    status: (patch.status as UserAssignmentItem["status"]) ?? prev.status,
+    lastOpenedOn: patch.lastOpenedOn ?? prev.lastOpenedOn,
+    completedOn: patch.completedOn ?? prev.completedOn,
+    finalEmbedCompleted: patch.finalEmbedCompleted ?? prev.finalEmbedCompleted,
+  };
+}
+
 export function AssignmentFlow({
   svc,
+  mutations,
   assignment,
   onBack,
   onUpdated,
 }: {
   svc: AssignmentsSpService;
+  mutations: AssignmentsMutationsApi;
   assignment: UserAssignmentItem;
   onBack: () => void;
   onUpdated: (next: UserAssignmentItem) => void;
@@ -35,8 +57,15 @@ export function AssignmentFlow({
   const [err, setErr] = React.useState<string | undefined>(undefined);
 
   const [activeOrder, setActiveOrder] = React.useState<number>(assignment.currentStepOrder ?? 1);
-  const [finalEmbedDone, setFinalEmbedDone] = React.useState<boolean>(false);
+  const [finalEmbedDone, setFinalEmbedDone] = React.useState<boolean>(
+    assignment.finalEmbedCompleted === true,
+  );
   const [saving, setSaving] = React.useState(false);
+  const startedForId = React.useRef<number | null>(null);
+
+  React.useEffect(() => {
+    setFinalEmbedDone(assignment.finalEmbedCompleted === true);
+  }, [assignment.id, assignment.finalEmbedCompleted]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -54,7 +83,6 @@ export function AssignmentFlow({
         setSteps(s);
         const maxOrder = s.length ? Math.max(...s.map((x) => x.stepOrder)) : 1;
         setActiveOrder(clamp(assignment.currentStepOrder ?? 1, 1, maxOrder));
-        setFinalEmbedDone(false);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : "Failed to load assignment.";
         setErr(msg);
@@ -67,6 +95,23 @@ export function AssignmentFlow({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignment.id]);
+
+  React.useEffect(() => {
+    if (loading || !catalog || !assignment.id) return;
+    if (String(assignment.status || "").toLowerCase() === "completed") return;
+    if (startedForId.current === assignment.id) return;
+    startedForId.current = assignment.id;
+    (async (): Promise<void> => {
+      try {
+        const patch = await mutations.start(assignment.id);
+        onUpdated(mergeAssignment(assignment, patch));
+      } catch (e: unknown) {
+        startedForId.current = null;
+        const msg = e instanceof Error ? e.message : "Failed to record assignment start.";
+        setErr(msg);
+      }
+    })().catch(() => undefined);
+  }, [assignment, catalog, loading, mutations, onUpdated]);
 
   const stepByOrder = React.useMemo(() => {
     const map = new Map<number, AssignmentStepItem>();
@@ -92,36 +137,10 @@ export function AssignmentFlow({
 
   async function persistProgress(nextOrder: number): Promise<void> {
     if (!assignment.id) return;
-    const statusField = svc.statusFieldName();
-    const nextMax = Math.max(assignment.currentStepOrder ?? 0, nextOrder);
-    const percent =
-      maxStepOrder > 0 ? Math.round((nextMax / maxStepOrder) * 100) : undefined;
-
     setSaving(true);
     try {
-      await svc.updateAssignment(assignment.id, {
-        CurrentStepOrder: nextOrder,
-        PercentComplete: percent,
-        LastOpenedOn: new Date().toISOString(),
-        [statusField]:
-          assignment.status === "Completed"
-            ? "Completed"
-            : nextMax >= 1
-              ? "In Progress"
-              : "Not Started",
-      });
-
-      const next: UserAssignmentItem = {
-        ...assignment,
-        currentStepOrder: nextOrder,
-        percentComplete: percent,
-        lastOpenedOn: new Date().toISOString(),
-        status:
-          assignment.status === "Completed"
-            ? assignment.status
-            : "In Progress",
-      };
-      onUpdated(next);
+      const patch = await mutations.progress(assignment.id, nextOrder);
+      onUpdated(mergeAssignment(assignment, patch));
     } finally {
       setSaving(false);
     }
@@ -129,25 +148,22 @@ export function AssignmentFlow({
 
   async function persistFinalEmbedDone(): Promise<void> {
     if (finalEmbedDone) return;
-    setFinalEmbedDone(true);
+    setSaving(true);
+    try {
+      const patch = await mutations.finalEmbed(assignment.id);
+      setFinalEmbedDone(true);
+      onUpdated(mergeAssignment(assignment, patch));
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function markComplete(): Promise<void> {
     if (!canMarkComplete) return;
-    const statusField = svc.statusFieldName();
     setSaving(true);
     try {
-      await svc.updateAssignment(assignment.id, {
-        [statusField]: "Completed",
-        CompletedOn: new Date().toISOString(),
-        PercentComplete: 100,
-      });
-      onUpdated({
-        ...assignment,
-        status: "Completed",
-        completedOn: new Date().toISOString(),
-        percentComplete: 100,
-      });
+      const patch = await mutations.complete(assignment.id);
+      onUpdated(mergeAssignment(assignment, patch));
     } finally {
       setSaving(false);
     }
@@ -294,7 +310,7 @@ export function AssignmentFlow({
                   url={u}
                   title={`Embed ${idx + 1}`}
                   onCompleted={() => {
-                    if (isFinalStep && activeStep.requireEmbedCompletion) {
+                    if (isFinalStep && requiresFinalEmbed) {
                       persistFinalEmbedDone().catch(() => undefined);
                     }
                   }}
@@ -332,4 +348,3 @@ export function AssignmentFlow({
     </div>
   );
 }
-

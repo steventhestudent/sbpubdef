@@ -40,7 +40,6 @@ from azure_function.sbpubdef.local_upload import (
     lookup_id_field,
     update_list_item,
     get_sharepoint_user_lookup_id,
-    graph_get_user_object_id,
 )
 
 
@@ -581,7 +580,6 @@ def main() -> None:
     ]
 
     assign_lookup = lookup_id_field("AssignmentCatalogId")
-    entra_ids_by_email: dict[str, str] = {}
     for a in seed_assignments:
         cat_title = a["catalog"]
         cat_id = catalog_ids_by_title[cat_title]
@@ -592,12 +590,6 @@ def main() -> None:
             print(f"[Assignment] skip: could not resolve Employee person for {email}: {e}")
             continue
         title = f"{cat_title} - {email}"
-
-        if email not in entra_ids_by_email:
-            try:
-                entra_ids_by_email[email] = graph_get_user_object_id(email)
-            except Exception as e:
-                print(f"[Assignment] warn: could not resolve Entra object id for {email}: {e}")
 
         fields: dict[str, Any] = {
             "Title": title,
@@ -613,9 +605,6 @@ def main() -> None:
             "PercentComplete": float(a["percent"]) / 100.0,
             "LastOpenedOn": iso(now),
         }
-        oid = entra_ids_by_email.get(email)
-        if oid:
-            fields["EmployeeObjectId"] = oid
         if a.get("completed"):
             fields["CompletedOn"] = iso(a["completed"])
 

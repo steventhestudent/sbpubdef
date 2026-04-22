@@ -191,6 +191,22 @@ def update_list_item(site_id: str, list_id: str, item_id: str | int, field_data:
     return True
 
 
+def get_list_item(site_id: str, list_id: str, item_id: str | int, *, fields_select: list[str]) -> dict:
+    """
+    Fetch a single list item with selected fields (Microsoft Graph list items API).
+    Returns the JSON object including top-level `id` and `fields`.
+    """
+    if not session_headers.get("Authorization"):
+        raise Exception("Graph session_headers missing Authorization (call authenticate() first).")
+    sel = ",".join(fields_select)
+    url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/{item_id}"
+    params = {"$expand": f"fields($select={sel})"}
+    resp = requests.get(url, headers=session_headers, params=params)
+    if resp.status_code >= 300:
+        raise Exception(f"Graph get_list_item failed: {resp.status_code} {resp.text}")
+    return resp.json()
+
+
 def graph_get_user_object_id(email: str) -> str:
     """
     Minimal Entra object id lookup via Microsoft Graph.
