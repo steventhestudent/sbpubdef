@@ -421,6 +421,12 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                     lookup_id_field("AssignmentId"),
                 ],
             ) or "AssignmentId"
+            # Dev diagnostics to surface schema mismatch quickly.
+            if assignment_fk not in set(attempt_cols):
+                return _json_response(
+                    {"error": f"Quiz attempts list missing FK column. chosen={assignment_fk} cols={sorted(attempt_cols)}"},
+                    status=500,
+                )
 
             # must be on final step
             max_order = _max_step_order(site_id, steps_list_id, catalog_item_id)

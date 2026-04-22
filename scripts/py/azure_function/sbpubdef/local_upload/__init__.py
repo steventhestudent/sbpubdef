@@ -155,7 +155,12 @@ def get_list_items(site_id: str, list_id: str, *, fields_filter: str = "", top: 
     if fields_filter:
         headers["Prefer"] = "HonorNonIndexedQueriesWarningMayFailRandomly"
     resp = requests.get(url, headers=headers, params=params)
-    if resp.status_code >= 300: raise Exception(f"Graph get_list_items failed: {resp.status_code} {resp.text}")
+    if resp.status_code >= 300:
+        raise Exception(
+            "Graph get_list_items failed: "
+            f"{resp.status_code} {resp.text} "
+            f"(list_id={list_id}, filter={fields_filter!r}, select={fields_select})"
+        )
     return resp.json().get("value", [])
 
 def upsert_list_item(site_id: str, list_id: str, *, unique_filter: str, field_data: dict, fields_select: list[str] | None = None):
