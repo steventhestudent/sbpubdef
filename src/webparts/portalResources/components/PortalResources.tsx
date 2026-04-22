@@ -9,6 +9,12 @@ import { MostCommonForms } from "@components/mostCommonForms/MostCommonForms";
 import { CDDResourceGuides } from "@components/cddResourceGuides/CDDResourceGuides";
 import { ProcedureChecklist } from "@components/procedureChecklist/ProcedureChecklist";
 import { AttorneyWorkload } from "@components/attorneyWorkload/AttorneyWorkload";
+import {
+	ComplianceResourcesPanel,
+	GuestResourcesPanel,
+	HRResourcesPanel,
+	ITResourcesPanel,
+} from "./PortalResourcesRolePanels";
 
 // a wrapper to pass other things we want from webpart props (context)
 function CollapsibleWrapper(
@@ -67,14 +73,12 @@ function CollapsibleWrapper(
 								sourceRole={sourceRole}
 							/>
 						);
+					if (sourceRole === "EVERYONE")
+						return <GuestResourcesPanel />;
 					if (sourceRole === "COMPLIANCEOFFICER")
-						return (
-							<div className="min-h-64">
-								Compliance officer resources...
-							</div>
-						);
-					if (sourceRole === "IT")
-						return <div className="min-h-64">IT resources...</div>;
+						return <ComplianceResourcesPanel />;
+					if (sourceRole === "IT") return <ITResourcesPanel />;
+					if (sourceRole === "HR") return <HRResourcesPanel />;
 					return (
 						<>
 							<h2 className="m-4">Manuals and Handbooks:</h2>
@@ -99,8 +103,8 @@ export function PortalResources(props: IPortalResourcesProps): JSX.Element {
 				ATTORNEY: CollapsibleWrapper(props.context),
 				CDD: CollapsibleWrapper(props.context),
 				LOP: CollapsibleWrapper(props.context),
-				TrialSupervisor: CollapsibleWrapper(props.context),
-				ComplianceOfficer: CollapsibleWrapper(props.context),
+				TRIALSUPERVISOR: CollapsibleWrapper(props.context),
+				COMPLIANCEOFFICER: CollapsibleWrapper(props.context),
 				HR: CollapsibleWrapper(props.context),
 				IT: CollapsibleWrapper(props.context),
 			}}
