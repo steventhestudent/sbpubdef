@@ -205,10 +205,6 @@ function MyAssignmentsView({
 					<div className="text-base font-semibold text-slate-900">
 						My Assignments
 					</div>
-					<div className="mt-1 text-sm text-slate-600">
-						Signed in as{" "}
-						<span className="font-medium">{email || "—"}</span>
-					</div>
 				</div>
 
 				<div className="flex items-center gap-2">
@@ -244,8 +240,8 @@ function MyAssignmentsView({
 					No incomplete assignments found.
 				</div>
 			) : (
-				<div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
-					<table className="w-full min-w-[520px] divide-y divide-slate-200">
+				<div className="mt-3 w-full overflow-x-auto rounded-lg border border-slate-200 bg-white">
+					<table className="table-row w-full min-w-[520px] table-fixed divide-y divide-slate-200">
 						<thead className="bg-slate-50">
 							<tr>
 								{["Assignment", "Due", ""].map((h) => (
