@@ -79,6 +79,8 @@ export function AssignmentFlow({
 	const [activeOrder, setActiveOrder] = React.useState<number>(
 		assignment.currentStepOrder ?? 1,
 	);
+	const [pane, setPane] = React.useState<"step" | "quiz">("step");
+	const [quizUnlocked, setQuizUnlocked] = React.useState(false);
 	const [finalEmbedDone, setFinalEmbedDone] = React.useState<boolean>(
 		assignment.finalEmbedCompleted === true,
 	);
@@ -113,6 +115,8 @@ export function AssignmentFlow({
 				setAnswers({});
 				setQuizResult(undefined);
 				setEmbedDoneByStep({});
+				setPane("step");
+				setQuizUnlocked(false);
 				const maxOrder = s.length
 					? Math.max(...s.map((x) => x.stepOrder))
 					: 1;
@@ -180,7 +184,6 @@ export function AssignmentFlow({
 	React.useEffect(() => {
 		const catalogId = assignment.assignmentCatalogId;
 		if (!catalogId) return;
-		if (!isFinalStep) return;
 		let cancelled = false;
 		(async (): Promise<void> => {
 			try {
@@ -196,7 +199,7 @@ export function AssignmentFlow({
 		return () => {
 			cancelled = true;
 		};
-	}, [assignment.assignmentCatalogId, isFinalStep, svc]);
+	}, [assignment.assignmentCatalogId, svc]);
 
 	const requiresFinalEmbed =
 		(catalog?.finalStepCompletionMode ?? "")
@@ -217,6 +220,26 @@ export function AssignmentFlow({
 
 	const passingScore = catalog?.quizPassingScore ?? 70;
 	const quizPassed = quizResult?.passed ?? assignment.quizPassed ?? false;
+	const hasQuiz = requiresQuizPass || quiz.length > 0;
+
+	const completionBlockReason = React.useMemo(() => {
+		if (!isFinalStep) return "Finish the final step to mark complete.";
+		if (!(activeStep?.allowMarkCompleteHere ?? true))
+			return "This step does not allow completion here.";
+		if (requiresEmbed && !finalEmbedDone)
+			return "Finish the required embed watch-time to unlock completion.";
+		if (requiresQuizPass && !quizPassed)
+			return `Submit and pass the quiz (≥ ${passingScore}%) to unlock completion.`;
+		return undefined;
+	}, [
+		activeStep?.allowMarkCompleteHere,
+		finalEmbedDone,
+		isFinalStep,
+		passingScore,
+		quizPassed,
+		requiresEmbed,
+		requiresQuizPass,
+	]);
 
 	const canMarkComplete =
 		isFinalStep &&
@@ -235,13 +258,26 @@ export function AssignmentFlow({
 		}
 	}
 
+	function goToQuiz(): void {
+		setQuizUnlocked(true);
+		setPane("quiz");
+	}
+
 	async function persistFinalEmbedDone(): Promise<void> {
 		if (finalEmbedDone) return;
 		setSaving(true);
+		setErr(undefined);
 		try {
 			const patch = await mutations.finalEmbed(assignment.id);
 			setFinalEmbedDone(true);
 			onUpdated(mergeAssignment(assignment, patch));
+		} catch (e: unknown) {
+			const msg =
+				e instanceof Error
+					? e.message
+					: "Failed to record final embed completion.";
+			setErr(msg);
+			throw e;
 		} finally {
 			setSaving(false);
 		}
@@ -374,6 +410,7 @@ export function AssignmentFlow({
 								(assignment.currentStepOrder ?? 0) >=
 								s.stepOrder;
 							const disabled =
+								pane === "step" &&
 								stepNavigationBlocked &&
 								s.stepOrder !== activeOrder;
 							return (
@@ -390,6 +427,7 @@ export function AssignmentFlow({
 										].join(" ")}
 										disabled={disabled}
 										onClick={async () => {
+											setPane("step");
 											setActiveOrder(s.stepOrder);
 											await persistProgress(s.stepOrder);
 										}}
@@ -423,10 +461,208 @@ export function AssignmentFlow({
 								</li>
 							);
 						})}
+						{hasQuiz ? (
+							<li key="__quiz__" className="mt-1">
+								<button
+									className={[
+										"w-full rounded-md px-2 py-2 text-left text-sm",
+										pane === "quiz"
+											? "bg-purple-50 text-purple-900"
+											: "text-slate-800 hover:bg-slate-50",
+										!quizUnlocked
+											? "opacity-50 cursor-not-allowed hover:bg-transparent"
+											: "",
+									].join(" ")}
+									disabled={!quizUnlocked}
+									onClick={() => setPane("quiz")}
+								>
+									<div className="flex items-center justify-between gap-2">
+										<span className="font-medium">
+											{maxStepOrder + 1}. Quiz
+										</span>
+										<span className="text-xs text-slate-400">
+											{quizUnlocked ? "—" : "Locked"}
+										</span>
+									</div>
+								</button>
+							</li>
+						) : null}
 					</ul>
 				</aside>
 
 				<main className="rounded-lg border border-slate-200 bg-white p-3">
+					{pane === "quiz" ? (
+						<div>
+							<div className="flex items-center justify-between gap-2">
+								<div className="text-base font-semibold text-slate-900">
+									Quiz
+								</div>
+								<button
+									className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
+									onClick={() => setPane("step")}
+								>
+									← Back to steps
+								</button>
+							</div>
+
+							<div className="mt-1 text-xs text-slate-600">
+								Passing score:{" "}
+								<span className="font-semibold">
+									{passingScore}%
+								</span>
+							</div>
+
+							{quiz.length === 0 ? (
+								<div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+									No quiz questions found for this assignment.
+								</div>
+							) : (
+								<>
+									<div className="mt-3 space-y-4">
+										{quiz.map((q) => {
+											const val =
+												answers[q.questionOrder] ?? "";
+											const type = String(
+												q.questionType ||
+													"MultipleChoice",
+											);
+											const choices = (
+												q.choicesText || ""
+											)
+												.split(/\r?\n/g)
+												.map((s) => s.trim())
+												.filter(Boolean);
+											return (
+												<div
+													key={q.id}
+													className="rounded-md border border-slate-200 bg-white p-3"
+												>
+													<div className="text-sm font-semibold text-slate-900">
+														{q.questionOrder}.{" "}
+														{q.questionText}
+													</div>
+													{type.toLowerCase() ===
+													"openanswer" ? (
+														<textarea
+															className="mt-2 w-full rounded-md border border-slate-200 p-2 text-sm"
+															rows={3}
+															value={val}
+															onChange={(e) =>
+																setAnswers(
+																	(prev) => ({
+																		...prev,
+																		[q.questionOrder]:
+																			e
+																				.target
+																				.value,
+																	}),
+																)
+															}
+															placeholder="Type your answer…"
+														/>
+													) : (
+														<div className="mt-2 space-y-2">
+															{choices.map(
+																(c) => {
+																	const key =
+																		c
+																			.split(
+																				".",
+																			)[0]
+																			?.trim() ||
+																		c;
+																	return (
+																		<label
+																			key={
+																				c
+																			}
+																			className="flex items-start gap-2 text-sm text-slate-800"
+																		>
+																			<input
+																				type="radio"
+																				name={`q-${q.id}`}
+																				checked={
+																					val ===
+																					key
+																				}
+																				onChange={() =>
+																					setAnswers(
+																						(
+																							prev,
+																						) => ({
+																							...prev,
+																							[q.questionOrder]:
+																								key,
+																						}),
+																					)
+																				}
+																			/>
+																			<span>
+																				{c}
+																			</span>
+																		</label>
+																	);
+																},
+															)}
+														</div>
+													)}
+												</div>
+											);
+										})}
+									</div>
+
+									<div className="mt-3 flex items-center justify-between gap-3">
+										<div className="text-xs text-slate-600">
+											{quizResult ? (
+												<>
+													Score:{" "}
+													<span className="font-semibold">
+														{
+															quizResult.scorePercent
+														}
+														%
+													</span>{" "}
+													{quizResult.passed ? (
+														<span className="font-semibold text-green-700">
+															Passed
+														</span>
+													) : (
+														<span className="font-semibold text-red-700">
+															Not passed
+														</span>
+													)}
+												</>
+											) : (
+												<span>
+													Submit your answers to score
+													this quiz.
+												</span>
+											)}
+										</div>
+										<button
+											className={[
+												"rounded-md px-3 py-2 text-sm font-semibold",
+												submittingQuiz
+													? "cursor-wait bg-slate-200 text-slate-500"
+													: "bg-blue-600 text-white hover:bg-blue-700",
+											].join(" ")}
+											disabled={submittingQuiz}
+											onClick={() =>
+												submitQuiz().catch(
+													() => undefined,
+												)
+											}
+										>
+											{submittingQuiz
+												? "Submitting…"
+												: "Submit Quiz"}
+										</button>
+									</div>
+								</>
+							)}
+						</div>
+					) : (
+					<>
 					<div className="flex items-center justify-between gap-2">
 						<div className="text-base font-semibold text-slate-900">
 							{activeStep?.stepTitle ?? "Step"}
@@ -450,10 +686,14 @@ export function AssignmentFlow({
 							<button
 								className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
 								disabled={
-									activeOrder >= maxStepOrder ||
-									stepNavigationBlocked
+									stepNavigationBlocked ||
+									(activeOrder >= maxStepOrder && !hasQuiz)
 								}
 								onClick={async () => {
+									if (activeOrder >= maxStepOrder && hasQuiz) {
+										goToQuiz();
+										return;
+									}
 									const next = clamp(
 										activeOrder + 1,
 										1,
@@ -463,7 +703,9 @@ export function AssignmentFlow({
 									await persistProgress(next);
 								}}
 							>
-								Next
+								{activeOrder >= maxStepOrder && hasQuiz
+									? "Go to Quiz"
+									: "Next"}
 							</button>
 						</div>
 					</div>
@@ -521,144 +763,20 @@ export function AssignmentFlow({
 							) : null}
 						</div>
 					) : null}
-
-					{isFinalStep && quiz.length ? (
-						<div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-3">
-							<div className="text-sm font-semibold text-slate-900">
-								Quiz
-							</div>
-							<div className="mt-1 text-xs text-slate-600">
-								Passing score:{" "}
-								<span className="font-semibold">
-									{passingScore}%
-								</span>
-							</div>
-
-							<div className="mt-3 space-y-4">
-								{quiz.map((q) => {
-									const val = answers[q.questionOrder] ?? "";
-									const type = String(
-										q.questionType || "MultipleChoice",
-									);
-									const choices = (q.choicesText || "")
-										.split(/\r?\n/g)
-										.map((s) => s.trim())
-										.filter(Boolean);
-									return (
-										<div
-											key={q.id}
-											className="rounded-md border border-slate-200 bg-white p-3"
-										>
-											<div className="text-sm font-semibold text-slate-900">
-												{q.questionOrder}.{" "}
-												{q.questionText}
-											</div>
-											{type.toLowerCase() ===
-											"openanswer" ? (
-												<textarea
-													className="mt-2 w-full rounded-md border border-slate-200 p-2 text-sm"
-													rows={3}
-													value={val}
-													onChange={(e) =>
-														setAnswers((prev) => ({
-															...prev,
-															[q.questionOrder]:
-																e.target.value,
-														}))
-													}
-													placeholder="Type your answer…"
-												/>
-											) : (
-												<div className="mt-2 space-y-2">
-													{choices.map((c) => {
-														const key =
-															c
-																.split(".")[0]
-																?.trim() || c;
-														return (
-															<label
-																key={c}
-																className="flex items-start gap-2 text-sm text-slate-800"
-															>
-																<input
-																	type="radio"
-																	name={`q-${q.id}`}
-																	checked={
-																		val ===
-																		key
-																	}
-																	onChange={() =>
-																		setAnswers(
-																			(
-																				prev,
-																			) => ({
-																				...prev,
-																				[q.questionOrder]:
-																					key,
-																			}),
-																		)
-																	}
-																/>
-																<span>{c}</span>
-															</label>
-														);
-													})}
-												</div>
-											)}
-										</div>
-									);
-								})}
-							</div>
-
-							<div className="mt-3 flex items-center justify-between gap-3">
-								<div className="text-xs text-slate-600">
-									{quizResult ? (
-										<>
-											Score:{" "}
-											<span className="font-semibold">
-												{quizResult.scorePercent}%
-											</span>{" "}
-											{quizResult.passed ? (
-												<span className="font-semibold text-green-700">
-													Passed
-												</span>
-											) : (
-												<span className="font-semibold text-red-700">
-													Not passed
-												</span>
-											)}
-										</>
-									) : (
-										<span>
-											Submit your answers to score this
-											quiz.
-										</span>
-									)}
-								</div>
-								<button
-									className={[
-										"rounded-md px-3 py-2 text-sm font-semibold",
-										submittingQuiz
-											? "cursor-wait bg-slate-200 text-slate-500"
-											: "bg-blue-600 text-white hover:bg-blue-700",
-									].join(" ")}
-									disabled={submittingQuiz}
-									onClick={() =>
-										submitQuiz().catch(() => undefined)
-									}
-								>
-									{submittingQuiz
-										? "Submitting…"
-										: "Submit Quiz"}
-								</button>
-							</div>
-						</div>
-					) : null}
+					</>
+					)}
 
 					<div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-200 pt-3">
 						<div className="text-xs text-slate-500">
-							Step {activeOrder} of {maxStepOrder}
+							{pane === "quiz"
+								? `Quiz (${maxStepOrder + 1} of ${maxStepOrder + 1})`
+								: `Step ${activeOrder} of ${maxStepOrder}`}
 						</div>
+						{!canMarkComplete && completionBlockReason ? (
+							<div className="text-xs text-amber-800">
+								{completionBlockReason}
+							</div>
+						) : null}
 						<button
 							className={[
 								"rounded-md px-3 py-2 text-sm font-semibold",
