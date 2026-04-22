@@ -48,7 +48,9 @@ function isDirectVideo(url: string): boolean {
 }
 
 function youTubeEmbedSrcForVideoId(videoId: string): string {
-  const base = `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}`;
+  // NOTE: Some tenants block the iframe_api script and also appear to suppress/alter postMessage
+  // behavior for the nocookie domain. Prefer youtube.com for postMessage control.
+  const base = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}`;
   const params = new URLSearchParams({
     enablejsapi: "1",
     origin: window.location.origin,
@@ -88,8 +90,9 @@ export function EmbedPlayer({
   const lastTRef = React.useRef(0);
   const playedRef = React.useRef(0);
   const intervalRef = React.useRef<number | undefined>(undefined);
-  const [assumedPlaying, setAssumedPlaying] = React.useState(false);
-  const [assumedSeconds, setAssumedSeconds] = React.useState(0);
+  const [ytPlaying, setYtPlaying] = React.useState(false);
+  const [ytSeconds, setYtSeconds] = React.useState(0);
+  const lastInfoTsRef = React.useRef<number>(0);
 
   const videoId = React.useMemo(() => (isYouTube(url) ? toYouTubeVideoId(url) : undefined), [url]);
   const isYt = React.useMemo(() => isYouTube(url), [url]);
@@ -128,33 +131,138 @@ export function EmbedPlayer({
     lastTRef.current = 0;
     playedRef.current = 0;
     stopInterval();
-    setAssumedPlaying(false);
-    setAssumedSeconds(0);
+    setYtPlaying(false);
+    setYtSeconds(0);
+    lastInfoTsRef.current = 0;
   }, [stopInterval, url]);
 
-  // Heuristic timer for YouTube (no iframe API). Toggle assumed play/pause on click.
+  // YouTube (no iframe_api): use postMessage listening + infoDelivery polling.
   React.useEffect(() => {
-    if (!isYt) return;
-    if (!assumedPlaying) return;
-    if (completedRef.current) return;
+    if (!isYt || !videoId) return;
+    const iframe = document.getElementById(iframeId) as HTMLIFrameElement | null;
+    if (!iframe) {
+      log("yt postMessage: iframe not found", { iframeId });
+      return;
+    }
 
-    const id = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      setAssumedSeconds((prev) => prev + 1);
-      const threshold = thresholdSeconds({ requiredSeconds });
-      log("yt heuristic tick", {
-        assumedSeconds: assumedSeconds + 1,
-        thresholdSeconds: threshold,
-        visible: document.visibilityState,
-      });
-      if (threshold !== undefined && (assumedSeconds + 1) >= threshold) {
-        window.clearInterval(id);
-        setAssumedPlaying(false);
-        complete();
+    const allowedOrigins = new Set([
+      "https://www.youtube.com",
+      "https://www.youtube-nocookie.com",
+    ]);
+
+    const send = (obj: Record<string, unknown>): void => {
+      try {
+        const targetOrigin = new URL(iframe.src).origin;
+        iframe.contentWindow?.postMessage(JSON.stringify(obj), targetOrigin);
+      } catch (e) {
+        log("yt postMessage send failed", e);
       }
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [assumedPlaying, assumedSeconds, complete, isYt, log, requiredSeconds]);
+    };
+
+    // Ask the player to start sending events.
+    log("yt postMessage: listening");
+    send({ event: "listening" });
+
+    let cancelled = false;
+    const onMsg = (ev: MessageEvent): void => {
+      if (cancelled) return;
+      if (!allowedOrigins.has(ev.origin)) return;
+      const raw = ev.data;
+      let msg: any = undefined;
+      if (typeof raw === "string") {
+        // Many YT messages are JSON strings.
+        try {
+          msg = JSON.parse(raw);
+        } catch {
+          // If it's not JSON, still log for debugging.
+          log("yt msg (string)", raw.slice(0, 200));
+          return;
+        }
+      } else if (typeof raw === "object" && raw) {
+        // Some environments deliver objects directly.
+        msg = raw;
+      } else {
+        return;
+      }
+
+      // Debug: show any message we get from YT origins.
+      log("yt msg", msg);
+
+      if (msg?.event === "onStateChange") {
+        const s = Number(msg?.info);
+        // 1 playing, 2 paused, 0 ended (per iframe API)
+        if (s === 1) setYtPlaying(true);
+        if (s === 2) setYtPlaying(false);
+        if (s === 0) {
+          setYtPlaying(false);
+          complete();
+        }
+        log("yt state", { state: s });
+        return;
+      }
+
+      // infoDelivery contains currentTime/duration among other things.
+      if (msg?.event === "infoDelivery" && msg?.info) {
+        const info = msg.info;
+        const cur =
+          typeof info.currentTime === "number" ? info.currentTime : undefined;
+        const dur =
+          typeof info.duration === "number" ? info.duration : undefined;
+        if (cur !== undefined && cur >= 0) {
+          // Infer play/pause: if currentTime advances, we're playing.
+          const prev = lastTRef.current || 0;
+          const dt = Math.max(0, cur - prev);
+          if (dt > 0.01) {
+            setYtPlaying(true);
+            // Ignore giant jumps caused by seeking.
+            if (dt <= 2.5) playedRef.current += dt;
+          }
+          lastTRef.current = cur;
+          lastInfoTsRef.current = Date.now();
+          setYtSeconds(cur);
+
+          const threshold = thresholdSeconds({
+            requiredSeconds,
+            durationSeconds: dur,
+          });
+          log("yt tick", {
+            playedSeconds: Math.round(playedRef.current),
+            currentTime: Math.round(cur),
+            duration: dur ? Math.round(dur) : undefined,
+            thresholdSeconds: threshold,
+          });
+          if (threshold !== undefined && playedRef.current >= threshold) {
+            complete();
+          }
+        }
+      }
+    };
+
+    window.addEventListener("message", onMsg);
+
+    // Watchdog: if we stop receiving infoDelivery, assume paused.
+    stopInterval();
+    intervalRef.current = window.setInterval(() => {
+      if (cancelled) return;
+      if (document.visibilityState !== "visible") return;
+      const last = lastInfoTsRef.current;
+      if (!last) return;
+      const staleMs = Date.now() - last;
+      if (staleMs > 1500 && ytPlaying) {
+        setYtPlaying(false);
+        log("yt inferred paused (stale infoDelivery)", { staleMs });
+      }
+    }, 700);
+
+    return () => {
+      cancelled = true;
+      stopInterval();
+      window.removeEventListener("message", onMsg);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [complete, iframeId, isYt, log, requiredSeconds, videoId, ytPlaying]);
+
+  // Note: YouTube accumulation is handled inside infoDelivery handler above.
 
   // Direct video: accumulate playtime via onTimeUpdate.
   const onDirectTimeUpdate = React.useCallback(
@@ -201,7 +309,7 @@ export function EmbedPlayer({
 
   if (isYt) {
     const threshold = thresholdSeconds({ requiredSeconds });
-    const remaining = threshold !== undefined ? Math.max(0, threshold - assumedSeconds) : undefined;
+    const remaining = threshold !== undefined ? Math.max(0, threshold - playedRef.current) : undefined;
     return (
       <div className="w-full">
         <div className="aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-black">
@@ -219,23 +327,6 @@ export function EmbedPlayer({
             ) : (
               <div className="w-full h-full" />
             )}
-
-            {/* Cross-origin iframes absorb pointer events; provide a tiny toggle control instead. */}
-            {threshold !== undefined ? (
-              <button
-                type="button"
-                className="absolute right-2 top-2 rounded-md bg-black/70 px-2 py-1 text-xs font-semibold text-white hover:bg-black/80"
-                onClick={() => {
-                  setAssumedPlaying((p) => {
-                    const next = !p;
-                    log("yt heuristic toggle", { assumedPlaying: next });
-                    return next;
-                  });
-                }}
-              >
-                {assumedPlaying ? "Assume: Playing" : "Assume: Paused"}
-              </button>
-            ) : null}
           </div>
         </div>
         <div className="mt-1 text-xs text-slate-500">{title ?? "YouTube"}</div>
@@ -245,10 +336,13 @@ export function EmbedPlayer({
               <div className="text-sm">
                 State:{" "}
                 <span className="font-semibold">
-                  {assumedPlaying ? "Playing" : "Paused"}
+                  {ytPlaying ? "Playing" : "Paused"}
                 </span>
                 {" "}• Watched:{" "}
-                <span className="font-semibold">{assumedSeconds}s</span>
+                <span className="font-semibold">
+                  {Math.round(playedRef.current)}s
+                </span>
+                {" "}• At: <span className="font-semibold">{Math.round(ytSeconds)}s</span>
                 {remaining !== undefined ? (
                   <>
                     {" "}• Remaining: <span className="font-semibold">{remaining}s</span>
