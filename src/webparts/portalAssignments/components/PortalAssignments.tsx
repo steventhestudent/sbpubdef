@@ -241,7 +241,7 @@ function MyAssignmentsView({
 				</div>
 			) : (
 				<div className="mt-3 w-full overflow-x-auto rounded-lg border border-slate-200 bg-white">
-					<table className="table-row w-full min-w-[520px] table-fixed divide-y divide-slate-200">
+					<table className="table w-full table-fixed divide-y divide-slate-200">
 						<thead className="bg-slate-50">
 							<tr>
 								{["Assignment", "Due", ""].map((h) => (
