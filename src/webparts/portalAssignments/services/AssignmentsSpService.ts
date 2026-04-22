@@ -353,11 +353,14 @@ export class AssignmentsSpService {
     catalogId: number,
     limit = 200,
   ): Promise<AssignmentQuizQuestion[]> {
-    const list = await this.getListByTitle("AssignmentQuizQuestions");
+    const list = await this.getListByTitle(
+      (ENV as any).LIST_ASSIGNMENTQUIZQUESTIONS || "AssignmentQuizQuestions",
+    );
+
+    // Your quiz list uses a plain Number foreign key `AssignmentCatalogId` (no lookup).
+    // Do NOT select lookup-only fields like `AssignmentCatalogIdId` / `...LookupId` since PnP will 400.
     const baseQuery = list.items.select(
       "Id",
-      // Support either Lookup (`AssignmentCatalogIdId`) or Number (`AssignmentCatalogId`)
-      "AssignmentCatalogIdId",
       "AssignmentCatalogId",
       "QuestionOrder",
       "QuestionText",
@@ -371,15 +374,21 @@ export class AssignmentsSpService {
     let rows: Array<Record<string, unknown>> = [];
     try {
       rows = await baseQuery
-        .filter(`AssignmentCatalogIdId eq ${catalogId}`)
-        .orderBy("QuestionOrder", true)
-        .top(limit)();
-    } catch {
-      // Fallback: Number column schema
-      rows = await baseQuery
         .filter(`AssignmentCatalogId eq ${catalogId}`)
         .orderBy("QuestionOrder", true)
         .top(limit)();
+    } catch {
+      rows = [];
+    }
+
+    if (!rows.length) {
+      // Last resort: fetch unfiltered and filter client-side.
+      try {
+        const all = await baseQuery.orderBy("QuestionOrder", true).top(limit)();
+        rows = (all || []).filter((r) => safeNumber(getProp<unknown>(r, "AssignmentCatalogId")) === catalogId);
+      } catch {
+        rows = [];
+      }
     }
 
     return (rows || [])
