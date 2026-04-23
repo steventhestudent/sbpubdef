@@ -112,7 +112,9 @@ def _resolve_first(existing: list[str], candidates: list[str]) -> str | None:
 
 
 def _catalog_lookup_field() -> str:
-    return lookup_id_field("AssignmentCatalogId")
+    # In this tenant the lookup column internal name is the base field name.
+    # (No "...LookupId" shadow field exists.)
+    return "AssignmentCatalogId"
 
 
 def _assignment_select_fields(status_col: str, embed_col: str) -> list[str]:
@@ -163,8 +165,8 @@ def _max_step_order(site_id: str, steps_list_id: str, catalog_lookup_id: int) ->
     rows = get_list_items(
         site_id,
         steps_list_id,
-        fields_filter=f"fields/AssignmentCatalogIdLookupId eq {catalog_lookup_id}",
-        top=200,
+        fields_filter=f"fields/AssignmentCatalogId eq {catalog_lookup_id}",
+        top=999,
         fields_select=["StepOrder"],
     )
     m = 1
@@ -185,8 +187,8 @@ def _final_step_fields(
     rows = get_list_items(
         site_id,
         steps_list_id,
-        fields_filter=f"fields/AssignmentCatalogIdLookupId eq {catalog_lookup_id}",
-        top=200,
+        fields_filter=f"fields/AssignmentCatalogId eq {catalog_lookup_id}",
+        top=999,
         fields_select=["StepOrder", "RequireEmbedCompletion", "AllowMarkCompleteHere", "StepTitle"],
     )
     for r in rows:
@@ -234,21 +236,11 @@ def _assignment_payload(
     }
 
 def _quiz_questions(site_id: str, quiz_questions_list_id: str, catalog_item_id: int) -> list[dict[str, Any]]:
-    cols = get_list_column_names(site_id, quiz_questions_list_id, include_sp_cols=True)
-    catalog_fk = _resolve_first(
-        cols,
-        [
-            "AssignmentCatalogId",
-            "AssignmentCatalogIdLookupId",
-            lookup_id_field("AssignmentCatalogId"),
-            lookup_id_field("AssignmentCatalog"),
-        ],
-    ) or "AssignmentCatalogId"
     rows = get_list_items(
         site_id,
         quiz_questions_list_id,
-        fields_filter=f"fields/{catalog_fk} eq {catalog_item_id} and fields/Active eq true",
-        top=200,
+        fields_filter=f"fields/AssignmentCatalogId eq {catalog_item_id} and fields/Active eq true",
+        top=999,
         fields_select=[
             "QuestionOrder",
             "QuestionText",
@@ -313,6 +305,45 @@ def _require_owner(fields: dict[str, Any], caller_email: str) -> None:
     owner = str(fields.get("EmployeeEmail") or "").strip().lower()
     if not owner or owner != caller_email.strip().lower():
         raise PermissionError("Assignment is not assigned to the signed-in user.")
+
+def _parse_answers_by_order(raw: Any) -> dict[int, str]:
+    """
+    Accept the portal payload in a few common shapes:
+      - {"1": "A", "2": "some text"}
+      - {1: "A"}
+      - {"1": {"value": "A"}} (or {"answer": "A"})
+      - [{"questionOrder": 1, "answer": "A"}]
+    Returns a dict keyed by QuestionOrder (int).
+    """
+    out: dict[int, str] = {}
+    if raw is None:
+        return out
+
+    if isinstance(raw, list):
+        for row in raw:
+            if not isinstance(row, dict):
+                continue
+            qo = row.get("questionOrder") or row.get("order") or row.get("QuestionOrder")
+            try:
+                order = int(qo)
+            except (TypeError, ValueError):
+                continue
+            v = row.get("answer") if "answer" in row else row.get("value")
+            out[order] = str(v or "").strip()
+        return out
+
+    if not isinstance(raw, dict):
+        return out
+
+    for k, v in raw.items():
+        try:
+            order = int(k)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(v, dict):
+            v = v.get("answer") if "answer" in v else v.get("value")
+        out[order] = str(v or "").strip()
+    return out
 
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
@@ -412,21 +443,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         if action == "submit_quiz":
             if not quiz_questions_list_id or not quiz_attempts_list_id:
                 return _json_response({"error": "Quiz lists not found (AssignmentQuizQuestions / AssignmentQuizAttempts)."}, status=500)
-            attempt_cols = get_list_column_names(site_id, quiz_attempts_list_id, include_sp_cols=True)
-            assignment_fk = _resolve_first(
-                attempt_cols,
-                [
-                    "AssignmentId",
-                    "AssignmentIdLookupId",
-                    lookup_id_field("AssignmentId"),
-                ],
-            ) or "AssignmentId"
-            # Dev diagnostics to surface schema mismatch quickly.
-            if assignment_fk not in set(attempt_cols):
-                return _json_response(
-                    {"error": f"Quiz attempts list missing FK column. chosen={assignment_fk} cols={sorted(attempt_cols)}"},
-                    status=500,
-                )
+            assignment_fk = "AssignmentId"
 
             # must be on final step
             max_order = _max_step_order(site_id, steps_list_id, catalog_item_id)
@@ -438,16 +455,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             if cur_i < max_order:
                 return _json_response({"error": "Quiz can only be submitted on the final step."}, status=400)
 
-            answers = body.get("answers") or {}
-            if not isinstance(answers, dict):
-                return _json_response({"error": "answers must be an object keyed by questionOrder."}, status=400)
-            answers_by_order: dict[int, str] = {}
-            for k, v in answers.items():
-                try:
-                    order = int(k)
-                except Exception:
-                    continue
-                answers_by_order[order] = str(v or "").strip()
+            answers_by_order = _parse_answers_by_order(body.get("answers"))
 
             questions = _quiz_questions(site_id, quiz_questions_list_id, catalog_item_id)
             score, has_graded = _score_quiz(questions, answers_by_order)
@@ -620,15 +628,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         if require_quiz:
             if not quiz_attempts_list_id:
                 return _json_response({"error": "Quiz attempts list not found."}, status=500)
-            attempt_cols = get_list_column_names(site_id, quiz_attempts_list_id, include_sp_cols=True)
-            assignment_fk = _resolve_first(
-                attempt_cols,
-                [
-                    "AssignmentId",
-                    "AssignmentIdLookupId",
-                    lookup_id_field("AssignmentId"),
-                ],
-            ) or "AssignmentId"
+            assignment_fk = "AssignmentId"
             # require latest attempt passed
             rows = get_list_items(
                 site_id,
