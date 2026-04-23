@@ -41,11 +41,23 @@ export class AssignmentsMutationsApi {
 		const text = await res.text();
 		if (!res.ok) {
 			let msg = text;
+			let debugPayload: unknown | undefined = undefined;
 			try {
-				const j = JSON.parse(text) as { error?: string };
+				const j = JSON.parse(text) as { error?: string; debug?: unknown };
 				if (j.error) msg = j.error;
+				if (j.debug !== undefined) debugPayload = j.debug;
 			} catch {
 				// ignore
+			}
+			if (debugPayload !== undefined) {
+				// eslint-disable-next-line no-console
+				console.error("PortalAssignmentsMutate debug payload", {
+					requestBody: body,
+					debug: debugPayload,
+					rawResponseText: text,
+					status: res.status,
+				});
+				if (msg && !/see console/i.test(msg)) msg = `${msg} (see console for debug details)`;
 			}
 			throw new Error(msg || `Assignment mutation failed (${res.status})`);
 		}
