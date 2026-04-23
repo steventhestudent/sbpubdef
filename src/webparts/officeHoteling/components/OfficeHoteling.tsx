@@ -1493,7 +1493,7 @@ export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
 	return (
 		<section className="border border-[--webpart-border-color] bg-[--webpart-bg-color] p-6 shadow-sm">
 			<h2 className="mb-4 text-xl font-semibold text-slate-800">
-				Hoteling
+				Office Hoteling
 			</h2>
 			{statusMessage && (
 				<div
