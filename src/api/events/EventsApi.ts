@@ -25,7 +25,9 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 			const list = w.lists.getByTitle(this.listTitle(opts));
 			const { Id: listGuid } = await list.select("Id")(); // List GUID for Details URL
 			const deptProp = await this.resolveDeptProp(list);
-			// this.and(`startswith(ContentTypeId,'${ENV.CONTENTTYPE_EVENT}')`);
+			const pdEventsCtId = await this.resolvePdEventsCtId(list);
+			// Only show PD Events (content type) like the Announcements webpart.
+			if (pdEventsCtId) this.and(`startswith(ContentTypeId,'${pdEventsCtId}')`);
 			this.addDateFilters(opts);
 			if (department && deptProp)
 				this.and(`${deptProp} eq '${department.replace(/'/g, "''")}'`);
@@ -33,6 +35,7 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 				.select(
 					"Id",
 					"Title",
+					"ContentTypeId",
 					"EventDate",
 					"EndDate",
 					"fAllDayEvent",

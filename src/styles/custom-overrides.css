@@ -10,7 +10,6 @@ div[data-automation-id="webPart"],
 div[data-automation-id="CanvasControl"],
 section[role="region"] {
 	background: var(--pd-card) !important;
-	border: 1px solid var(--pd-border) !important;
 	border-radius: 8px !important;
 	box-shadow: var(--pd-surface-shadow) !important;
 }

@@ -7,6 +7,7 @@ import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
 import { GraphClient, MSGraphClientV3 } from "@utils/graph/GraphClient";
 import { getEventLocalStart } from "@utils/calendar";
+import * as Utils from "@utils";
 
 const PAGE_SIZE = 5;
 
@@ -80,8 +81,9 @@ function ChevronRightIcon({ className }: { className?: string }): JSX.Element {
 function PDIntranetView({
 	userGroupNames,
 	pnpWrapper,
+	sourceRole,
 }: RoleBasedViewProps): JSX.Element {
-	const [items, setItems] = React.useState<PDEvent[]>([]);
+	const [allItems, setAllItems] = React.useState<PDEvent[]>([]);
 	const [page, setPage] = React.useState(0);
 	const [addingEventId, setAddingEventId] = React.useState<
 		string | number | null
@@ -101,9 +103,8 @@ function PDIntranetView({
 	const load = React.useCallback(async (): Promise<void> => {
 		try {
 			const eventsApi = new EventsApi(pnpWrapper);
-			const rows = await eventsApi.getCombinedEvents(pnpWrapper.ctx, {
-				includeOutlook: true,
-			});
+			// Announcements-style: SharePoint PD Events only (no Outlook items).
+			const rows = await eventsApi.get(200);
 
 			const mapped = (rows || []).map((item: PDEvent) => ({
 				id: item.id,
@@ -113,13 +114,14 @@ function PDIntranetView({
 				allDay: item.allDay,
 				location: item.location,
 				detailsUrl: item.detailsUrl,
+				PDDepartment: item.PDDepartment,
 			}));
 
-			setItems(mapped.length ? mapped : defaultItems);
+			setAllItems(mapped.length ? mapped : defaultItems);
 			setPage(0);
 		} catch (error) {
 			console.error("Failed to load upcoming events:", error);
-			setItems(defaultItems);
+			setAllItems(defaultItems);
 			setPage(0);
 		}
 	}, []);
@@ -127,6 +129,20 @@ function PDIntranetView({
 	React.useEffect(() => {
 		pnpWrapper.loadCachedThenFresh(load);
 	}, [load]);
+
+	const isUserIT = Utils.isIT(userGroupNames);
+	const items = React.useMemo(() => {
+		// Keep default placeholder behavior.
+		if (allItems.length === 1 && allItems[0].id === 0 && !allItems[0].date)
+			return allItems;
+
+		// Filter by PDDepartment for selected department.
+		// If the current user is IT, always show all departments.
+		return allItems.filter((el) => {
+			if (isUserIT) return true;
+			return el.PDDepartment === sourceRole;
+		});
+	}, [allItems, isUserIT, sourceRole]);
 
 	React.useEffect(() => {
 		const empty = items.length === 1 && items[0].id === 0 && !items[0].date;
@@ -209,7 +225,7 @@ function PDIntranetView({
 	};
 
 	return (
-		<section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+		<section className="min-h-[23em] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
 			{calendarStatus && (
 				<div
 					className={`mx-3 mt-3 rounded-lg border px-3 py-2 text-sm ${
