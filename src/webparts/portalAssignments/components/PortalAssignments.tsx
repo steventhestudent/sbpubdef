@@ -13,6 +13,7 @@ import { AssignmentsMutationsApi } from "../services/AssignmentsMutationsApi";
 import type { UserAssignmentItem } from "../types/AssignmentTypes";
 import { AssignmentFlow } from "./AssignmentFlow";
 import { AssignmentsCenter } from "./AssignmentsCenter";
+import * as Utils from "@utils";
 
 function getAssignmentIdFromLocation(): number | undefined {
 	// Supported:
@@ -38,16 +39,6 @@ function assignmentsPageUrl(ctx: IPortalAssignmentsProps["context"]): string {
 	const webRel = ctx.pageContext.web.serverRelativeUrl || "";
 	const base = `${window.location.origin}${webRel}`;
 	return `${base.replace(/\/$/, "")}/SitePages/Assignments.aspx`;
-}
-
-function isAdmin(groups: string[]): boolean {
-	const set = new Set(groups.map((g) => g.toLowerCase()));
-	return (
-		set.has("it") ||
-		set.has("hr") ||
-		set.has("complianceofficer") ||
-		set.has("compliance officer")
-	);
 }
 
 function MyAssignmentsView({
@@ -79,7 +70,7 @@ function MyAssignmentsView({
 	>(undefined);
 
 	const pageUrl = assignmentsPageUrl(pnpWrapper.ctx);
-	const admin = isAdmin(userGroupNames);
+	const admin = Utils.isGlobalEditor(userGroupNames);
 	const selectionId = selectedId;
 	const hasSelection = !!selectionId;
 	const openHrefForId = (id: number): string =>
@@ -221,7 +212,7 @@ function MyAssignmentsView({
 							target="_blank"
 							rel="noreferrer"
 						>
-							View Assignments List
+							📋
 						</a>
 					) : null}
 				</div>
