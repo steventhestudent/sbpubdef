@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
@@ -36,6 +37,9 @@ def _json_response(body: dict[str, Any], *, status: int = 200) -> func.HttpRespo
         status_code=status,
         mimetype="application/json",
     )
+
+def _debug_enabled() -> bool:
+    return str(os.getenv("DEBUG_PORTAL_ASSIGNMENTS_MUTATE") or "").strip().lower() in ("1", "true", "yes", "y")
 
 
 def _truthy(v: Any) -> bool:
@@ -283,7 +287,7 @@ def _score_quiz(
         except (TypeError, ValueError):
             continue
         qtype = str(q.get("QuestionType") or "MultipleChoice").strip()
-        if qtype.lower() == "openanswer":
+        if qtype.lower().replace(" ", "") == "openanswer":
             # ungraded (auto-correct)
             total += 1
             correct += 1
@@ -348,6 +352,7 @@ def _parse_answers_by_order(raw: Any) -> dict[int, str]:
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     try:
+        log = logging.getLogger(__name__)
         auth = req.headers.get("Authorization") or ""
         if not auth.lower().startswith("bearer "):
             return _json_response({"error": "Missing Authorization: Bearer token"}, status=401)
@@ -455,11 +460,48 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             if cur_i < max_order:
                 return _json_response({"error": "Quiz can only be submitted on the final step."}, status=400)
 
-            answers_by_order = _parse_answers_by_order(body.get("answers"))
+            raw_answers = body.get("answers")
+            answers_by_order = _parse_answers_by_order(raw_answers)
+            log.info(
+                "submit_quiz assignmentId=%s catalogItemId=%s answers_type=%s parsed_answer_keys=%s",
+                item_id,
+                catalog_item_id,
+                type(raw_answers).__name__,
+                sorted(list(answers_by_order.keys())),
+            )
 
             questions = _quiz_questions(site_id, quiz_questions_list_id, catalog_item_id)
+            log.info(
+                "submit_quiz fetched_questions=%s question_orders=%s",
+                len(questions),
+                [q.get("QuestionOrder") for q in questions],
+            )
             score, has_graded = _score_quiz(questions, answers_by_order)
             if not has_graded:
+                if _debug_enabled():
+                    return _json_response(
+                        {
+                            "error": "No valid quiz answers submitted.",
+                            "debug": {
+                                "assignmentId": item_id,
+                                "catalogItemId": catalog_item_id,
+                                "rawAnswersType": type(raw_answers).__name__,
+                                "parsedAnswerKeys": sorted(list(answers_by_order.keys())),
+                                "parsedAnswers": answers_by_order,
+                                "fetchedQuestionCount": len(questions),
+                                "fetchedQuestions": [
+                                    {
+                                        "QuestionOrder": q.get("QuestionOrder"),
+                                        "QuestionType": q.get("QuestionType"),
+                                        "QuestionText": q.get("QuestionText"),
+                                        "CorrectAnswer": q.get("CorrectAnswer"),
+                                    }
+                                    for q in questions
+                                ],
+                            },
+                        },
+                        status=400,
+                    )
                 return _json_response({"error": "No valid quiz answers submitted."}, status=400)
 
             cat_fields = _catalog_fields(site_id, catalog_list_id, catalog_item_id)
