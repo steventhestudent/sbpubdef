@@ -16,19 +16,21 @@ function openHref(href: string): void {
 
 export function ComplianceResourcesPanel(): JSX.Element {
 	return (
-		<div className="m-4 space-y-4 border-l-4 border-amber-600 bg-amber-50/80 px-4 py-3 text-slate-900">
-			<p className="text-sm leading-relaxed text-amber-950/90">
-				{COMPLIANCE_DEMO_HEADLINE}
-			</p>
+		<div className="m-4 space-y-4 border border-slate-200 bg-gradient-to-b from-slate-50 to-white px-4 py-3 text-slate-900 shadow-sm">
+			<div className="border-l-4 border-slate-500 pl-3">
+				<p className="text-sm leading-relaxed text-slate-700">
+					{COMPLIANCE_DEMO_HEADLINE}
+				</p>
+			</div>
 			<ul className="grid gap-3 sm:grid-cols-2">
 				{COMPLIANCE_DEMO_RESOURCES.map((r) => (
 					<li key={r.id}>
 						<button
 							type="button"
 							onClick={() => openHref(r.href)}
-							className="flex h-full w-full flex-col rounded-md border border-amber-800/25 bg-white px-3 py-2.5 text-left text-sm shadow-sm transition hover:border-amber-700/50 hover:bg-amber-50 focus-visible:ring-2 focus-visible:ring-amber-700 focus-visible:outline-none"
+							className="flex h-full w-full flex-col rounded-md border border-slate-200 bg-white px-3 py-2.5 text-left text-sm shadow-sm transition hover:border-slate-400 hover:bg-slate-50/80 focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:outline-none"
 						>
-							<span className="text-xs font-semibold uppercase tracking-wide text-amber-800">
+							<span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
 								{r.tag}
 							</span>
 							<span className="mt-1 font-medium text-slate-900">
@@ -63,16 +65,19 @@ const statusLabel: Record<
 	planned: "Planned change",
 };
 
-export function ITResourcesPanel(): JSX.Element {
+export function ITResourcesPanel({ cmsHref }: { cmsHref: string }): JSX.Element {
 	return (
-		<div className="m-4 space-y-4 rounded-lg border border-slate-700 bg-slate-900 px-4 py-4 text-slate-100">
+		<div className="m-4 space-y-4 rounded-lg border border-slate-200 bg-white px-4 py-4 text-slate-900 shadow-sm">
 			<div className="flex flex-wrap items-start justify-between gap-2">
-				<p className="max-w-2xl text-sm leading-relaxed text-slate-300">
+				<p className="max-w-2xl text-sm leading-relaxed text-slate-600">
 					{IT_DEMO_BANNER}
 				</p>
-				<span className="rounded border border-cyan-500/40 bg-cyan-950/40 px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-cyan-200">
-					Demo tenant
-				</span>
+				<a
+					href={cmsHref}
+					className="shrink-0 rounded border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-medium text-blue-800 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none"
+				>
+					CMS
+				</a>
 			</div>
 			<div className="grid gap-3 sm:grid-cols-2">
 				{IT_DEMO_TILES.map((t) => (
@@ -80,17 +85,19 @@ export function ITResourcesPanel(): JSX.Element {
 						key={t.id}
 						type="button"
 						onClick={() => openHref(t.href)}
-						className="flex flex-col rounded-md border border-slate-600 bg-slate-800/80 px-3 py-3 text-left text-sm transition hover:border-cyan-500/60 hover:bg-slate-800 focus-visible:ring-2 focus-visible:ring-cyan-400 focus-visible:outline-none"
+						className="flex flex-col rounded-md border border-slate-200 bg-slate-50/80 px-3 py-3 text-left text-sm transition hover:border-slate-300 hover:bg-white focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none"
 					>
 						<div className="flex items-center justify-between gap-2">
-							<span className="font-medium text-white">{t.title}</span>
+							<span className="font-medium text-slate-900">
+								{t.title}
+							</span>
 							<span
 								className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ring-inset ${statusStyles[t.status]}`}
 							>
 								{statusLabel[t.status]}
 							</span>
 						</div>
-						<span className="mt-2 text-xs leading-relaxed text-slate-400">
+						<span className="mt-2 text-xs leading-relaxed text-slate-600">
 							{t.blurb}
 						</span>
 					</button>

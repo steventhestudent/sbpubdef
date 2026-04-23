@@ -7,8 +7,9 @@ import {
 	CalendarItem,
 	PDAssignment,
 	PDEvent,
-	toDateSafe,
 	formatTime,
+	getEventLocalStart,
+	toDateSafe,
 } from "@utils/calendar";
 import {
 	HOTELING_SYNC_EVENT,
@@ -48,7 +49,7 @@ function mapEventsToCal(events: PDEvent[]): CalendarItem[] {
 	return events
 		.filter((e) => !/(office\s*)?hoteling|hotelling/i.test(e.title || ""))
 		.map((e) => {
-			const when = toDateSafe(e.date);
+			const when = getEventLocalStart(e);
 			if (!when) return undefined;
 
 			const end = toDateSafe(e.endDate);
@@ -62,15 +63,18 @@ function mapEventsToCal(events: PDEvent[]): CalendarItem[] {
 				: 0;
 
 			const isAllDaySelection =
+				!e.allDay &&
 				!!end &&
 				isSameDay &&
 				when.getHours() <= 8 &&
 				end.getHours() >= 17 &&
 				durationHours >= 8;
 
-			const timeLabel = isAllDaySelection
-				? "All day (8:00 AM - 5:00 PM)"
-				: formatTime(when);
+			const timeLabel = e.allDay
+				? "All day"
+				: isAllDaySelection
+					? "All day (8:00 AM - 5:00 PM)"
+					: formatTime(when);
 
 			return {
 				id: `E-${e.id}`,

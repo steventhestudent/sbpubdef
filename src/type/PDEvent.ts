@@ -13,6 +13,8 @@ export type PDEvent = {
 	title: string;
 	date?: string; // ISO string; you can change to Date if you prefer
 	endDate?: string; // optional
+	/** SharePoint `fAllDayEvent` or Graph `isAllDay` — avoids UTC midnight shifting the calendar day. */
+	allDay?: boolean;
 	location?: string;
 	detailsUrl?: string;
 	siteUrl?: string;

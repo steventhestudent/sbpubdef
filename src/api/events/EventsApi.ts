@@ -5,6 +5,7 @@ import "@pnp/sp/content-types";
 
 import { EventApi, EventGetOpts } from "@api/EventApi";
 import { EventResult, PDEvent } from "@type/PDEvent";
+import { getEventLocalStart } from "@utils/calendar";
 import { GraphClient, MSGraphClientV3 } from "@utils/graph/GraphClient";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 
@@ -34,6 +35,7 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 					"Title",
 					"EventDate",
 					"EndDate",
+					"fAllDayEvent",
 					"Location",
 					ENV.INTERNALCOLUMN_PDDEPARTMENT,
 				)
@@ -48,6 +50,10 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 					title: i.Title ?? "(untitled)",
 					date: i.EventDate, // ISO from list
 					endDate: i.EndDate,
+					allDay: Boolean(
+						(i as EventResult & { fAllDayEvent?: boolean })
+							.fAllDayEvent,
+					),
 					location: i.Location,
 					// detailsUrl: `${siteOrigin}/sites/${ENV.HUB_NAME}/Lists/Events/DispForm.aspx?ID=${i.Id}`,
 					// detailsUrl: `${siteOrigin}/_layouts/15/Event.aspx?ListGuid=${listGuid}&ItemId=${i.Id}`,
@@ -64,8 +70,8 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 		// Sort globally by EventDate ascending
 		return flat.sort(
 			(a, b) =>
-				new Date(a.date || 0).getTime() -
-				new Date(b.date || 0).getTime(),
+				(getEventLocalStart(a)?.getTime() ?? 0) -
+				(getEventLocalStart(b)?.getTime() ?? 0),
 		);
 	}
 
@@ -120,7 +126,7 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 			}>;
 		} = await client
 			.api("/me/events")
-			.select("id,subject,start,end,location,webLink")
+			.select("id,subject,start,end,location,webLink,isAllDay")
 			.orderby("start/dateTime ASC")
 			.top(limit)
 			.get();
@@ -130,6 +136,7 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 			title: e.subject ?? "(untitled)",
 			date: e.start?.dateTime ?? "",
 			endDate: e.end?.dateTime ?? "",
+			allDay: Boolean((e as { isAllDay?: boolean }).isAllDay),
 			location: e.location?.displayName ?? "",
 			detailsUrl: e.webLink ?? "",
 			siteUrl: "outlook://me",
@@ -162,7 +169,7 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 					}>;
 				} = await client
 					.api(`/groups/${group.id}/events`)
-					.select("id,subject,start,end,location,webLink")
+					.select("id,subject,start,end,location,webLink,isAllDay")
 					.orderby("start/dateTime ASC")
 					.top(limitPerGroup)
 					.get();
@@ -172,6 +179,7 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 					title: event.subject ?? "(untitled)",
 					date: event.start?.dateTime ?? "",
 					endDate: event.end?.dateTime ?? "",
+					allDay: Boolean((event as { isAllDay?: boolean }).isAllDay),
 					location: event.location?.displayName ?? "",
 					detailsUrl: event.webLink ?? "",
 					siteUrl: `https://outlook.office.com/group/${group.id}`,
@@ -218,11 +226,14 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 		}
 
 		const combined: PDEvent[] = [...sharePointEvents, ...personal, ...group]
-			.filter((e) => e.date && new Date(e.date).getTime() >= Date.now())
+			.filter((e) => {
+				const t = getEventLocalStart(e)?.getTime();
+				return t !== undefined && !isNaN(t) && t >= Date.now();
+			})
 			.sort(
 				(a, b) =>
-					new Date(a.date || 0).getTime() -
-					new Date(b.date || 0).getTime(),
+					(getEventLocalStart(a)?.getTime() ?? 0) -
+					(getEventLocalStart(b)?.getTime() ?? 0),
 			);
 
 		return combined;

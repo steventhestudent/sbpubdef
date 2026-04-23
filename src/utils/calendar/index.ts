@@ -16,6 +16,7 @@ export type PDEvent = {
 	location?: string;
 	detailsUrl?: string;
 	endDate?: string;
+	allDay?: boolean;
 };
 
 export type CalendarItem = {
@@ -33,6 +34,35 @@ export function toDateSafe(val?: string): Date | undefined {
 	if (!val) return undefined;
 	const d = new Date(val);
 	return isNaN(d.getTime()) ? undefined : d;
+}
+
+/**
+ * Leading YYYY-MM-DD from an ISO string as a **local** calendar date at noon.
+ * SharePoint/Graph all-day events often use UTC midnight (`…T00:00:00Z`), which
+ * becomes the previous calendar day in US time zones if parsed with `new Date(iso)`.
+ */
+export function parseDateOnlyLocal(isoOrDate?: string): Date | undefined {
+	if (!isoOrDate) return undefined;
+	const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoOrDate.trim());
+	if (!m) return undefined;
+	const y = Number(m[1]);
+	const mo = Number(m[2]) - 1;
+	const d = Number(m[3]);
+	const dt = new Date(y, mo, d, 12, 0, 0, 0);
+	return isNaN(dt.getTime()) ? undefined : dt;
+}
+
+/** Start instant for UI: all-day uses calendar date in local time; timed uses parsed ISO. */
+export function getEventLocalStart(e: {
+	date?: string;
+	allDay?: boolean;
+}): Date | undefined {
+	if (!e.date) return undefined;
+	if (e.allDay) {
+		const localDay = parseDateOnlyLocal(e.date);
+		if (localDay) return localDay;
+	}
+	return toDateSafe(e.date);
 }
 
 export function pad2(n: number): string {

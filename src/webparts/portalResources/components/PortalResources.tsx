@@ -77,7 +77,12 @@ function CollapsibleWrapper(
 						return <GuestResourcesPanel />;
 					if (sourceRole === "COMPLIANCEOFFICER")
 						return <ComplianceResourcesPanel />;
-					if (sourceRole === "IT") return <ITResourcesPanel />;
+					if (sourceRole === "IT")
+						return (
+							<ITResourcesPanel
+								cmsHref={`${ctx.pageContext.web.absoluteUrl}/SitePages/CMS.aspx`}
+							/>
+						);
 					if (sourceRole === "HR") return <HRResourcesPanel />;
 					return (
 						<>

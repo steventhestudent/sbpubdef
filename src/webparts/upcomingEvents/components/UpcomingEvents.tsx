@@ -6,6 +6,7 @@ import { EventsApi } from "@api/events/EventsApi";
 import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
 import { GraphClient, MSGraphClientV3 } from "@utils/graph/GraphClient";
+import { getEventLocalStart } from "@utils/calendar";
 
 function PDIntranetView({
 	userGroupNames,
@@ -38,6 +39,8 @@ function PDIntranetView({
 				id: item.id,
 				title: item.title,
 				date: item.date,
+				endDate: item.endDate,
+				allDay: item.allDay,
 				location: item.location,
 				detailsUrl: item.detailsUrl,
 			}));
@@ -62,7 +65,7 @@ function PDIntranetView({
 			return;
 		}
 
-		const start = new Date(event.date);
+		const start = getEventLocalStart(event) ?? new Date(event.date || "");
 		if (isNaN(start.getTime())) {
 			setCalendarStatus({
 				type: "error",
@@ -151,7 +154,9 @@ function PDIntranetView({
 							</tr>
 						)}
 						{items.map((event) => {
-							const eventDateObj = new Date(event.date || "");
+							const eventDateObj =
+								getEventLocalStart(event) ??
+								new Date(event.date || "");
 							const eventDate = eventDateObj.toLocaleDateString(
 								undefined,
 								{
@@ -160,13 +165,12 @@ function PDIntranetView({
 									year: "numeric",
 								},
 							);
-							const eventTime = eventDateObj.toLocaleTimeString(
-								undefined,
-								{
-									hour: "numeric",
-									minute: "2-digit",
-								},
-							);
+							const eventTime = event.allDay
+								? "All day"
+								: eventDateObj.toLocaleTimeString(undefined, {
+										hour: "numeric",
+										minute: "2-digit",
+									});
 
 							return (
 								<tr
@@ -192,7 +196,9 @@ function PDIntranetView({
 
 									<td className="px-1 py-1 text-sm text-slate-800">
 										<div className="px-1 py-1 text-xs whitespace-nowrap text-[var(--pd-muted)]">
-											{eventDate} @ {eventTime}
+											{event.allDay
+												? `${eventDate} · ${eventTime}`
+												: `${eventDate} @ ${eventTime}`}
 										</div>
 										<div className="p-1 text-sm text-slate-700">
 											{event.location || "—"}
