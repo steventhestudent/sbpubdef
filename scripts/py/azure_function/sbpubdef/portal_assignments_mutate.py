@@ -164,12 +164,23 @@ def _workflow_status(due_iso: str | None) -> str:
     """Status for in-flight user work: past due stays Overdue; otherwise In Progress."""
     return "Overdue" if _is_past_due(due_iso) else "In Progress"
 
+def _odata_number(n: int | float) -> str:
+    """
+    SharePoint 'Number' columns come through Graph as doubles.
+    In some tenants, `$filter fields/Foo eq 2` fails while `eq 2.0` works.
+    Normalize numeric filter literals to a float string.
+    """
+    try:
+        return str(float(n))
+    except (TypeError, ValueError):
+        return str(n)
+
 
 def _max_step_order(site_id: str, steps_list_id: str, catalog_lookup_id: int) -> int:
     rows = get_list_items(
         site_id,
         steps_list_id,
-        fields_filter=f"fields/AssignmentCatalogId eq {catalog_lookup_id}",
+        fields_filter=f"fields/AssignmentCatalogId eq {_odata_number(catalog_lookup_id)}",
         top=999,
         fields_select=["StepOrder"],
     )
@@ -191,7 +202,7 @@ def _final_step_fields(
     rows = get_list_items(
         site_id,
         steps_list_id,
-        fields_filter=f"fields/AssignmentCatalogId eq {catalog_lookup_id}",
+        fields_filter=f"fields/AssignmentCatalogId eq {_odata_number(catalog_lookup_id)}",
         top=999,
         fields_select=["StepOrder", "RequireEmbedCompletion", "AllowMarkCompleteHere", "StepTitle"],
     )
@@ -243,7 +254,7 @@ def _quiz_questions(site_id: str, quiz_questions_list_id: str, catalog_item_id: 
     rows = get_list_items(
         site_id,
         quiz_questions_list_id,
-        fields_filter=f"fields/AssignmentCatalogId eq {catalog_item_id} and fields/Active eq true",
+        fields_filter=f"fields/AssignmentCatalogId eq {_odata_number(catalog_item_id)} and fields/Active eq true",
         top=999,
         fields_select=[
             "QuestionOrder",
@@ -675,7 +686,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             rows = get_list_items(
                 site_id,
                 quiz_attempts_list_id,
-                fields_filter=f"fields/EmployeeEmail eq '{odata_escape(caller_email)}' and fields/{assignment_fk} eq {item_id} and fields/Passed eq true",
+                fields_filter=f"fields/EmployeeEmail eq '{odata_escape(caller_email)}' and fields/{assignment_fk} eq {_odata_number(item_id)} and fields/Passed eq true",
                 top=1,
                 fields_select=["Passed"],
             )
