@@ -251,10 +251,11 @@ def _assignment_payload(
     }
 
 def _quiz_questions(site_id: str, quiz_questions_list_id: str, catalog_item_id: int) -> list[dict[str, Any]]:
+    filt = f"fields/AssignmentCatalogId eq {_odata_number(catalog_item_id)} and fields/Active eq true"
     rows = get_list_items(
         site_id,
         quiz_questions_list_id,
-        fields_filter=f"fields/AssignmentCatalogId eq {_odata_number(catalog_item_id)} and fields/Active eq true",
+        fields_filter=filt,
         top=999,
         fields_select=[
             "QuestionOrder",
@@ -279,6 +280,34 @@ def _quiz_questions(site_id: str, quiz_questions_list_id: str, catalog_item_id: 
         out.append({**f, "QuestionOrder": order})
     out.sort(key=lambda x: int(x.get("QuestionOrder") or 0))
     return out
+
+
+def _quiz_questions_debug_probe(site_id: str, quiz_questions_list_id: str, catalog_item_id: int) -> dict[str, Any]:
+    """
+    Extra diagnostics when questions come back empty.
+    Avoids expensive queries; only used in DEBUG mode.
+    """
+    filt = f"fields/AssignmentCatalogId eq {_odata_number(catalog_item_id)} and fields/Active eq true"
+    probe_unfiltered = get_list_items(
+        site_id,
+        quiz_questions_list_id,
+        top=5,
+        fields_select=["AssignmentCatalogId", "QuestionOrder", "Active", "QuestionType"],
+    )
+    probe_filtered = get_list_items(
+        site_id,
+        quiz_questions_list_id,
+        fields_filter=filt,
+        top=5,
+        fields_select=["AssignmentCatalogId", "QuestionOrder", "Active", "QuestionType"],
+    )
+    return {
+        "quizQuestionsFilter": filt,
+        "probeUnfilteredCount": len(probe_unfiltered),
+        "probeUnfiltered": [r.get("fields") or {} for r in probe_unfiltered],
+        "probeFilteredCount": len(probe_filtered),
+        "probeFiltered": [r.get("fields") or {} for r in probe_filtered],
+    }
 
 def _score_quiz(
     questions: list[dict[str, Any]],
@@ -490,12 +519,20 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             score, has_graded = _score_quiz(questions, answers_by_order)
             if not has_graded:
                 if _debug_enabled():
+                    probe: dict[str, Any] = {}
+                    try:
+                        probe = _quiz_questions_debug_probe(site_id, quiz_questions_list_id, catalog_item_id)
+                    except Exception as e:
+                        probe = {"probeError": str(e)}
                     return _json_response(
                         {
                             "error": "No valid quiz answers submitted.",
                             "debug": {
                                 "assignmentId": item_id,
                                 "catalogItemId": catalog_item_id,
+                                "hubName": os.getenv("HUB_NAME"),
+                                "quizQuestionsListTitle": quiz_q_title,
+                                "quizQuestionsListId": quiz_questions_list_id,
                                 "rawAnswersType": type(raw_answers).__name__,
                                 "parsedAnswerKeys": sorted(list(answers_by_order.keys())),
                                 "parsedAnswers": answers_by_order,
@@ -509,6 +546,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                                     }
                                     for q in questions
                                 ],
+                                "questionProbe": probe,
                             },
                         },
                         status=400,
