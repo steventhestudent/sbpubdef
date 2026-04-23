@@ -251,7 +251,10 @@ def _assignment_payload(
     }
 
 def _quiz_questions(site_id: str, quiz_questions_list_id: str, catalog_item_id: int) -> list[dict[str, Any]]:
-    filt = f"fields/AssignmentCatalogId eq {_odata_number(catalog_item_id)} and fields/Active eq true"
+    # In this tenant, filtering on the boolean `Active` column via Graph can return
+    # empty results even when values are clearly true. Filter only by FK in Graph,
+    # then apply Active filtering in Python.
+    filt = f"fields/AssignmentCatalogId eq {_odata_number(catalog_item_id)}"
     rows = get_list_items(
         site_id,
         quiz_questions_list_id,
@@ -263,11 +266,14 @@ def _quiz_questions(site_id: str, quiz_questions_list_id: str, catalog_item_id: 
             "QuestionType",
             "ChoicesText",
             "CorrectAnswer",
+            "Active",
         ],
     )
     out: list[dict[str, Any]] = []
     for r in rows:
         f = r.get("fields") or {}
+        if not _truthy(f.get("Active")):
+            continue
         try:
             order = int(f.get("QuestionOrder") or 0)
         except (TypeError, ValueError):
@@ -287,7 +293,7 @@ def _quiz_questions_debug_probe(site_id: str, quiz_questions_list_id: str, catal
     Extra diagnostics when questions come back empty.
     Avoids expensive queries; only used in DEBUG mode.
     """
-    filt = f"fields/AssignmentCatalogId eq {_odata_number(catalog_item_id)} and fields/Active eq true"
+    filt = f"fields/AssignmentCatalogId eq {_odata_number(catalog_item_id)}"
     probe_unfiltered = get_list_items(
         site_id,
         quiz_questions_list_id,
