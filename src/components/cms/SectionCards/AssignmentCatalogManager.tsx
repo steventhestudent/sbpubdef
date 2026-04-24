@@ -27,10 +27,8 @@ export function AssignmentCatalogManager({
 		setLoading(true);
 		try {
 			const web = pnpWrapper.web();
-			const listTitle = ENV.LIST_ASSIGNMENTCATALOG || "AssignmentCatalog";
-			const cv = ENV.INTERNALCOLUMN_CONTENTVERSION || "ContentVersion0";
 			const rows = (await web.lists
-				.getByTitle(listTitle)
+				.getByTitle(ENV.LIST_ASSIGNMENTCATALOG)
 				.items.select(
 					"Id",
 					"Title",
@@ -38,7 +36,7 @@ export function AssignmentCatalogManager({
 					"Category",
 					"Active",
 					"DisplayOrder",
-					cv,
+					ENV.INTERNALCOLUMN_CONTENTVERSION,
 				)
 				.orderBy("DisplayOrder", true)
 				.skip(reset ? 0 : skip)
@@ -48,8 +46,11 @@ export function AssignmentCatalogManager({
 				id: Number(r.Id),
 				title: String(r.Title || "(untitled)"),
 				assignmentKey:
-					typeof r.AssignmentKey === "string" ? r.AssignmentKey : undefined,
-				category: typeof r.Category === "string" ? r.Category : undefined,
+					typeof r.AssignmentKey === "string"
+						? r.AssignmentKey
+						: undefined,
+				category:
+					typeof r.Category === "string" ? r.Category : undefined,
 				active:
 					typeof r.Active === "boolean"
 						? r.Active
@@ -61,9 +62,15 @@ export function AssignmentCatalogManager({
 						? r.DisplayOrder
 						: undefined,
 				contentVersion:
-					typeof (r as Record<string, unknown>)[cv] === "string" ||
-					typeof (r as Record<string, unknown>)[cv] === "number"
-						? ((r as Record<string, unknown>)[cv] as string | number)
+					typeof (r as Record<string, unknown>)[
+						ENV.INTERNALCOLUMN_CONTENTVERSION
+					] === "string" ||
+					typeof (r as Record<string, unknown>)[
+						ENV.INTERNALCOLUMN_CONTENTVERSION
+					] === "number"
+						? ((r as Record<string, unknown>)[
+								ENV.INTERNALCOLUMN_CONTENTVERSION
+							] as string | number)
 						: undefined,
 			}));
 
@@ -92,16 +99,21 @@ export function AssignmentCatalogManager({
 				<table className="min-w-full divide-y divide-slate-200">
 					<thead className="bg-slate-50">
 						<tr>
-							{["Title", "Key", "Category", "Active", "Order", "Version"].map(
-								(h) => (
-									<th
-										key={h}
-										className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
-									>
-										{h}
-									</th>
-								),
-							)}
+							{[
+								"Title",
+								"Key",
+								"Category",
+								"Active",
+								"Order",
+								"Version",
+							].map((h) => (
+								<th
+									key={h}
+									className="px-4 py-2 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase"
+								>
+									{h}
+								</th>
+							))}
 						</tr>
 					</thead>
 					<tbody className="divide-y divide-slate-200">
@@ -109,7 +121,9 @@ export function AssignmentCatalogManager({
 							<tr key={it.id} className="hover:bg-slate-50">
 								<td className="px-4 py-3 text-sm text-slate-800">
 									{it.title}
-									<div className="text-xs text-slate-500">#{it.id}</div>
+									<div className="text-xs text-slate-500">
+										#{it.id}
+									</div>
 								</td>
 								<td className="px-4 py-3 text-sm text-slate-700">
 									{it.assignmentKey || "—"}
@@ -118,7 +132,11 @@ export function AssignmentCatalogManager({
 									{it.category || "—"}
 								</td>
 								<td className="px-4 py-3 text-sm text-slate-700">
-									{it.active === undefined ? "—" : it.active ? "Yes" : "No"}
+									{it.active === undefined
+										? "—"
+										: it.active
+											? "Yes"
+											: "No"}
 								</td>
 								<td className="px-4 py-3 text-sm text-slate-700">
 									{it.displayOrder ?? "—"}
@@ -130,7 +148,10 @@ export function AssignmentCatalogManager({
 						))}
 						{!filtered.length && !loading ? (
 							<tr>
-								<td colSpan={6} className="px-4 py-6 text-sm text-slate-500">
+								<td
+									colSpan={6}
+									className="px-4 py-6 text-sm text-slate-500"
+								>
 									No catalog items found.
 								</td>
 							</tr>
@@ -153,4 +174,3 @@ export function AssignmentCatalogManager({
 		</div>
 	);
 }
-

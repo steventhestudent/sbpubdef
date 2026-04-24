@@ -49,9 +49,10 @@ export function AssignmentsManager({
 
 		// IMPORTANT: avoid falling back to the deprecated list "Assignments"
 		// when the intended list key is "Assignments1".
-		const primaryCandidates = [key, key.replace(/([a-zA-Z])(\d+)/g, "$1 $2")].filter(
-			Boolean,
-		);
+		const primaryCandidates = [
+			key,
+			key.replace(/([a-zA-Z])(\d+)/g, "$1 $2"),
+		].filter(Boolean);
 		const strippedFallback = key.replace(/\d+$/, "");
 
 		for (const c of primaryCandidates) {
@@ -69,7 +70,9 @@ export function AssignmentsManager({
 		// Only now allow stripped exact match (Assignments) as last resort.
 		if (strippedFallback) {
 			const exactStripped = all.find(
-				(l) => String(l.Title).toLowerCase() === strippedFallback.toLowerCase(),
+				(l) =>
+					String(l.Title).toLowerCase() ===
+					strippedFallback.toLowerCase(),
 			);
 			if (exactStripped?.Title) return exactStripped.Title;
 			const strippedNorm = normalizeTitle(strippedFallback);
@@ -95,7 +98,7 @@ export function AssignmentsManager({
 			);
 			setResolvedListTitle(listTitle);
 			const statusField = ENV.INTERNALCOLUMN_ASSIGNMENTSTATUS || "Status";
-			const rows = (await web.lists
+			const base = web.lists
 				.getByTitle(listTitle)
 				.items.select(
 					"Id",
@@ -106,8 +109,13 @@ export function AssignmentsManager({
 					"PercentComplete",
 				)
 				.orderBy("Id", false)
-				.skip(reset ? 0 : skip)
-				.top(pageSize)()) as Array<Record<string, unknown>>;
+				.top(pageSize);
+
+			// Some SharePoint endpoints behave oddly with `$skip=0` (returning empty results).
+			// Only apply skip when it's actually needed.
+			const rows = (await (reset ? base : base.skip(skip))()) as Array<
+				Record<string, unknown>
+			>;
 
 			const mapped: AssignmentRow[] = (rows || []).map((r) => ({
 				id: Number(r.Id),
@@ -223,17 +231,17 @@ export function AssignmentsManager({
 										{dueLabel}
 									</td>
 									<td className="px-4 py-3 text-sm text-slate-700">
-									<span
-										className={
-											String(it.status || "")
-												.toLowerCase()
-												.includes("overdue")
-												? "font-semibold text-red-700"
-												: ""
-										}
-									>
-										{it.status || "—"}
-									</span>
+										<span
+											className={
+												String(it.status || "")
+													.toLowerCase()
+													.includes("overdue")
+													? "font-semibold text-red-700"
+													: ""
+											}
+										>
+											{it.status || "—"}
+										</span>
 									</td>
 								</tr>
 							);

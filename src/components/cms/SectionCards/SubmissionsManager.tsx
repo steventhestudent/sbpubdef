@@ -33,8 +33,8 @@ export function SubmissionsManager({
 		setLoadingQuiz(true);
 		try {
 			const web = pnpWrapper.web();
-			const listTitle = ENV.LIST_ASSIGNMENTQUIZATTEMPTS || "AssignmentQuizAttempts";
-			const rows = (await web.lists
+			const listTitle = ENV.LIST_ASSIGNMENTQUIZATTEMPTS;
+			const base = web.lists
 				.getByTitle(listTitle)
 				.items.select(
 					"Id",
@@ -47,8 +47,13 @@ export function SubmissionsManager({
 					"Answers",
 				)
 				.orderBy("Id", false)
-				.skip(reset ? 0 : quizSkip)
-				.top(quizPageSize)()) as Array<Record<string, unknown>>;
+				.top(quizPageSize);
+
+			// Some SharePoint endpoints behave oddly with `$skip=0` (returning empty results).
+			// Only apply skip when it's actually needed.
+			const rows = (await (
+				reset ? base : base.skip(quizSkip)
+			)()) as Array<Record<string, unknown>>;
 
 			const mapped = (rows || []).map((r) => ({
 				id: Number(r.Id),
@@ -60,7 +65,9 @@ export function SubmissionsManager({
 							? Number(r.AssignmentId)
 							: undefined,
 				employeeEmail:
-					typeof r.EmployeeEmail === "string" ? r.EmployeeEmail : undefined,
+					typeof r.EmployeeEmail === "string"
+						? r.EmployeeEmail
+						: undefined,
 				scorePercent:
 					typeof r.ScorePercent === "number"
 						? r.ScorePercent
@@ -74,7 +81,9 @@ export function SubmissionsManager({
 							? r.Passed !== 0
 							: undefined,
 				submittedOn:
-					typeof r.SubmittedOn === "string" ? r.SubmittedOn : undefined,
+					typeof r.SubmittedOn === "string"
+						? r.SubmittedOn
+						: undefined,
 				answers: typeof r.Answers === "string" ? r.Answers : undefined,
 			}));
 
@@ -128,7 +137,7 @@ export function SubmissionsManager({
 										].map((h) => (
 											<th
 												key={h}
-												className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
+												className="px-4 py-2 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase"
 											>
 												{h}
 											</th>
@@ -151,7 +160,10 @@ export function SubmissionsManager({
 													? "Yes"
 													: "No";
 										return (
-											<tr key={q.id} className="hover:bg-slate-50">
+											<tr
+												key={q.id}
+												className="hover:bg-slate-50"
+											>
 												<td className="px-4 py-3 text-xs text-slate-600">
 													#{q.id}
 												</td>
@@ -167,9 +179,9 @@ export function SubmissionsManager({
 												<td
 													className={`px-4 py-3 text-sm ${
 														q.passed === false
-															? "text-red-700 font-semibold"
+															? "font-semibold text-red-700"
 															: q.passed === true
-																? "text-emerald-700 font-semibold"
+																? "font-semibold text-emerald-700"
 																: "text-slate-700"
 													}`}
 												>
@@ -188,7 +200,10 @@ export function SubmissionsManager({
 									})}
 									{!quizAttempts.length && !loadingQuiz ? (
 										<tr>
-											<td colSpan={7} className="px-4 py-6 text-sm text-slate-500">
+											<td
+												colSpan={7}
+												className="px-4 py-6 text-sm text-slate-500"
+											>
 												No quiz attempts found.
 											</td>
 										</tr>
@@ -211,7 +226,12 @@ export function SubmissionsManager({
 				</section>
 			) : null}
 
-			<ContentTable kind="Submission" items={items} sites={sites} query={query} />
+			<ContentTable
+				kind="Submission"
+				items={items}
+				sites={sites}
+				query={query}
+			/>
 		</div>
 	);
 }
