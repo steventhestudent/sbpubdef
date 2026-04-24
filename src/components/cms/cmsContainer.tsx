@@ -232,6 +232,7 @@ export const CMSContainer: ({
 											: [...prev, id],
 									)
 								}
+								pnpWrapper={pnpWrapper}
 							/>
 						</SectionCard>
 					)}

@@ -26,6 +26,7 @@ export function AssignmentsManager({
 	const [items, setItems] = React.useState<AssignmentRow[]>([]);
 	const [skip, setSkip] = React.useState(0);
 	const [loading, setLoading] = React.useState(false);
+	const [error, setError] = React.useState<string | undefined>(undefined);
 	const pageSize = 25;
 
 	function normalizeTitle(s: string): string {
@@ -70,6 +71,7 @@ export function AssignmentsManager({
 
 	async function load(reset = false): Promise<void> {
 		setLoading(true);
+		setError(undefined);
 		try {
 			const web = pnpWrapper.web();
 			const listTitle = await resolveListTitle(ENV.LIST_ASSIGNMENTS || "Assignments1");
@@ -103,6 +105,9 @@ export function AssignmentsManager({
 
 			setItems((prev) => (reset ? mapped : [...prev, ...mapped]));
 			setSkip((prev) => (reset ? pageSize : prev + pageSize));
+		} catch (e: unknown) {
+			const msg = e instanceof Error ? e.message : String(e);
+			setError(msg || "Failed to load assignments.");
 		} finally {
 			setLoading(false);
 		}
@@ -122,6 +127,11 @@ export function AssignmentsManager({
 
 	return (
 		<div className="space-y-3">
+			{error ? (
+				<div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+					{error}
+				</div>
+			) : null}
 			<div className="overflow-x-auto">
 				<table className="min-w-full divide-y divide-slate-200">
 					<thead className="bg-slate-50">
