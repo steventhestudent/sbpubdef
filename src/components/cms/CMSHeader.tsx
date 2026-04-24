@@ -11,7 +11,7 @@ export function CMSHeader({
 		<header className="flex flex-wrap items-center justify-between gap-3">
 			<div>
 				<h1 className="text-xl font-semibold text-slate-900">
-					PD CMS Dashboard
+					PD Content Management System (CMS)
 				</h1>
 			</div>
 			<div className="flex items-center gap-2">
@@ -22,7 +22,7 @@ export function CMSHeader({
 					＋ New
 					<svg
 						viewBox="0 0 24 24"
-						className="h-4 w-4 float-right color-gray-900 mt-1"
+						className="color-gray-900 float-right mt-1 h-4 w-4"
 					>
 						<path
 							d="M6 9l6 6 6-6"

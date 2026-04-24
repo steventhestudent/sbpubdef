@@ -36,9 +36,27 @@ import "@pnp/sp/items";
 import "@pnp/sp/files";
 import "@pnp/sp/folders";
 import * as Utils from "@utils";
+import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
+import type RoleBasedViewProps from "@type/RoleBasedViewProps";
 
 export function OfficeHoteling(props: IOfficeHotelingProps): JSX.Element {
-	const groups = Utils.cachedGroupNames();
+	const View = ({ userGroupNames }: RoleBasedViewProps): JSX.Element => (
+		<OfficeHotelingInner {...props} userGroupNames={userGroupNames} />
+	);
+
+	return (
+		<PDRoleBasedSelect
+			ctx={props.context}
+			views={{ EVERYONE: View }}
+			preventRoleForcing={false}
+		/>
+	);
+}
+
+function OfficeHotelingInner(
+	props: IOfficeHotelingProps & { userGroupNames: string[] },
+): JSX.Element {
+	const groups = props.userGroupNames;
 	if (!Utils.hasRole(groups, ["IT", "PDINTRANET", "ATTORNEY", "CDD", "LOP"]))
 		return <></>;
 
