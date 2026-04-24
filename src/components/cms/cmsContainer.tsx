@@ -13,7 +13,7 @@ import { SubmissionsManager } from "@components/cms/SectionCards/SubmissionsMana
 
 import { AuditLog } from "@components/cms/SectionCards/AuditLog";
 import { HelpDrawer } from "@components/cms/HelpDrawer";
-import { NewPDAnnouncementDrawer } from "@components/cms/NewPDAnnouncementDrawer";
+import { NewPDContentDrawer } from "@components/cms/NewPDContentDrawer";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { AnnouncementsApi } from "@api/announcements";
 
@@ -52,6 +52,7 @@ export const CMSContainer: ({
 	const [selectionMode, setSelectionMode] = React.useState<boolean>(false);
 	const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
 	const [showNewAnn, setShowNewAnn] = React.useState(false);
+	// kept for other parts of CMS that load announcements
 	const announcementsApi = new AnnouncementsApi(pnpWrapper);
 
 	function clearSelection(): void {
@@ -218,31 +219,11 @@ export const CMSContainer: ({
 				</div>
 			</section>
 			<HelpDrawer open={showHelp} onClose={() => setShowHelp(false)} />
-			<NewPDAnnouncementDrawer
+			<NewPDContentDrawer
 				open={showNewAnn}
 				onClose={() => setShowNewAnn(false)}
 				onOpenHelp={() => setShowHelp(true)}
-				onSubmit={(payload) => {
-					// payload will be { title, department, html }
-					function stripToText(html: string, maxLen = 240): string {
-						const div = document.createElement("div");
-						div.innerHTML = html;
-						// remove <img>, <video>, etc.
-						div.querySelectorAll(
-							"img,video,source,iframe,script,style",
-						).forEach((el) => el.remove());
-						const text =
-							div.textContent?.replace(/\s+/g, " ").trim() ?? "";
-						return text.length > maxLen
-							? text.slice(0, maxLen - 1) + "…"
-							: text;
-					}
-					payload.html = stripToText(payload.html); // to do: use images & styles (compatible w/ sharpeoint email news webparts)
-					setTimeout(
-						async () => await announcementsApi.create(payload),
-					);
-					setShowNewAnn(false);
-				}}
+				pnpWrapper={pnpWrapper}
 			/>
 		</div>
 	);
