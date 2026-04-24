@@ -1,4 +1,5 @@
 import * as React from "react";
+import "@pnp/sp/items";
 import type { PNPWrapper } from "@utils/PNPWrapper";
 import { SelectAllCheckbox } from "@components/cms/SelectAllCheckbox";
 
@@ -28,15 +29,28 @@ export function AssignmentCatalogManager({
 	pnpWrapper: PNPWrapper;
 }): JSX.Element {
 	const [items, setItems] = React.useState<CatalogRow[]>([]);
-	const [skip, setSkip] = React.useState(0);
 	const [loading, setLoading] = React.useState(false);
+	const [hasMore, setHasMore] = React.useState(true);
 	const pageSize = 25;
+
+	type ItemsBatch = Array<Record<string, unknown>>;
+	type ItemsIterator = AsyncIterator<ItemsBatch>;
+	const iteratorRef = React.useRef<ItemsIterator | null>(null);
+	type CatalogRawRow = {
+		Id?: unknown;
+		Title?: unknown;
+		AssignmentKey?: unknown;
+		Category?: unknown;
+		Active?: unknown;
+		DisplayOrder?: unknown;
+		[key: string]: unknown;
+	};
 
 	async function load(reset = false): Promise<void> {
 		setLoading(true);
 		try {
 			const web = pnpWrapper.web();
-			const rows = (await web.lists
+			const base = web.lists
 				.getByTitle(ENV.LIST_ASSIGNMENTCATALOG)
 				.items.select(
 					"Id",
@@ -48,43 +62,56 @@ export function AssignmentCatalogManager({
 					ENV.INTERNALCOLUMN_CONTENTVERSION,
 				)
 				.orderBy("DisplayOrder", true)
-				.skip(reset ? 0 : skip)
-				.top(pageSize)()) as Array<Record<string, unknown>>;
+				.top(pageSize);
 
-			const mapped: CatalogRow[] = (rows || []).map((r) => ({
-				id: Number(r.Id),
-				title: String(r.Title || "(untitled)"),
-				assignmentKey:
-					typeof r.AssignmentKey === "string"
-						? r.AssignmentKey
-						: undefined,
-				category:
-					typeof r.Category === "string" ? r.Category : undefined,
-				active:
-					typeof r.Active === "boolean"
-						? r.Active
-						: typeof r.Active === "number"
-							? r.Active !== 0
-							: undefined,
-				displayOrder:
-					typeof r.DisplayOrder === "number"
-						? r.DisplayOrder
-						: undefined,
-				contentVersion:
-					typeof (r as Record<string, unknown>)[
-						ENV.INTERNALCOLUMN_CONTENTVERSION
-					] === "string" ||
-					typeof (r as Record<string, unknown>)[
-						ENV.INTERNALCOLUMN_CONTENTVERSION
-					] === "number"
-						? ((r as Record<string, unknown>)[
-								ENV.INTERNALCOLUMN_CONTENTVERSION
-							] as string | number)
-						: undefined,
-			}));
+			if (reset || !iteratorRef.current) {
+				const iterable = base as unknown as AsyncIterable<ItemsBatch>;
+				iteratorRef.current = iterable[Symbol.asyncIterator]();
+				setHasMore(true);
+			}
+
+			const next = await iteratorRef.current.next();
+			const rows = next.value || [];
+			setHasMore(!Boolean(next.done));
+
+			const mapped: CatalogRow[] = (rows || []).map(
+				(raw: Record<string, unknown>) => {
+					const r = raw as CatalogRawRow;
+					return {
+						id: Number(r.Id),
+						title: String(r.Title || "(untitled)"),
+						assignmentKey:
+							typeof r.AssignmentKey === "string"
+								? r.AssignmentKey
+								: undefined,
+						category:
+							typeof r.Category === "string"
+								? r.Category
+								: undefined,
+						active:
+							typeof r.Active === "boolean"
+								? r.Active
+								: typeof r.Active === "number"
+									? r.Active !== 0
+									: undefined,
+						displayOrder:
+							typeof r.DisplayOrder === "number"
+								? r.DisplayOrder
+								: undefined,
+						contentVersion:
+							typeof r[ENV.INTERNALCOLUMN_CONTENTVERSION] ===
+								"string" ||
+							typeof r[ENV.INTERNALCOLUMN_CONTENTVERSION] ===
+								"number"
+								? (r[ENV.INTERNALCOLUMN_CONTENTVERSION] as
+										| string
+										| number)
+								: undefined,
+					} satisfies CatalogRow;
+				},
+			);
 
 			setItems((prev) => (reset ? mapped : [...prev, ...mapped]));
-			setSkip((prev) => (reset ? pageSize : prev + pageSize));
 		} finally {
 			setLoading(false);
 		}
@@ -222,9 +249,9 @@ export function AssignmentCatalogManager({
 					onClick={() => {
 						load(false).catch(() => {});
 					}}
-					disabled={loading}
+					disabled={loading || !hasMore}
 				>
-					{loading ? "Loading…" : "Load more"}
+					{loading ? "Loading…" : hasMore ? "Load more" : "No more"}
 				</button>
 			</div>
 		</div>

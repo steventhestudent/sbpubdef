@@ -1,4 +1,5 @@
 import * as React from "react";
+import "@pnp/sp/items";
 import type { PNPWrapper } from "@utils/PNPWrapper";
 import { SelectAllCheckbox } from "@components/cms/SelectAllCheckbox";
 
@@ -27,12 +28,16 @@ export function AssignmentsManager({
 	pnpWrapper: PNPWrapper;
 }): JSX.Element {
 	const [items, setItems] = React.useState<AssignmentRow[]>([]);
-	const [skip, setSkip] = React.useState(0);
 	const [loading, setLoading] = React.useState(false);
 	const [error, setError] = React.useState<string | undefined>(undefined);
 	const [resolvedListTitle, setResolvedListTitle] =
 		React.useState<string>("");
+	const [hasMore, setHasMore] = React.useState(true);
 	const pageSize = 25;
+
+	type ItemsBatch = Array<Record<string, unknown>>;
+	type ItemsIterator = AsyncIterator<ItemsBatch>;
+	const iteratorRef = React.useRef<ItemsIterator | null>(null);
 
 	function normalizeTitle(s: string): string {
 		return s.replace(/\s+/g, "").trim().toLowerCase();
@@ -92,7 +97,8 @@ export function AssignmentsManager({
 		setError(undefined);
 		if (reset) {
 			setItems([]);
-			setSkip(0);
+			iteratorRef.current = null;
+			setHasMore(true);
 		}
 		try {
 			const web = pnpWrapper.web();
@@ -114,11 +120,15 @@ export function AssignmentsManager({
 				.orderBy("Id", false)
 				.top(pageSize);
 
-			// Some SharePoint endpoints behave oddly with `$skip=0` (returning empty results).
-			// Only apply skip when it's actually needed.
-			const rows = (await (reset ? base : base.skip(skip))()) as Array<
-				Record<string, unknown>
-			>;
+			if (reset || !iteratorRef.current) {
+				const iterable = base as unknown as AsyncIterable<ItemsBatch>;
+				iteratorRef.current = iterable[Symbol.asyncIterator]();
+				setHasMore(true);
+			}
+
+			const next = await iteratorRef.current.next();
+			const rows = (next.value || []) as Array<Record<string, unknown>>;
+			setHasMore(!Boolean(next.done));
 
 			const mapped: AssignmentRow[] = (rows || []).map((r) => ({
 				id: Number(r.Id),
@@ -142,7 +152,6 @@ export function AssignmentsManager({
 			}));
 
 			setItems((prev) => (reset ? mapped : [...prev, ...mapped]));
-			setSkip((prev) => (reset ? pageSize : prev + pageSize));
 		} catch (e: unknown) {
 			const msg = e instanceof Error ? e.message : String(e);
 			setError(msg || "Failed to load assignments.");
@@ -299,9 +308,9 @@ export function AssignmentsManager({
 					onClick={() => {
 						load(false).catch(() => {});
 					}}
-					disabled={loading}
+					disabled={loading || !hasMore}
 				>
-					{loading ? "Loading…" : "Load more"}
+					{loading ? "Loading…" : hasMore ? "Load more" : "No more"}
 				</button>
 			</div>
 		</div>
