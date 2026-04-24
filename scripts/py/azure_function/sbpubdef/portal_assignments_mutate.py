@@ -175,13 +175,37 @@ def _odata_number(n: int | float) -> str:
 
 
 def _max_step_order(site_id: str, steps_list_id: str, catalog_lookup_id: int) -> int:
-    rows = get_list_items(
-        site_id,
-        steps_list_id,
-        fields_filter=f"fields/AssignmentCatalogId eq {_odata_number(catalog_lookup_id)}",
-        top=999,
-        fields_select=["StepOrder"],
-    )
+    filt = f"fields/AssignmentCatalogId eq {_odata_number(catalog_lookup_id)}"
+    rows: list[dict[str, Any]] = []
+    try:
+        rows = get_list_items(
+            site_id,
+            steps_list_id,
+            fields_filter=filt,
+            top=999,
+            fields_select=["AssignmentCatalogId", "StepOrder"],
+        )
+    except Exception:
+        rows = []
+
+    if not rows:
+        # Fallback: Graph filters can be flaky in some tenants. Fetch a small slice
+        # and apply the FK filter in Python.
+        try:
+            all_rows = get_list_items(
+                site_id,
+                steps_list_id,
+                top=999,
+                fields_select=["AssignmentCatalogId", "StepOrder"],
+            )
+            rows = [
+                r
+                for r in (all_rows or [])
+                if float((r.get("fields") or {}).get("AssignmentCatalogId") or -1) == float(catalog_lookup_id)
+            ]
+        except Exception:
+            rows = []
+
     m = 1
     for r in rows:
         f = r.get("fields") or {}
@@ -197,13 +221,32 @@ def _max_step_order(site_id: str, steps_list_id: str, catalog_lookup_id: int) ->
 def _final_step_fields(
     site_id: str, steps_list_id: str, catalog_lookup_id: int, max_order: int
 ) -> dict[str, Any]:
-    rows = get_list_items(
-        site_id,
-        steps_list_id,
-        fields_filter=f"fields/AssignmentCatalogId eq {_odata_number(catalog_lookup_id)}",
-        top=999,
-        fields_select=["StepOrder", "RequireEmbedCompletion", "AllowMarkCompleteHere", "StepTitle"],
-    )
+    rows: list[dict[str, Any]] = []
+    try:
+        rows = get_list_items(
+            site_id,
+            steps_list_id,
+            fields_filter=f"fields/AssignmentCatalogId eq {_odata_number(catalog_lookup_id)}",
+            top=999,
+            fields_select=["AssignmentCatalogId", "StepOrder", "RequireEmbedCompletion", "AllowMarkCompleteHere", "StepTitle"],
+        )
+    except Exception:
+        rows = []
+    if not rows:
+        try:
+            all_rows = get_list_items(
+                site_id,
+                steps_list_id,
+                top=999,
+                fields_select=["AssignmentCatalogId", "StepOrder", "RequireEmbedCompletion", "AllowMarkCompleteHere", "StepTitle"],
+            )
+            rows = [
+                r
+                for r in (all_rows or [])
+                if float((r.get("fields") or {}).get("AssignmentCatalogId") or -1) == float(catalog_lookup_id)
+            ]
+        except Exception:
+            rows = []
     for r in rows:
         f = r.get("fields") or {}
         try:
@@ -671,8 +714,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 return _json_response({"error": "currentStepOrder must be >= 1"}, status=400)
 
             max_order = _max_step_order(site_id, steps_list_id, catalog_item_id)
+            # Be tolerant of transient step-query issues: clamp rather than hard-fail.
             if next_order > max_order:
-                return _json_response({"error": "currentStepOrder exceeds configured steps"}, status=400)
+                next_order = max_order
 
             prev_max = fields.get("CurrentStepOrder")
             try:

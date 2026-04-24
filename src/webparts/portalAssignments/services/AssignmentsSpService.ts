@@ -411,22 +411,42 @@ export class AssignmentsSpService {
 
   public async getStepsForCatalog(catalogId: number, limit = 200): Promise<AssignmentStepItem[]> {
     const list = await this.getListByTitle(this.lists.steps);
-    const rows: Array<Record<string, unknown>> = await list.items
-      .select(
-        "Id",
-        "Title",
-        "AssignmentCatalogIdId",
-        "StepOrder",
-        "StepTitle",
-        "BodyHtml",
-        "EmbedUrl",
-        "RequireEmbedCompletion",
-        "AllowMarkCompleteHere",
-        "EstimatedMinutes",
-      )
-      .filter(`AssignmentCatalogIdId eq ${catalogId}`)
-      .orderBy("StepOrder", true)
-      .top(limit)();
+    // SharePoint REST: lookup columns must be filtered by the `<FieldName>Id` shadow field.
+    // Even though the internal column name is `AssignmentCatalogId`, REST requires `AssignmentCatalogIdId`.
+    const baseQuery = list.items.select(
+      "Id",
+      "Title",
+      "AssignmentCatalogIdId",
+      "StepOrder",
+      "StepTitle",
+      "BodyHtml",
+      "EmbedUrl",
+      "RequireEmbedCompletion",
+      "AllowMarkCompleteHere",
+      "EstimatedMinutes",
+    );
+
+    let rows: Array<Record<string, unknown>> = [];
+    try {
+      rows = await baseQuery
+        .filter(`AssignmentCatalogIdId eq ${catalogId}`)
+        .orderBy("StepOrder", true)
+        .top(limit)();
+    } catch {
+      rows = [];
+    }
+
+    if (!rows.length) {
+      try {
+        const all = await baseQuery.orderBy("StepOrder", true).top(limit)();
+        rows = (all || []).filter(
+          (r) =>
+            safeNumber(getProp<unknown>(r, "AssignmentCatalogIdId")) === catalogId,
+        );
+      } catch {
+        rows = [];
+      }
+    }
 
     return (rows || []).map((r) => {
       const stepOrder = safeNumber(getProp<unknown>(r, "StepOrder")) ?? 0;

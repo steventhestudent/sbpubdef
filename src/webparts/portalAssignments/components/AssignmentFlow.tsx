@@ -249,9 +249,14 @@ export function AssignmentFlow({
 
 	async function persistProgress(nextOrder: number): Promise<void> {
 		if (!assignment.id) return;
+		const maxAllowed = Math.max(1, maxStepOrder);
+		const safe = clamp(nextOrder, 1, maxAllowed);
+		if (safe !== nextOrder) {
+			setActiveOrder(safe);
+		}
 		setSaving(true);
 		try {
-			const patch = await mutations.progress(assignment.id, nextOrder);
+			const patch = await mutations.progress(assignment.id, safe);
 			onUpdated(mergeAssignment(assignment, patch));
 		} finally {
 			setSaving(false);
@@ -636,7 +641,7 @@ export function AssignmentFlow({
 										<div className="text-xs text-slate-600">
 											{quizResult ? (
 												<>
-													{quizResult.attemptNumber != null ? (
+													{quizResult.attemptNumber !== undefined ? (
 														<>
 															Attempt{" "}
 															<span className="font-semibold">
