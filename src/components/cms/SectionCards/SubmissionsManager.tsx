@@ -1,4 +1,5 @@
 import * as React from "react";
+import "@pnp/sp/items";
 import type { PNPWrapper } from "@utils/PNPWrapper";
 import { ContentTable } from "@components/cms/ContentTable";
 import { mockRows } from "@components/cms/MockRows";
@@ -34,8 +35,22 @@ export function SubmissionsManager({
 		}>
 	>([]);
 	const [loadingQuiz, setLoadingQuiz] = React.useState(false);
-	const [quizSkip, setQuizSkip] = React.useState(0);
-	const quizPageSize = 25;
+	const [hasMoreQuiz, setHasMoreQuiz] = React.useState<boolean>(true);
+	const quizPageSize = 10;
+
+	type ItemsBatch = Array<Record<string, unknown>>;
+	type ItemsIterator = AsyncIterator<ItemsBatch>;
+	const iteratorRef = React.useRef<ItemsIterator | null>(null);
+	type QuizAttemptRow = {
+		Id?: unknown;
+		Title?: unknown;
+		AssignmentId?: unknown;
+		EmployeeEmail?: unknown;
+		ScorePercent?: unknown;
+		Passed?: unknown;
+		SubmittedOn?: unknown;
+		Answers?: unknown;
+	};
 
 	async function loadQuizAttempts(reset = false): Promise<void> {
 		if (!pnpWrapper) return;
@@ -43,30 +58,34 @@ export function SubmissionsManager({
 		try {
 			const web = pnpWrapper.web();
 			const listTitle = ENV.LIST_ASSIGNMENTQUIZATTEMPTS;
-			const base = web.lists
-				.getByTitle(listTitle)
-				.items.select(
-					"Id",
-					"Title",
-					"AssignmentId",
-					"EmployeeEmail",
-					"ScorePercent",
-					"Passed",
-					"SubmittedOn",
-					"Answers",
-				)
-				.orderBy("Id", false)
-				.top(quizPageSize);
+			const base = web.lists.getByTitle(listTitle).items.select(
+				"Id",
+				"Title",
+				"AssignmentId",
+				"EmployeeEmail",
+				"ScorePercent",
+				"Passed",
+				"SubmittedOn",
+				"Answers",
+			);
 
-			// Some SharePoint endpoints behave oddly with `$skip=0` (returning empty results).
-			// Only apply skip when it's actually needed.
-			const rows = (await (
-				reset ? base : base.skip(quizSkip)
-			)()) as Array<Record<string, unknown>>;
+			// SharePoint list paging can ignore `$skip` in some cases.
+			// Use the async-iterator paging support from PnPjs (internally uses skip tokens).
+			if (reset || !iteratorRef.current) {
+				const iterable = base.orderBy("Id", false).top(quizPageSize) as unknown as AsyncIterable<ItemsBatch>;
+				iteratorRef.current = iterable[Symbol.asyncIterator]();
+				setHasMoreQuiz(true);
+			}
 
-			const mapped = (rows || []).map((r) => ({
-				id: Number(r.Id),
-				title: String(r.Title || ""),
+			const next = await iteratorRef.current.next();
+			const rows = next.value || [];
+			setHasMoreQuiz(!Boolean(next.done));
+
+			const mapped = (rows || []).map((raw: Record<string, unknown>) => {
+				const r = raw as QuizAttemptRow;
+				return {
+					id: Number(r.Id),
+					title: String(r.Title || ""),
 				assignmentId:
 					typeof r.AssignmentId === "number"
 						? r.AssignmentId
@@ -94,10 +113,10 @@ export function SubmissionsManager({
 						? r.SubmittedOn
 						: undefined,
 				answers: typeof r.Answers === "string" ? r.Answers : undefined,
-			}));
+				} as const;
+			});
 
 			setQuizAttempts((prev) => (reset ? mapped : [...prev, ...mapped]));
-			setQuizSkip((prev) => (reset ? quizPageSize : prev + quizPageSize));
 		} finally {
 			setLoadingQuiz(false);
 		}
@@ -295,9 +314,13 @@ export function SubmissionsManager({
 								onClick={() => {
 									loadQuizAttempts(false).catch(() => {});
 								}}
-								disabled={loadingQuiz}
+								disabled={loadingQuiz || !hasMoreQuiz}
 							>
-								{loadingQuiz ? "Loading…" : "Load more"}
+								{loadingQuiz
+									? "Loading…"
+									: hasMoreQuiz
+										? "Load more"
+										: "No more"}
 							</button>
 						</div>
 					</div>
