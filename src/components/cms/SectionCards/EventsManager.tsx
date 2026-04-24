@@ -60,7 +60,10 @@ export function EventsManager({
 			)
 		: items;
 
-	const paged = React.useMemo(() => filtered.slice(0, shown), [filtered, shown]);
+	const paged = React.useMemo(
+		() => filtered.slice(0, shown),
+		[filtered, shown],
+	);
 
 	const visibleIds = React.useMemo(
 		() => paged.map((i) => String(i.id)),
@@ -105,10 +108,17 @@ export function EventsManager({
 									/>
 								</th>
 							)}
-							{["ID", "Title", "Start", "Owner", "Location", "Department"].map((h) => (
+							{[
+								"ID",
+								"Title",
+								"Start",
+								"Owner",
+								"Location",
+								"Department",
+							].map((h) => (
 								<th
 									key={h}
-									className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
+									className="px-4 py-2 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase"
 								>
 									{h}
 								</th>
@@ -123,19 +133,28 @@ export function EventsManager({
 									? d.toLocaleString()
 									: "—";
 							return (
-								<tr key={String(it.id)} className="hover:bg-slate-50">
+								<tr
+									key={String(it.id)}
+									className="hover:bg-slate-50"
+								>
 									{selectionMode && (
 										<td className="px-3 py-3">
 											<input
 												type="checkbox"
-												checked={selectedIds?.includes(String(it.id))}
-												onChange={() => onToggleSelect(String(it.id))}
+												checked={selectedIds?.includes(
+													String(it.id),
+												)}
+												onChange={() =>
+													onToggleSelect(
+														String(it.id),
+													)
+												}
 												aria-label={`Select ${it.title}`}
 											/>
 										</td>
 									)}
 									<td className="px-4 py-3 text-xs text-slate-600">
-										#{String(it.id)}
+										{String(it.id)}
 									</td>
 									<td className="px-4 py-3 text-sm text-slate-800">
 										{it.detailsUrl ? (

@@ -167,6 +167,7 @@ export function AssignmentCatalogManager({
 								</th>
 							)}
 							{[
+								"Id",
 								"Title",
 								"Key",
 								"Category",
@@ -194,19 +195,17 @@ export function AssignmentCatalogManager({
 												String(it.id),
 											)}
 											onChange={() =>
-												onToggleSelect(
-													String(it.id),
-												)
+												onToggleSelect(String(it.id))
 											}
 											aria-label={`Select ${it.title}`}
 										/>
 									</td>
 								)}
+								<div className="px-4 py-3 text-xs text-slate-500">
+									{it.id}
+								</div>
 								<td className="px-4 py-3 text-sm text-slate-800">
 									{it.title}
-									<div className="text-xs text-slate-500">
-										#{it.id}
-									</div>
 								</td>
 								<td className="px-4 py-3 text-sm text-slate-700">
 									{it.assignmentKey || "—"}

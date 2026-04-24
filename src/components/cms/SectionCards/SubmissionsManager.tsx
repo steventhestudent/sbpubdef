@@ -58,21 +58,25 @@ export function SubmissionsManager({
 		try {
 			const web = pnpWrapper.web();
 			const listTitle = ENV.LIST_ASSIGNMENTQUIZATTEMPTS;
-			const base = web.lists.getByTitle(listTitle).items.select(
-				"Id",
-				"Title",
-				"AssignmentId",
-				"EmployeeEmail",
-				"ScorePercent",
-				"Passed",
-				"SubmittedOn",
-				"Answers",
-			);
+			const base = web.lists
+				.getByTitle(listTitle)
+				.items.select(
+					"Id",
+					"Title",
+					"AssignmentId",
+					"EmployeeEmail",
+					"ScorePercent",
+					"Passed",
+					"SubmittedOn",
+					"Answers",
+				);
 
 			// SharePoint list paging can ignore `$skip` in some cases.
 			// Use the async-iterator paging support from PnPjs (internally uses skip tokens).
 			if (reset || !iteratorRef.current) {
-				const iterable = base.orderBy("Id", false).top(quizPageSize) as unknown as AsyncIterable<ItemsBatch>;
+				const iterable = base
+					.orderBy("Id", false)
+					.top(quizPageSize) as unknown as AsyncIterable<ItemsBatch>;
 				iteratorRef.current = iterable[Symbol.asyncIterator]();
 				setHasMoreQuiz(true);
 			}
@@ -86,33 +90,34 @@ export function SubmissionsManager({
 				return {
 					id: Number(r.Id),
 					title: String(r.Title || ""),
-				assignmentId:
-					typeof r.AssignmentId === "number"
-						? r.AssignmentId
-						: typeof r.AssignmentId === "string"
-							? Number(r.AssignmentId)
+					assignmentId:
+						typeof r.AssignmentId === "number"
+							? r.AssignmentId
+							: typeof r.AssignmentId === "string"
+								? Number(r.AssignmentId)
+								: undefined,
+					employeeEmail:
+						typeof r.EmployeeEmail === "string"
+							? r.EmployeeEmail
 							: undefined,
-				employeeEmail:
-					typeof r.EmployeeEmail === "string"
-						? r.EmployeeEmail
-						: undefined,
-				scorePercent:
-					typeof r.ScorePercent === "number"
-						? r.ScorePercent
-						: typeof r.ScorePercent === "string"
-							? Number(r.ScorePercent)
+					scorePercent:
+						typeof r.ScorePercent === "number"
+							? r.ScorePercent
+							: typeof r.ScorePercent === "string"
+								? Number(r.ScorePercent)
+								: undefined,
+					passed:
+						typeof r.Passed === "boolean"
+							? r.Passed
+							: typeof r.Passed === "number"
+								? r.Passed !== 0
+								: undefined,
+					submittedOn:
+						typeof r.SubmittedOn === "string"
+							? r.SubmittedOn
 							: undefined,
-				passed:
-					typeof r.Passed === "boolean"
-						? r.Passed
-						: typeof r.Passed === "number"
-							? r.Passed !== 0
-							: undefined,
-				submittedOn:
-					typeof r.SubmittedOn === "string"
-						? r.SubmittedOn
-						: undefined,
-				answers: typeof r.Answers === "string" ? r.Answers : undefined,
+					answers:
+						typeof r.Answers === "string" ? r.Answers : undefined,
 				} as const;
 			});
 
@@ -183,26 +188,25 @@ export function SubmissionsManager({
 							<table className="min-w-full divide-y divide-slate-200">
 								<thead className="bg-slate-50">
 									<tr>
-											{selectionMode && (
-												<th className="w-10 px-3 py-2">
-													<SelectAllCheckbox
-														checked={Boolean(
-															allSelected,
-														)}
-														indeterminate={Boolean(
-															someSelected,
-														)}
-														onChange={(e) =>
-															onSelectAll(
-																visibleIds,
-																e.target
-																	.checked,
-															)
-														}
-														ariaLabel="Select all quiz attempts"
-													/>
-												</th>
-											)}
+										{selectionMode && (
+											<th className="w-10 px-3 py-2">
+												<SelectAllCheckbox
+													checked={Boolean(
+														allSelected,
+													)}
+													indeterminate={Boolean(
+														someSelected,
+													)}
+													onChange={(e) =>
+														onSelectAll(
+															visibleIds,
+															e.target.checked,
+														)
+													}
+													ariaLabel="Select all quiz attempts"
+												/>
+											</th>
+										)}
 										{[
 											"ID",
 											"AssignmentId",
@@ -260,7 +264,7 @@ export function SubmissionsManager({
 													</td>
 												)}
 												<td className="px-4 py-3 text-xs text-slate-600">
-													#{q.id}
+													{q.id}
 												</td>
 												<td className="px-4 py-3 text-sm text-slate-700">
 													{q.assignmentId ?? "—"}
@@ -293,12 +297,11 @@ export function SubmissionsManager({
 											</tr>
 										);
 									})}
-									{!filteredQuizAttempts.length && !loadingQuiz ? (
+									{!filteredQuizAttempts.length &&
+									!loadingQuiz ? (
 										<tr>
 											<td
-												colSpan={
-													selectionMode ? 8 : 7
-												}
+												colSpan={selectionMode ? 8 : 7}
 												className="px-4 py-6 text-sm text-slate-500"
 											>
 												No quiz attempts found.

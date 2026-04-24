@@ -261,7 +261,7 @@ export function AssignmentsManager({
 										</td>
 									)}
 									<td className="px-4 py-3 text-xs text-slate-600">
-										#{it.id}
+										{it.id}
 									</td>
 									<td className="px-4 py-3 text-sm text-slate-800">
 										{it.title}
