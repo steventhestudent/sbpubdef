@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { PNPWrapper } from "@utils/PNPWrapper";
+import { SelectAllCheckbox } from "@components/cms/SelectAllCheckbox";
 
 type BannerSettings = {
 	id?: number;
@@ -9,8 +10,16 @@ type BannerSettings = {
 
 export function BannerManager({
 	pnpWrapper,
+	selectionMode,
+	selectedIds,
+	onToggleSelect,
+	onSelectAll,
 }: {
 	pnpWrapper: PNPWrapper;
+	selectionMode: boolean;
+	selectedIds: string[];
+	onToggleSelect: (id: string) => void;
+	onSelectAll: (ids: string[], select: boolean) => void;
 }): JSX.Element {
 	const [loading, setLoading] = React.useState(false);
 	const [settings, setSettings] = React.useState<BannerSettings>({
@@ -47,24 +56,94 @@ export function BannerManager({
 		load().catch(() => {});
 	}, []);
 
+	const rowId = settings.id ? String(settings.id) : "";
+	const visibleIds = React.useMemo(() => (rowId ? [rowId] : []), [rowId]);
+	const selectedVisibleCount = React.useMemo(() => {
+		if (!selectionMode) return 0;
+		const set = new Set(selectedIds);
+		return visibleIds.reduce((acc, id) => (set.has(id) ? acc + 1 : acc), 0);
+	}, [selectionMode, selectedIds, visibleIds]);
+	const allSelected =
+		selectionMode &&
+		visibleIds.length > 0 &&
+		selectedVisibleCount === visibleIds.length;
+	const someSelected =
+		selectionMode && selectedVisibleCount > 0 && !allSelected;
+
 	return (
 		<div className="space-y-3">
-			<div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-				<div className="text-sm text-slate-700">
-					<div>
-						<b>ShowBanner</b>: {settings.show ? "true" : "false"}
-					</div>
-					<div className="mt-2">
-						<b>BannerMessage</b>:
-						<div className="mt-1 rounded-md border border-slate-200 bg-white p-2 text-sm text-slate-700">
-							{settings.message ? (
-								<div dangerouslySetInnerHTML={{ __html: settings.message }} />
-							) : (
-								<span className="text-slate-500 italic">(empty)</span>
+			<div className="overflow-x-auto">
+				<table className="min-w-full divide-y divide-slate-200">
+					<thead className="bg-slate-50">
+						<tr>
+							{selectionMode && (
+								<th className="w-10 px-3 py-2">
+									<SelectAllCheckbox
+										checked={Boolean(allSelected)}
+										indeterminate={Boolean(someSelected)}
+										onChange={(e) =>
+											onSelectAll(
+												visibleIds,
+												e.target.checked,
+											)
+										}
+										ariaLabel="Select banner settings"
+									/>
+								</th>
 							)}
-						</div>
-					</div>
-				</div>
+							{["ID", "ShowBanner", "BannerMessage"].map((h) => (
+								<th
+									key={h}
+									className="px-4 py-2 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase"
+								>
+									{h}
+								</th>
+							))}
+						</tr>
+					</thead>
+					<tbody className="divide-y divide-slate-200">
+						<tr className="hover:bg-slate-50">
+							{selectionMode && (
+								<td className="px-3 py-3">
+									<input
+										type="checkbox"
+										checked={
+											rowId
+												? selectedIds?.includes(rowId)
+												: false
+										}
+										onChange={() => {
+											if (!rowId) return;
+											onToggleSelect(rowId);
+										}}
+										disabled={!rowId}
+										aria-label="Select banner row"
+									/>
+								</td>
+							)}
+							<td className="px-4 py-3 text-xs text-slate-600">
+								{rowId ? `#${rowId}` : "—"}
+							</td>
+							<td className="px-4 py-3 text-sm text-slate-700">
+								{settings.show ? "true" : "false"}
+							</td>
+							<td className="px-4 py-3 text-sm text-slate-700">
+								{settings.message ? (
+									<div
+										className="max-w-[48rem] whitespace-pre-wrap"
+										dangerouslySetInnerHTML={{
+											__html: settings.message,
+										}}
+									/>
+								) : (
+									<span className="text-slate-500 italic">
+										(empty)
+									</span>
+								)}
+							</td>
+						</tr>
+					</tbody>
+				</table>
 			</div>
 
 			<div className="flex items-center justify-end">

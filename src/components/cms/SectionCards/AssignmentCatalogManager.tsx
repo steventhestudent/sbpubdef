@@ -1,5 +1,6 @@
 import * as React from "react";
 import type { PNPWrapper } from "@utils/PNPWrapper";
+import { SelectAllCheckbox } from "@components/cms/SelectAllCheckbox";
 
 type CatalogRow = {
 	id: number;
@@ -13,9 +14,17 @@ type CatalogRow = {
 
 export function AssignmentCatalogManager({
 	query,
+	selectionMode,
+	selectedIds,
+	onToggleSelect,
+	onSelectAll,
 	pnpWrapper,
 }: {
 	query: string;
+	selectionMode: boolean;
+	selectedIds: string[];
+	onToggleSelect: (id: string) => void;
+	onSelectAll: (ids: string[], select: boolean) => void;
 	pnpWrapper: PNPWrapper;
 }): JSX.Element {
 	const [items, setItems] = React.useState<CatalogRow[]>([]);
@@ -93,12 +102,43 @@ export function AssignmentCatalogManager({
 			)
 		: items;
 
+	const visibleIds = React.useMemo(
+		() => filtered.map((i) => String(i.id)),
+		[filtered],
+	);
+	const selectedVisibleCount = React.useMemo(() => {
+		if (!selectionMode) return 0;
+		const set = new Set(selectedIds);
+		return visibleIds.reduce((acc, id) => (set.has(id) ? acc + 1 : acc), 0);
+	}, [selectionMode, selectedIds, visibleIds]);
+	const allSelected =
+		selectionMode &&
+		visibleIds.length > 0 &&
+		selectedVisibleCount === visibleIds.length;
+	const someSelected =
+		selectionMode && selectedVisibleCount > 0 && !allSelected;
+
 	return (
 		<div className="space-y-3">
 			<div className="overflow-x-auto">
 				<table className="min-w-full divide-y divide-slate-200">
 					<thead className="bg-slate-50">
 						<tr>
+							{selectionMode && (
+								<th className="w-10 px-3 py-2">
+									<SelectAllCheckbox
+										checked={Boolean(allSelected)}
+										indeterminate={Boolean(someSelected)}
+										onChange={(e) =>
+											onSelectAll(
+												visibleIds,
+												e.target.checked,
+											)
+										}
+										ariaLabel="Select all catalog items"
+									/>
+								</th>
+							)}
 							{[
 								"Title",
 								"Key",
@@ -119,6 +159,22 @@ export function AssignmentCatalogManager({
 					<tbody className="divide-y divide-slate-200">
 						{filtered.map((it) => (
 							<tr key={it.id} className="hover:bg-slate-50">
+								{selectionMode && (
+									<td className="px-3 py-3">
+										<input
+											type="checkbox"
+											checked={selectedIds?.includes(
+												String(it.id),
+											)}
+											onChange={() =>
+												onToggleSelect(
+													String(it.id),
+												)
+											}
+											aria-label={`Select ${it.title}`}
+										/>
+									</td>
+								)}
 								<td className="px-4 py-3 text-sm text-slate-800">
 									{it.title}
 									<div className="text-xs text-slate-500">
@@ -149,7 +205,7 @@ export function AssignmentCatalogManager({
 						{!filtered.length && !loading ? (
 							<tr>
 								<td
-									colSpan={6}
+									colSpan={selectionMode ? 7 : 6}
 									className="px-4 py-6 text-sm text-slate-500"
 								>
 									No catalog items found.

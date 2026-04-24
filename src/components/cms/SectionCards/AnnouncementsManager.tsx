@@ -1,6 +1,7 @@
 import * as React from "react";
 import { AnnouncementsApi } from "@api/announcements";
 import { PDAnnouncement } from "@type/PDAnnouncement";
+import { SelectAllCheckbox } from "@components/cms/SelectAllCheckbox";
 
 type AnnRow = {
 	id: string;
@@ -18,6 +19,7 @@ export function AnnouncementsManager({
 	selectionMode,
 	selectedIds,
 	onToggleSelect,
+	onSelectAll,
 	announcementsApi,
 }: {
 	sites: string[];
@@ -25,6 +27,7 @@ export function AnnouncementsManager({
 	selectionMode: boolean;
 	selectedIds: string[];
 	onToggleSelect: (id: string) => void;
+	onSelectAll: (ids: string[], select: boolean) => void;
 	announcementsApi: AnnouncementsApi;
 }): JSX.Element {
 	const [items, setItems] = React.useState<AnnRow[]>([]);
@@ -58,13 +61,40 @@ export function AnnouncementsManager({
 		announcementsApi.pnpWrapper.loadCachedThenFresh(load); // pnpWrapper.cacheVal is "true" <--- not bool: true (subsequent req's are not cached)
 	}, [limit]);
 
+	const visibleIds = React.useMemo(() => items.map((i) => i.id), [items]);
+	const selectedVisibleCount = React.useMemo(() => {
+		if (!selectionMode) return 0;
+		const set = new Set(selectedIds);
+		return visibleIds.reduce((acc, id) => (set.has(id) ? acc + 1 : acc), 0);
+	}, [selectionMode, selectedIds, visibleIds]);
+	const allSelected =
+		selectionMode &&
+		visibleIds.length > 0 &&
+		selectedVisibleCount === visibleIds.length;
+	const someSelected =
+		selectionMode && selectedVisibleCount > 0 && !allSelected;
+
 	return (
 		<div className="space-y-3">
 			<div className="overflow-x-auto">
 				<table className="min-w-full divide-y divide-slate-200">
 					<thead className="bg-slate-50">
 						<tr>
-							{selectionMode && <th className="w-10 px-3 py-2" />}
+							{selectionMode && (
+								<th className="w-10 px-3 py-2">
+									<SelectAllCheckbox
+										checked={Boolean(allSelected)}
+										indeterminate={Boolean(someSelected)}
+										onChange={(e) =>
+											onSelectAll(
+												visibleIds,
+												e.target.checked,
+											)
+										}
+										ariaLabel="Select all announcements"
+									/>
+								</th>
+							)}
 							{[
 								"#",
 								"Title",

@@ -8,12 +8,14 @@ export function FormsManager({
 	selectionMode,
 	selectedIds,
 	onToggleSelect,
+	onSelectAll,
 }: {
 	sites: string[];
 	query: string;
 	selectionMode: boolean;
 	selectedIds: string[];
 	onToggleSelect: (id: string) => void;
+	onSelectAll: (ids: string[], select: boolean) => void;
 }): JSX.Element {
 	const items = mockRows("FRM", 8, { includeOwner: true });
 	return (
@@ -25,6 +27,7 @@ export function FormsManager({
 			selectionMode={selectionMode}
 			selectedIds={selectedIds}
 			onToggleSelect={onToggleSelect}
+			onSelectAll={onSelectAll}
 		/>
 	);
 }

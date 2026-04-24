@@ -2,14 +2,23 @@ import * as React from "react";
 import type { PNPWrapper } from "@utils/PNPWrapper";
 import { ContentTable } from "@components/cms/ContentTable";
 import { mockRows } from "@components/cms/MockRows";
+import { SelectAllCheckbox } from "@components/cms/SelectAllCheckbox";
 
 export function SubmissionsManager({
 	sites,
 	query,
+	selectionMode,
+	selectedIds,
+	onToggleSelect,
+	onSelectAll,
 	pnpWrapper,
 }: {
 	sites: string[];
 	query: string;
+	selectionMode: boolean;
+	selectedIds: string[];
+	onToggleSelect: (id: string) => void;
+	onSelectAll: (ids: string[], select: boolean) => void;
 	pnpWrapper?: PNPWrapper;
 }): JSX.Element {
 	const [quizAttempts, setQuizAttempts] = React.useState<
@@ -103,6 +112,35 @@ export function SubmissionsManager({
 		includeOwner: true,
 		includeStatus: true,
 	});
+
+	const filteredQuizAttempts = React.useMemo(() => {
+		if (!query.trim()) return quizAttempts;
+		const q = query.trim().toLowerCase();
+		return quizAttempts.filter((a) =>
+			`${a.id} ${a.assignmentId ?? ""} ${a.employeeEmail ?? ""} ${
+				a.scorePercent ?? ""
+			} ${a.passed ?? ""} ${a.submittedOn ?? ""} ${a.answers ?? ""}`
+				.toLowerCase()
+				.includes(q),
+		);
+	}, [quizAttempts, query]);
+
+	const visibleIds = React.useMemo(
+		() => filteredQuizAttempts.map((a) => String(a.id)),
+		[filteredQuizAttempts],
+	);
+	const selectedVisibleCount = React.useMemo(() => {
+		if (!selectionMode) return 0;
+		const set = new Set(selectedIds);
+		return visibleIds.reduce((acc, id) => (set.has(id) ? acc + 1 : acc), 0);
+	}, [selectionMode, selectedIds, visibleIds]);
+	const allSelected =
+		selectionMode &&
+		visibleIds.length > 0 &&
+		selectedVisibleCount === visibleIds.length;
+	const someSelected =
+		selectionMode && selectedVisibleCount > 0 && !allSelected;
+
 	return (
 		<div className="space-y-6">
 			{pnpWrapper ? (
@@ -126,6 +164,26 @@ export function SubmissionsManager({
 							<table className="min-w-full divide-y divide-slate-200">
 								<thead className="bg-slate-50">
 									<tr>
+											{selectionMode && (
+												<th className="w-10 px-3 py-2">
+													<SelectAllCheckbox
+														checked={Boolean(
+															allSelected,
+														)}
+														indeterminate={Boolean(
+															someSelected,
+														)}
+														onChange={(e) =>
+															onSelectAll(
+																visibleIds,
+																e.target
+																	.checked,
+															)
+														}
+														ariaLabel="Select all quiz attempts"
+													/>
+												</th>
+											)}
 										{[
 											"ID",
 											"AssignmentId",
@@ -145,7 +203,7 @@ export function SubmissionsManager({
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-slate-200">
-									{quizAttempts.map((q) => {
+									{filteredQuizAttempts.map((q) => {
 										const d = q.submittedOn
 											? new Date(q.submittedOn)
 											: undefined;
@@ -164,6 +222,24 @@ export function SubmissionsManager({
 												key={q.id}
 												className="hover:bg-slate-50"
 											>
+												{selectionMode && (
+													<td className="px-3 py-3">
+														<input
+															type="checkbox"
+															checked={selectedIds?.includes(
+																String(q.id),
+															)}
+															onChange={() =>
+																onToggleSelect(
+																	String(
+																		q.id,
+																	),
+																)
+															}
+															aria-label={`Select submission ${q.id}`}
+														/>
+													</td>
+												)}
 												<td className="px-4 py-3 text-xs text-slate-600">
 													#{q.id}
 												</td>
@@ -198,10 +274,12 @@ export function SubmissionsManager({
 											</tr>
 										);
 									})}
-									{!quizAttempts.length && !loadingQuiz ? (
+									{!filteredQuizAttempts.length && !loadingQuiz ? (
 										<tr>
 											<td
-												colSpan={7}
+												colSpan={
+													selectionMode ? 8 : 7
+												}
 												className="px-4 py-6 text-sm text-slate-500"
 											>
 												No quiz attempts found.
@@ -231,6 +309,10 @@ export function SubmissionsManager({
 				items={items}
 				sites={sites}
 				query={query}
+				selectionMode={selectionMode}
+				selectedIds={selectedIds}
+				onToggleSelect={onToggleSelect}
+				onSelectAll={onSelectAll}
 			/>
 		</div>
 	);

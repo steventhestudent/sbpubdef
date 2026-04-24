@@ -2,6 +2,7 @@ import * as React from "react";
 import type { PNPWrapper } from "@utils/PNPWrapper";
 import { EventsApi } from "@api/events/EventsApi";
 import type { PDEvent } from "@type/PDEvent";
+import { SelectAllCheckbox } from "@components/cms/SelectAllCheckbox";
 
 export function EventsManager({
 	sites,
@@ -9,6 +10,7 @@ export function EventsManager({
 	selectionMode,
 	selectedIds,
 	onToggleSelect,
+	onSelectAll,
 	pnpWrapper,
 }: {
 	sites: string[];
@@ -16,6 +18,7 @@ export function EventsManager({
 	selectionMode: boolean;
 	selectedIds: string[];
 	onToggleSelect: (id: string) => void;
+	onSelectAll: (ids: string[], select: boolean) => void;
 	pnpWrapper: PNPWrapper;
 }): JSX.Element {
 	const [items, setItems] = React.useState<PDEvent[]>([]);
@@ -51,6 +54,22 @@ export function EventsManager({
 			)
 		: items;
 
+	const visibleIds = React.useMemo(
+		() => filtered.map((i) => String(i.id)),
+		[filtered],
+	);
+	const selectedVisibleCount = React.useMemo(() => {
+		if (!selectionMode) return 0;
+		const set = new Set(selectedIds);
+		return visibleIds.reduce((acc, id) => (set.has(id) ? acc + 1 : acc), 0);
+	}, [selectionMode, selectedIds, visibleIds]);
+	const allSelected =
+		selectionMode &&
+		visibleIds.length > 0 &&
+		selectedVisibleCount === visibleIds.length;
+	const someSelected =
+		selectionMode && selectedVisibleCount > 0 && !allSelected;
+
 	return (
 		<div className="space-y-3">
 			{error ? (
@@ -63,7 +82,21 @@ export function EventsManager({
 				<table className="min-w-full divide-y divide-slate-200">
 					<thead className="bg-slate-50">
 						<tr>
-							{selectionMode && <th className="w-10 px-3 py-2" />}
+							{selectionMode && (
+								<th className="w-10 px-3 py-2">
+									<SelectAllCheckbox
+										checked={Boolean(allSelected)}
+										indeterminate={Boolean(someSelected)}
+										onChange={(e) =>
+											onSelectAll(
+												visibleIds,
+												e.target.checked,
+											)
+										}
+										ariaLabel="Select all events"
+									/>
+								</th>
+							)}
 							{["ID", "Title", "Start", "Owner", "Location", "Department"].map((h) => (
 								<th
 									key={h}

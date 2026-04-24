@@ -64,6 +64,81 @@ export const CMSContainer: ({
 		setSelectionMode(false);
 	}
 
+	function onSelectAll(ids: string[], select: boolean): void {
+		if (!ids.length) return;
+		setSelectedIds((prev) => {
+			if (select) {
+				const set = new Set(prev);
+				for (const id of ids) set.add(id);
+				return Array.from(set);
+			}
+			const remove = new Set(ids);
+			return prev.filter((x) => !remove.has(x));
+		});
+	}
+
+	async function deleteSelected(): Promise<void> {
+		if (!selectedIds.length) return;
+		if (!confirm(`Delete ${selectedIds.length} selected item(s)?`)) return;
+
+		const ids = selectedIds
+			.map((s) => Number(s))
+			.filter((n) => Number.isFinite(n) && n > 0);
+
+		try {
+			const web = pnpWrapper.web();
+
+			if (activeTab === "assignments") {
+				const listTitle = ENV.LIST_ASSIGNMENTS || "Assignments1";
+				await Promise.allSettled(
+					ids.map((id) =>
+						web.lists.getByTitle(listTitle).items.getById(id).delete(),
+					),
+				);
+			} else if (activeTab === "assignmentCatalog") {
+				await Promise.allSettled(
+					ids.map((id) =>
+						web.lists
+							.getByTitle(ENV.LIST_ASSIGNMENTCATALOG)
+							.items.getById(id)
+							.delete(),
+					),
+				);
+			} else if (activeTab === "submissions") {
+				await Promise.allSettled(
+					ids.map((id) =>
+						web.lists
+							.getByTitle(ENV.LIST_ASSIGNMENTQUIZATTEMPTS)
+							.items.getById(id)
+							.delete(),
+					),
+				);
+			} else if (activeTab === "events") {
+				await Promise.allSettled(
+					ids.map((id) =>
+						web.lists.getByTitle("Events").items.getById(id).delete(),
+					),
+				);
+			} else if (activeTab === "banner") {
+				const listTitle = ENV.LIST_SITESETTINGS || "SiteSettings";
+				await Promise.allSettled(
+					ids.map((id) =>
+						web.lists.getByTitle(listTitle).items.getById(id).delete(),
+					),
+				);
+			} else {
+				alert("Delete is not implemented for this section yet.");
+				return;
+			}
+		} catch (e: unknown) {
+			const msg = e instanceof Error ? e.message : String(e);
+			alert(msg || "Delete failed.");
+			return;
+		}
+
+		clearSelection();
+	}
+
 	return (
 		<div className="mx-auto max-w-[1200px] p-4">
 			<CMSHeader
@@ -98,10 +173,9 @@ export const CMSContainer: ({
 						onClear={clearSelection}
 						onPublish={() => alert("Publish (placeholder)")}
 						onUnpublish={() => alert("Unpublish (placeholder)")}
-						onDelete={() =>
-							confirm("Delete selected? (placeholder)") &&
-							clearSelection()
-						}
+						onDelete={() => {
+							deleteSelected().catch(() => {});
+						}}
 					/>
 				)}
 
@@ -174,6 +248,7 @@ export const CMSContainer: ({
 											: [...prev, id],
 									)
 								}
+								onSelectAll={onSelectAll}
 								announcementsApi={announcementsApi}
 							/>
 						</SectionCard>
@@ -192,6 +267,7 @@ export const CMSContainer: ({
 											: [...prev, id],
 									)
 								}
+								onSelectAll={onSelectAll}
 								pnpWrapper={pnpWrapper}
 							/>
 						</SectionCard>
@@ -201,6 +277,16 @@ export const CMSContainer: ({
 						<SectionCard title="Assignment Catalog">
 							<AssignmentCatalogManager
 								query={query}
+								selectionMode={selectionMode}
+								selectedIds={selectedIds}
+								onToggleSelect={(id) =>
+									setSelectedIds((prev) =>
+										prev.includes(id)
+											? prev.filter((x) => x !== id)
+											: [...prev, id],
+									)
+								}
+								onSelectAll={onSelectAll}
 								pnpWrapper={pnpWrapper}
 							/>
 						</SectionCard>
@@ -214,7 +300,19 @@ export const CMSContainer: ({
 
 					{activeTab === "banner" && (
 						<SectionCard title="Banner (Site Settings)">
-							<BannerManager pnpWrapper={pnpWrapper} />
+							<BannerManager
+								pnpWrapper={pnpWrapper}
+								selectionMode={selectionMode}
+								selectedIds={selectedIds}
+								onToggleSelect={(id) =>
+									setSelectedIds((prev) =>
+										prev.includes(id)
+											? prev.filter((x) => x !== id)
+											: [...prev, id],
+									)
+								}
+								onSelectAll={onSelectAll}
+							/>
 						</SectionCard>
 					)}
 
@@ -232,6 +330,7 @@ export const CMSContainer: ({
 											: [...prev, id],
 									)
 								}
+								onSelectAll={onSelectAll}
 								pnpWrapper={pnpWrapper}
 							/>
 						</SectionCard>
@@ -251,6 +350,7 @@ export const CMSContainer: ({
 											: [...prev, id],
 									)
 								}
+								onSelectAll={onSelectAll}
 							/>
 						</SectionCard>
 					)}
@@ -260,6 +360,16 @@ export const CMSContainer: ({
 							<SubmissionsManager
 								sites={sites}
 								query={query}
+								selectionMode={selectionMode}
+								selectedIds={selectedIds}
+								onToggleSelect={(id) =>
+									setSelectedIds((prev) =>
+										prev.includes(id)
+											? prev.filter((x) => x !== id)
+											: [...prev, id],
+									)
+								}
+								onSelectAll={onSelectAll}
 								pnpWrapper={pnpWrapper}
 							/>
 						</SectionCard>
