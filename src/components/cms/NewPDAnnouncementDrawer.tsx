@@ -1,5 +1,5 @@
 import * as React from "react";
-import * as Utils from "@utils";
+import RoleFormField from "@utils/rolebased/RoleFormField";
 
 export function NewPDAnnouncementDrawer({
 	open,
@@ -101,26 +101,10 @@ export function NewPDAnnouncementDrawer({
 						/>
 					</div>
 
-					<div>
-						<label
-							className="block text-sm font-medium text-slate-700"
-							htmlFor="ann-dept"
-						>
-							PD Department
-						</label>
-						<select
-							id="ann-dept"
-							value={department}
-							onChange={(e) => setDepartment(e.target.value)}
-							className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-						>
-							{ENV.ROLESELECT_ORDER.split(" ").map((rk, i) => (
-								<option key={i} value={rk}>
-									{Utils.ENV_ROLE_DISPLAY(rk)}
-								</option>
-							))}
-						</select>
-					</div>
+					<RoleFormField
+						value={department}
+						onChange={(e) => setDepartment(e.target.value)}
+					/>
 
 					{/* Mini toolbar — demo only */}
 					<div className="sticky top-0 z-10 flex flex-wrap gap-2 rounded-md border border-slate-200 bg-slate-50 p-2 text-sm">
