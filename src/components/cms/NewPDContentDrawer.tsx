@@ -332,17 +332,29 @@ export function NewPDContentDrawer({
 		if (!evTitle.trim()) throw new Error("Please enter a title.");
 		if (!evStart) throw new Error("Please choose a start date/time.");
 
-		await pnpWrapper
-			.web()
-			.lists.getByTitle("Events")
-			.items.add({
-				Title: evTitle.trim(),
-				EventDate: evStart,
-				EndDate: evEnd || evStart,
-				Location: evLocation.trim(),
-				fAllDayEvent: evAllDay,
-				PDDepartment: department,
-			});
+		const web = pnpWrapper.web();
+		const list = web.lists.getByTitle("Events");
+
+		let deptProp: string | undefined;
+		try {
+			const fld = await list.fields
+				.getByInternalNameOrTitle("PDDepartment")
+				.select("InternalName", "EntityPropertyName")();
+			deptProp = fld.EntityPropertyName || fld.InternalName;
+		} catch {
+			deptProp = undefined;
+		}
+
+		const payload: Record<string, unknown> = {
+			Title: evTitle.trim(),
+			EventDate: evStart,
+			EndDate: evEnd || evStart,
+			Location: evLocation.trim(),
+			fAllDayEvent: evAllDay,
+		};
+		if (deptProp && department) payload[deptProp] = department;
+
+		await list.items.add(payload);
 	}
 
 	async function submitAssignment(): Promise<void> {
