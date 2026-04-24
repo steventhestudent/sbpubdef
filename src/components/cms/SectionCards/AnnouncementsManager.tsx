@@ -32,6 +32,8 @@ export function AnnouncementsManager({
 }): JSX.Element {
 	const [items, setItems] = React.useState<AnnRow[]>([]);
 	const [limit, setLimit] = React.useState(12);
+	const pageSize = 10;
+	const [shown, setShown] = React.useState(pageSize);
 	const [loading, setLoading] = React.useState(false);
 
 	async function load(): Promise<void> {
@@ -61,6 +63,10 @@ export function AnnouncementsManager({
 		announcementsApi.pnpWrapper.loadCachedThenFresh(load); // pnpWrapper.cacheVal is "true" <--- not bool: true (subsequent req's are not cached)
 	}, [limit]);
 
+	React.useEffect(() => {
+		setShown(pageSize);
+	}, [query]);
+
 	const filtered = React.useMemo(() => {
 		const q = query.trim().toLowerCase();
 		if (!q) return items;
@@ -69,7 +75,9 @@ export function AnnouncementsManager({
 		);
 	}, [items, query]);
 
-	const visibleIds = React.useMemo(() => filtered.map((i) => i.id), [filtered]);
+	const paged = React.useMemo(() => filtered.slice(0, shown), [filtered, shown]);
+
+	const visibleIds = React.useMemo(() => paged.map((i) => i.id), [paged]);
 	const selectedVisibleCount = React.useMemo(() => {
 		if (!selectionMode) return 0;
 		const set = new Set(selectedIds);
@@ -121,7 +129,7 @@ export function AnnouncementsManager({
 						</tr>
 					</thead>
 					<tbody className="divide-y divide-slate-200">
-						{filtered.map((it) => (
+						{paged.map((it) => (
 							<tr key={it.id} className="hover:bg-slate-50">
 								{selectionMode && (
 									<td className="px-3 py-3">
@@ -185,7 +193,13 @@ export function AnnouncementsManager({
 				<div className="flex items-center gap-2">
 					<button
 						className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-white disabled:opacity-50"
-						onClick={() => setLimit((n) => n + 12)}
+						onClick={() => {
+							if (shown < filtered.length) {
+								setShown((n) => n + pageSize);
+							} else {
+								setLimit((n) => n + 12);
+							}
+						}}
 						disabled={loading}
 					>
 						{loading ? "Loading…" : "Load more"}
