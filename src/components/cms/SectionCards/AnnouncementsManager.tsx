@@ -1,22 +1,16 @@
 import * as React from "react";
-import { mockRows } from "@components/cms/MockRows";
-import { ContentTable } from "@components/cms/ContentTable";
 import { AnnouncementsApi } from "@api/announcements";
-import { ContentRow } from "@type/cms/ContentRow";
 import { PDAnnouncement } from "@type/PDAnnouncement";
 
-function announcementContentRow(data: PDAnnouncement, i: number): ContentRow {
-	return {
-		id: i + "",
-		title: data.title,
-		subtitle: undefined,
-		site: data.siteUrl ?? "",
-		when: data.published?.toDateString() ?? "—",
-		owner: "<owner>",
-		status: data.published ? "published" : "draft",
-		PDDeparment: data.PDDepartment,
-	};
-}
+type AnnRow = {
+	id: string;
+	title: string;
+	site: string;
+	when: string;
+	owner: string;
+	status: string;
+	url: string;
+};
 
 export function AnnouncementsManager({
 	sites,
@@ -33,26 +27,129 @@ export function AnnouncementsManager({
 	onToggleSelect: (id: string) => void;
 	announcementsApi: AnnouncementsApi;
 }): JSX.Element {
-	const [items, setItems] = React.useState(mockRows("ANN", 1));
+	const [items, setItems] = React.useState<AnnRow[]>([]);
+	const [limit, setLimit] = React.useState(12);
+	const [loading, setLoading] = React.useState(false);
 
 	async function load(): Promise<void> {
-		const data = await announcementsApi.get(12);
-		if (data) setItems(data.map((el, i) => announcementContentRow(el, i)));
-		console.log("announcements: ", data);
+		setLoading(true);
+		try {
+			const data = await announcementsApi.get(limit);
+			const rows = (data || []).map((el: PDAnnouncement, i: number) => {
+				const when = el.published
+					? el.published.toLocaleDateString()
+					: "—";
+				return {
+					id: `${i}`,
+					title: el.title,
+					site: el.siteUrl ?? "",
+					when,
+					owner: el.author || "—",
+					status: el.published ? "Published" : "Draft",
+					url: el.url,
+				} satisfies AnnRow;
+			});
+			setItems(rows);
+		} finally {
+			setLoading(false);
+		}
 	}
 	React.useEffect(() => {
 		announcementsApi.pnpWrapper.loadCachedThenFresh(load); // pnpWrapper.cacheVal is "true" <--- not bool: true (subsequent req's are not cached)
-	}, []);
+	}, [limit]);
 
 	return (
-		<ContentTable
-			kind="Announcement"
-			items={items}
-			sites={sites}
-			query={query}
-			selectionMode={selectionMode}
-			selectedIds={selectedIds}
-			onToggleSelect={onToggleSelect}
-		/>
+		<div className="space-y-3">
+			<div className="overflow-x-auto">
+				<table className="min-w-full divide-y divide-slate-200">
+					<thead className="bg-slate-50">
+						<tr>
+							{selectionMode && <th className="w-10 px-3 py-2" />}
+							{["Title", "When", "Owner", "Site", "Status", ""].map((h) => (
+								<th
+									key={h}
+									className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
+								>
+									{h}
+								</th>
+							))}
+						</tr>
+					</thead>
+					<tbody className="divide-y divide-slate-200">
+						{items.map((it) => (
+							<tr key={it.id} className="hover:bg-slate-50">
+								{selectionMode && (
+									<td className="px-3 py-3">
+										<input
+											type="checkbox"
+											checked={selectedIds?.includes(it.id)}
+											onChange={() => onToggleSelect(it.id)}
+											aria-label={`Select ${it.title}`}
+										/>
+									</td>
+								)}
+								<td className="px-4 py-3 text-sm text-slate-800">
+									<a
+										href={it.url}
+										className="text-blue-700 hover:underline"
+										target="_blank"
+										rel="noreferrer"
+									>
+										{it.title}
+									</a>
+								</td>
+								<td className="px-4 py-3 text-sm text-slate-700">
+									{it.when}
+								</td>
+								<td className="px-4 py-3 text-sm text-slate-700">
+									{it.owner}
+								</td>
+								<td className="px-4 py-3 text-xs text-slate-600">
+									{it.site || "—"}
+								</td>
+								<td className="px-4 py-3 text-sm text-slate-700">
+									{it.status}
+								</td>
+								<td className="px-4 py-3 text-right text-sm">
+									<a
+										href={it.url}
+										className="text-blue-700 hover:underline"
+										target="_blank"
+										rel="noreferrer"
+									>
+										Open
+									</a>
+								</td>
+							</tr>
+						))}
+						{!items.length && !loading ? (
+							<tr>
+								<td
+									colSpan={selectionMode ? 7 : 6}
+									className="px-4 py-6 text-sm text-slate-500"
+								>
+									No announcements found.
+								</td>
+							</tr>
+						) : null}
+					</tbody>
+				</table>
+			</div>
+
+			<div className="flex items-center justify-between">
+				<div className="text-xs text-slate-500">
+					Sites: {sites.join(", ") || "—"} | Filter: {query || "—"}
+				</div>
+				<div className="flex items-center gap-2">
+					<button
+						className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-white disabled:opacity-50"
+						onClick={() => setLimit((n) => n + 12)}
+						disabled={loading}
+					>
+						{loading ? "Loading…" : "Load more"}
+					</button>
+				</div>
+			</div>
+		</div>
 	);
 }

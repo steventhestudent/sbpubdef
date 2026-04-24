@@ -14,8 +14,10 @@ async function fetchBannerSettings(
 ): Promise<IBannerSettings | undefined> {
 	try {
 		const sp: SPFI = spfi().using(SPFx(context));
+		const envList = (ENV as unknown as { LIST_SITESETTINGS?: string })
+			.LIST_SITESETTINGS;
 		const items = await sp.web.lists
-			.getByTitle("SiteSettings")
+			.getByTitle(envList || "SiteSettings")
 			.items.select("BannerMessage", "ShowBanner")
 			.top(1)();
 

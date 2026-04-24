@@ -6,9 +6,11 @@ import { BulkActionsBar } from "@components/cms/BulkActionsBar";
 import { MultiSitePicker } from "@components/cms/MultiSitePicker";
 
 import { AnnouncementsManager } from "@components/cms/SectionCards/AnnouncementsManager";
+import { AssignmentsManager } from "@components/cms/SectionCards/AssignmentsManager";
+import { AssignmentCatalogManager } from "@components/cms/SectionCards/AssignmentCatalogManager";
+import { BannerManager } from "@components/cms/SectionCards/BannerManager";
 import { EventsManager } from "@components/cms/SectionCards/EventsManager";
 import { FormsManager } from "@components/cms/SectionCards/FormsManager";
-import { TrainingsManager } from "@components/cms/SectionCards/TrainingsManager";
 import { SubmissionsManager } from "@components/cms/SectionCards/SubmissionsManager";
 
 import { AuditLog } from "@components/cms/SectionCards/AuditLog";
@@ -19,11 +21,13 @@ import { AnnouncementsApi } from "@api/announcements";
 
 type TabKey =
 	| "announcements"
+	| "assignments"
+	| "assignmentCatalog"
+	| "banner"
+	| "audit"
 	| "events"
 	| "forms"
-	| "trainings"
-	| "submissions"
-	| "audit";
+	| "submissions";
 
 /**
  * CMS.aspx Dashboard — Attorney-Facing Content Management
@@ -112,6 +116,30 @@ export const CMSContainer: ({
 						onClick={() => setActiveTab("announcements")}
 					/>
 					<TabButton
+						id="assignments"
+						title="Assignments"
+						active={activeTab === "assignments"}
+						onClick={() => setActiveTab("assignments")}
+					/>
+					<TabButton
+						id="assignmentCatalog"
+						title="Assignment Catalog"
+						active={activeTab === "assignmentCatalog"}
+						onClick={() => setActiveTab("assignmentCatalog")}
+					/>
+					<TabButton
+						id="audit"
+						title="Audit Log"
+						active={activeTab === "audit"}
+						onClick={() => setActiveTab("audit")}
+					/>
+					<TabButton
+						id="banner"
+						title="Banner"
+						active={activeTab === "banner"}
+						onClick={() => setActiveTab("banner")}
+					/>
+					<TabButton
 						id="events"
 						title="Events"
 						active={activeTab === "events"}
@@ -124,22 +152,10 @@ export const CMSContainer: ({
 						onClick={() => setActiveTab("forms")}
 					/>
 					<TabButton
-						id="trainings"
-						title="Training"
-						active={activeTab === "trainings"}
-						onClick={() => setActiveTab("trainings")}
-					/>
-					<TabButton
 						id="submissions"
 						title="User Submissions"
 						active={activeTab === "submissions"}
 						onClick={() => setActiveTab("submissions")}
-					/>
-					<TabButton
-						id="audit"
-						title="Audit Log"
-						active={activeTab === "audit"}
-						onClick={() => setActiveTab("audit")}
 					/>
 				</nav>
 
@@ -160,6 +176,45 @@ export const CMSContainer: ({
 								}
 								announcementsApi={announcementsApi}
 							/>
+						</SectionCard>
+					)}
+
+					{activeTab === "assignments" && (
+						<SectionCard title="Assignments (List Items)">
+							<AssignmentsManager
+								query={query}
+								selectionMode={selectionMode}
+								selectedIds={selectedIds}
+								onToggleSelect={(id) =>
+									setSelectedIds((prev) =>
+										prev.includes(id)
+											? prev.filter((x) => x !== id)
+											: [...prev, id],
+									)
+								}
+								pnpWrapper={pnpWrapper}
+							/>
+						</SectionCard>
+					)}
+
+					{activeTab === "assignmentCatalog" && (
+						<SectionCard title="Assignment Catalog">
+							<AssignmentCatalogManager
+								query={query}
+								pnpWrapper={pnpWrapper}
+							/>
+						</SectionCard>
+					)}
+
+					{activeTab === "audit" && (
+						<SectionCard title="Audit Log">
+							<AuditLog />
+						</SectionCard>
+					)}
+
+					{activeTab === "banner" && (
+						<SectionCard title="Banner (Site Settings)">
+							<BannerManager pnpWrapper={pnpWrapper} />
 						</SectionCard>
 					)}
 
@@ -199,21 +254,9 @@ export const CMSContainer: ({
 						</SectionCard>
 					)}
 
-					{activeTab === "trainings" && (
-						<SectionCard title="Training (Events / Pages)">
-							<TrainingsManager sites={sites} query={query} />
-						</SectionCard>
-					)}
-
 					{activeTab === "submissions" && (
 						<SectionCard title="User Form Submissions">
 							<SubmissionsManager sites={sites} query={query} />
-						</SectionCard>
-					)}
-
-					{activeTab === "audit" && (
-						<SectionCard title="Audit Log">
-							<AuditLog />
 						</SectionCard>
 					)}
 				</div>
