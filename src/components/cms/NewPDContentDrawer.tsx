@@ -71,6 +71,25 @@ export function NewPDContentDrawer({
 	const [evEnd, setEvEnd] = React.useState("");
 	const [evLocation, setEvLocation] = React.useState("");
 	const [evAllDay, setEvAllDay] = React.useState(false);
+	const officeLocationOptions = React.useMemo(() => {
+		// Lazy import to avoid pulling office data into non-event paths.
+		try {
+			// eslint-disable-next-line @typescript-eslint/no-var-requires
+			const m = require("@webparts/officeInformation/components/Offices") as {
+				offices?: Array<{ name?: string; lines?: string[] }>;
+			};
+			const offices = m.offices || [];
+			return offices
+				.map((o) => {
+					const name = (o.name || "").trim();
+					const addr = (o.lines || []).join(", ").trim();
+					return addr ? `${name} — ${addr}` : name;
+				})
+				.filter(Boolean);
+		} catch {
+			return [];
+		}
+	}, []);
 
 	// Assignment
 	const [assignmentForm, setAssignmentForm] =
@@ -93,13 +112,19 @@ export function NewPDContentDrawer({
 		setContentType(getStoredContentType() || defaultContentType);
 		setDepartment("EVERYONE");
 
+		const today = new Date();
+		const todayYmd = today.toISOString().slice(0, 10);
+		const due = new Date(today);
+		due.setMonth(due.getMonth() + 2);
+		const dueYmd = due.toISOString().slice(0, 10);
+
 		setAnnTitle("");
 		if (editorRef.current) editorRef.current.innerHTML = "";
 
 		setPcTitle("");
 		setPcPurpose("");
 		setPcCategory("");
-		setPcEffectiveDate("");
+		setPcEffectiveDate(todayYmd);
 		setPcPdf(undefined);
 
 		setEvTitle("");
@@ -115,8 +140,8 @@ export function NewPDContentDrawer({
 			assignmentCatalogKey: "",
 			audience: [],
 			reason: "",
-			assignedDate: "",
-			dueDate: "",
+			assignedDate: todayYmd,
+			dueDate: dueYmd,
 			createCalendarEvent: false,
 			sendEmail: false,
 		});
@@ -684,7 +709,16 @@ export function NewPDContentDrawer({
 										className="block text-sm font-medium text-slate-700"
 										htmlFor="pc-pdf"
 									>
-										PDF
+										<span className="inline-flex items-center gap-2">
+											<span>PDF</span>
+											<span
+												aria-hidden="true"
+												className="inline-flex h-5 w-5 items-center justify-center rounded bg-red-50 text-red-700"
+												title="PDF document"
+											>
+												📄
+											</span>
+										</span>
 									</label>
 									<input
 										id="pc-pdf"
@@ -698,6 +732,15 @@ export function NewPDContentDrawer({
 										}
 										className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
 									/>
+									{pcPdf ? (
+										<div className="mt-1 text-xs text-slate-600">
+											Selected: <span className="font-medium">{pcPdf.name}</span>
+										</div>
+									) : (
+										<div className="mt-1 text-xs text-slate-500">
+											Choose a PDF to upload.
+										</div>
+									)}
 								</div>
 							</div>
 						</>
@@ -772,8 +815,14 @@ export function NewPDContentDrawer({
 									onChange={(e) =>
 										setEvLocation(e.target.value)
 									}
+									list="ev-location-options"
 									className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
 								/>
+								<datalist id="ev-location-options">
+									{officeLocationOptions.map((opt) => (
+										<option key={opt} value={opt} />
+									))}
+								</datalist>
 							</div>
 							<label
 								className="flex items-center gap-2 text-sm text-slate-700"
