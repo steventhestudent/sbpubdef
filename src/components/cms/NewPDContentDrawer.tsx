@@ -3,6 +3,7 @@ import { AadHttpClient } from "@microsoft/sp-http";
 import RoleFormField from "@utils/rolebased/RoleFormField";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { AnnouncementsApi } from "@api/announcements";
+import { offices } from "@webparts/officeInformation/components/Offices";
 import {
 	AssignmentView,
 	type AssignmentFormState,
@@ -83,24 +84,13 @@ export function NewPDContentDrawer({
 	const [evLocation, setEvLocation] = React.useState("");
 	const [evAllDay, setEvAllDay] = React.useState(false);
 	const officeLocationOptions = React.useMemo(() => {
-		// Lazy import to avoid pulling office data into non-event paths.
-		try {
-			// eslint-disable-next-line @typescript-eslint/no-var-requires
-			const m =
-				require("@webparts/officeInformation/components/Offices") as {
-					offices?: Array<{ name?: string; lines?: string[] }>;
-				};
-			const offices = m.offices || [];
-			return offices
-				.map((o) => {
-					const name = (o.name || "").trim();
-					const addr = (o.lines || []).join(", ").trim();
-					return addr ? `${name} — ${addr}` : name;
-				})
-				.filter(Boolean);
-		} catch {
-			return [];
-		}
+		return (offices || [])
+			.map((o) => {
+				const name = (o.name || "").trim();
+				const addr = (o.lines || []).join(", ").trim();
+				return addr ? `${name} — ${addr}` : name;
+			})
+			.filter(Boolean);
 	}, []);
 
 	// Assignment

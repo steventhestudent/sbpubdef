@@ -65,10 +65,17 @@ export function AnnouncementsManager({
 					<thead className="bg-slate-50">
 						<tr>
 							{selectionMode && <th className="w-10 px-3 py-2" />}
-							{["ID", "Title", "When", "Owner", "Site", "Status"].map((h) => (
+							{[
+								"#",
+								"Title",
+								"When",
+								"Owner",
+								"Site",
+								"Status",
+							].map((h) => (
 								<th
 									key={h}
-									className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
+									className="px-4 py-2 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase"
 								>
 									{h}
 								</th>
@@ -82,14 +89,18 @@ export function AnnouncementsManager({
 									<td className="px-3 py-3">
 										<input
 											type="checkbox"
-											checked={selectedIds?.includes(it.id)}
-											onChange={() => onToggleSelect(it.id)}
+											checked={selectedIds?.includes(
+												it.id,
+											)}
+											onChange={() =>
+												onToggleSelect(it.id)
+											}
 											aria-label={`Select ${it.title}`}
 										/>
 									</td>
 								)}
 								<td className="px-4 py-3 text-xs text-slate-600">
-									#{it.id}
+									{it.id}
 								</td>
 								<td className="px-4 py-3 text-sm text-slate-800">
 									<a

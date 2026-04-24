@@ -84,6 +84,10 @@ export function AssignmentsManager({
 	async function load(reset = false): Promise<void> {
 		setLoading(true);
 		setError(undefined);
+		if (reset) {
+			setItems([]);
+			setSkip(0);
+		}
 		try {
 			const web = pnpWrapper.web();
 			const listTitle = await resolveListTitle(
@@ -137,7 +141,10 @@ export function AssignmentsManager({
 	}
 
 	React.useEffect(() => {
-		load(true).catch(() => {});
+		// run after mount to avoid any stale initial state
+		setTimeout(() => {
+			load(true).catch(() => {});
+		}, 0);
 	}, []);
 
 	const filtered = query.trim()
@@ -216,7 +223,17 @@ export function AssignmentsManager({
 										{dueLabel}
 									</td>
 									<td className="px-4 py-3 text-sm text-slate-700">
+									<span
+										className={
+											String(it.status || "")
+												.toLowerCase()
+												.includes("overdue")
+												? "font-semibold text-red-700"
+												: ""
+										}
+									>
 										{it.status || "—"}
+									</span>
 									</td>
 								</tr>
 							);

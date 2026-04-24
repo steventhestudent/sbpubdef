@@ -257,7 +257,11 @@ export const CMSContainer: ({
 
 					{activeTab === "submissions" && (
 						<SectionCard title="User Form Submissions">
-							<SubmissionsManager sites={sites} query={query} />
+							<SubmissionsManager
+								sites={sites}
+								query={query}
+								pnpWrapper={pnpWrapper}
+							/>
 						</SectionCard>
 					)}
 				</div>
