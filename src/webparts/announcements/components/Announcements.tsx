@@ -9,6 +9,7 @@ import { Collapsible } from "@components/Collapsible";
 import { PDRoleBasedSelect } from "@components/PDRoleBasedSelect";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
 import * as Utils from "@utils";
+import { ENV_CANVIEW } from "@utils/rolebased/ENV";
 
 // PDIntranetView (replace items shape + render)
 type AnnouncementWebPartItem = {
@@ -43,9 +44,16 @@ function PDIntranetView({
 	const load = async (): Promise<void> => {
 		const data = await announcementsApi.get(12);
 		if (!data) return;
+		const effectiveRole = sourceRole || "EVERYONE";
+		const allowed = new Set<string>([
+			"EVERYONE",
+			effectiveRole,
+			...ENV_CANVIEW(effectiveRole),
+		]);
 		const items: AnnouncementWebPartItem[] = data
 			.filter((el) => {
-				return sourceRole === "IT" || el.PDDepartment === sourceRole;
+				if (Utils.isIT(userGroupNames)) return true;
+				return allowed.has(el.PDDepartment || "");
 			})
 			.map((el) => ({
 				title: el.title ?? "(untitled)",
