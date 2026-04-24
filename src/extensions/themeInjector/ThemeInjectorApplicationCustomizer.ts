@@ -47,78 +47,108 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 		})();
 
 		(function navItemsColor() {
-			const containers = document.querySelectorAll(
-				".ms-HorizontalNavItems",
-			);
-			const container = containers[containers.length - 1];
-			if (!container) return;
+			const findActiveContainer = (): Element | null => {
+				const containers = document.querySelectorAll(
+					".ms-HorizontalNavItems",
+				);
+				return containers[containers.length - 1] ?? null;
+			};
 
-			// intercept navbar link click: Use a single capturing click handler so SharePoint's own handlers
-			// (often attached to the anchor) don't win the race and hard-navigate.
-			const handlerKey = "__sbpubdefNavRoleHashHandler";
-			const existing = (container as any)[handlerKey] as
-				| ((e: MouseEvent) => void)
-				| undefined;
-			if (existing)
-				container.removeEventListener("click", existing, {
-					capture: true,
-				} as any);
-
-			const setSelected = (hash: string) => {
+			const setSelectedInContainer = (
+				container: Element,
+				hash: string,
+			) => {
 				Array.from(container.querySelectorAll("a span")).forEach(
-					($0: HTMLSpanElement) => $0.classList.remove("is-selected"),
+					($0: HTMLSpanElement) =>
+						$0.classList.remove("is-selected"),
 				);
 				const selected = container.querySelector(
 					`a span[data-role-hash="${CSS.escape(hash)}"]`,
 				) as HTMLSpanElement | null;
-				selected?.classList.add("is-selected");
+				if (selected) {
+					selected.classList.add("is-selected");
+					return;
+				}
+				for (const span of Array.from(
+					container.querySelectorAll("a span"),
+				) as HTMLSpanElement[]) {
+					const a = span.closest("a") as HTMLAnchorElement | null;
+					const hrefHash = (a?.href || "").split("#")[1];
+					if (hrefHash === hash) {
+						span.classList.add("is-selected");
+						return;
+					}
+				}
 			};
 
-			const clickHandler = (e: MouseEvent) => {
-				const target = e.target as Element | null;
-				if (!target) return;
-
-				// Accept clicks anywhere within the anchor/span.
-				const span = target.closest(
-					"a span[data-role-hash]",
-				) as HTMLSpanElement | null;
-				if (!span) return;
-				const hash = span.dataset.roleHash;
-				if (!hash) return;
-
-				e.preventDefault();
-				e.stopPropagation();
-				// In some SP builds, other listeners are on the same element.
-				(e as any).stopImmediatePropagation?.();
-
-				// Update URL hash without letting SP do a full navigation.
-				if (location.hash !== `#${hash}`) location.hash = `#${hash}`;
-				setSelected(hash);
+			const decorateContainer = (container: Element) => {
+				Array.from(container.querySelectorAll("a span")).forEach(
+					(el: HTMLSpanElement) => {
+						const a = el.closest("a") as HTMLAnchorElement | null;
+						const hash = (a?.href || "").split("#")[1];
+						el.classList.remove("is-selected");
+						if (
+							hash &&
+							hash.replace("View-As-", "") ===
+								Utils.roleViewPriority(
+									Utils.cachedGroupNames(),
+								)
+						)
+							el.classList.add("is-selected");
+						if (hash) el.dataset.roleHash = hash;
+						if (hash && a) a.href = `#${hash}`;
+					},
+				);
 			};
 
-			(container as any)[handlerKey] = clickHandler;
-			container.addEventListener("click", clickHandler, {
-				capture: true,
-			});
+			const initial = findActiveContainer();
+			if (initial) decorateContainer(initial);
 
-			Array.from(container.querySelectorAll("a span")).forEach(
-				(el: HTMLSpanElement, i) => {
-					const hash = (
-						(el.parentNode as HTMLAnchorElement).href || ""
-					).split("#")[1];
-					el.classList.remove("is-selected");
-					if (
-						hash &&
-						hash.replace("View-As-", "") ===
-							Utils.roleViewPriority(Utils.cachedGroupNames())
-					)
-						el.classList.add("is-selected");
-					if (hash) el.dataset.roleHash = hash;
-					// Keep the anchor href stable; the click handler will update location.hash.
-					if (hash)
-						(el.parentNode as HTMLAnchorElement).href = `#${hash}`;
-				},
-			);
+			// Document-level capture handler survives SP header re-renders.
+			const docKey = "__sbpubdefNavRoleHashDocHandler";
+			if (!(document as any)[docKey]) {
+				const docClickHandler = (e: MouseEvent) => {
+					const target = e.target as Element | null;
+					if (!target) return;
+
+					const a = target.closest(
+						".ms-HorizontalNavItems a",
+					) as HTMLAnchorElement | null;
+					if (!a) return;
+
+					const hash = (a.href || "").split("#")[1];
+					if (!hash) return;
+
+					e.preventDefault();
+					e.stopPropagation();
+					(e as any).stopImmediatePropagation?.();
+
+					if (location.hash !== `#${hash}`)
+						location.hash = `#${hash}`;
+
+					const container = findActiveContainer();
+					if (container) setSelectedInContainer(container, hash);
+				};
+
+				(document as any)[docKey] = docClickHandler;
+				document.addEventListener("click", docClickHandler, {
+					capture: true,
+				});
+			}
+
+			// When SP swaps header variants on scroll, re-decorate new nav DOM.
+			const moKey = "__sbpubdefNavRoleHashMO";
+			if (!(window as any)[moKey]) {
+				const mo = new MutationObserver(() => {
+					const container = findActiveContainer();
+					if (container) decorateContainer(container);
+				});
+				(window as any)[moKey] = mo;
+				mo.observe(document.body, {
+					childList: true,
+					subtree: true,
+				});
+			}
 		})();
 	}
 }
