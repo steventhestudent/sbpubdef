@@ -22,7 +22,8 @@
 		"description": { "default": "StaffDirectory description" },
 		"officeFabricIconFontName": "Page",
 		"properties": {
-			"description": "StaffDirectory"
+			"description": "StaffDirectory",
+			"fetchOnMount": true
 		}
 	}]
 }

@@ -12,10 +12,16 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 ) => {
 	const [experts, setExperts] = React.useState<IExpert[]>([]);
 	const [search, setSearch] = React.useState("");
-	const [isLoading, setIsLoading] = React.useState<boolean>(true);
+	const [hasRequestedLoad, setHasRequestedLoad] = React.useState(false);
+	const [isLoading, setIsLoading] = React.useState<boolean>(
+		!!(props.fetchOnMount ?? true),
+	);
 	const [error, setError] = React.useState<string | null>(null);
 
 	React.useEffect(() => {
+		const shouldLoad = (props.fetchOnMount ?? true) || hasRequestedLoad;
+		if (!shouldLoad) return;
+
 		let active = true;
 
 		const load = async (): Promise<void> => {
@@ -64,7 +70,7 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 		return () => {
 			active = false;
 		};
-	}, [props.siteUrl, props.spHttpClient]);
+	}, [props.fetchOnMount, hasRequestedLoad, props.siteUrl, props.spHttpClient]);
 
 	const filtered = React.useMemo(() => {
 		const term = search.trim().toLowerCase();
@@ -104,12 +110,18 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 								(e.target as HTMLInputElement).value || "",
 							)
 						}
+						onFocus={() => {
+							if ((props.fetchOnMount ?? true) || hasRequestedLoad) return;
+							setHasRequestedLoad(true);
+						}}
 					/>
 				</div>
 
 				{/* status text */}
 				<p className="mt-2 text-xs text-slate-500">
-					{isLoading
+					{!(props.fetchOnMount ?? true) && !hasRequestedLoad
+						? "Focus search to load directory…"
+						: isLoading
 						? "Loading directory…"
 						: error
 							? error

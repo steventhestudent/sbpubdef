@@ -3,6 +3,7 @@ import * as React from "react";
 export default function ClearableInput({
 	placeholder,
 	onChange,
+	onFocus,
 }: {
 	placeholder?: string;
 	onChange?: (
@@ -10,6 +11,7 @@ export default function ClearableInput({
 			| React.ChangeEvent<HTMLInputElement>
 			| React.MouseEvent<HTMLButtonElement>,
 	) => void;
+	onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
 }): JSX.Element {
 	const [value, setValue] = React.useState("");
 	return (
@@ -23,6 +25,7 @@ export default function ClearableInput({
 					setValue(e.target.value);
 					if (onChange) onChange(e);
 				}}
+				onFocus={(e) => onFocus?.(e)}
 			/>
 			{value ? (
 				<button

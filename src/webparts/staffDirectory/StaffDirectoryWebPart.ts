@@ -5,6 +5,7 @@ import { Version } from "@microsoft/sp-core-library";
 import {
 	type IPropertyPaneConfiguration,
 	PropertyPaneTextField,
+	PropertyPaneToggle,
 } from "@microsoft/sp-property-pane";
 import { BaseClientSideWebPart } from "@microsoft/sp-webpart-base";
 import { IReadonlyTheme } from "@microsoft/sp-component-base";
@@ -15,6 +16,7 @@ import { IStaffDirectoryProps } from "./components/IStaffDirectoryProps";
 
 export interface IStaffDirectoryWebPartProps {
 	description: string;
+	fetchOnMount: boolean;
 }
 
 export default class StaffDirectoryWebPart extends BaseClientSideWebPart<IStaffDirectoryWebPartProps> {
@@ -25,6 +27,7 @@ export default class StaffDirectoryWebPart extends BaseClientSideWebPart<IStaffD
 		const element: React.ReactElement<IStaffDirectoryProps> =
 			React.createElement(StaffDirectory, {
 				description: this.properties.description,
+				fetchOnMount: this.properties.fetchOnMount ?? true,
 				isDarkTheme: this._isDarkTheme,
 				environmentMessage: this._environmentMessage,
 				hasTeamsContext: !!this.context.sdks.microsoftTeams,
@@ -128,6 +131,11 @@ export default class StaffDirectoryWebPart extends BaseClientSideWebPart<IStaffD
 							groupFields: [
 								PropertyPaneTextField("description", {
 									label: strings.DescriptionFieldLabel,
+								}),
+								PropertyPaneToggle("fetchOnMount", {
+									label: strings.FetchOnMountFieldLabel,
+									onText: "On",
+									offText: "Off",
 								}),
 							],
 						},

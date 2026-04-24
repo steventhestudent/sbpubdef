@@ -22,7 +22,8 @@
 		"description": { "default": "ExpertWitnessDirectory description" },
 		"officeFabricIconFontName": "Page",
 		"properties": {
-			"description": "ExpertWitnessDirectory"
+			"description": "ExpertWitnessDirectory",
+			"fetchOnMount": true
 		}
 	}]
 }

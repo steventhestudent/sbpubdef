@@ -17,14 +17,26 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 		},
 	];
 	const [staff, setStaff] = React.useState(defaultItems);
+	const [hasRequestedLoad, setHasRequestedLoad] = React.useState(false);
+	const [isLoading, setIsLoading] = React.useState<boolean>(
+		!!(props.fetchOnMount ?? true),
+	);
 
-	const pnpWrapper = new PNPWrapper(props.context, {
-		siteUrls: ["/sites/PD-Intranet", "/sites/Tech-Team", "/sites/HR"],
-		cache: "true",
-	});
-	const staffDirectoryApi = new StaffDirectoryApi(pnpWrapper);
+	const pnpWrapper = React.useMemo(
+		() =>
+			new PNPWrapper(props.context, {
+				siteUrls: ["/sites/PD-Intranet", "/sites/Tech-Team", "/sites/HR"],
+				cache: "true",
+			}),
+		[props.context],
+	);
+	const staffDirectoryApi = React.useMemo(
+		() => new StaffDirectoryApi(pnpWrapper),
+		[pnpWrapper],
+	);
 
-	const load: () => Promise<void> = async () => {
+	const load = React.useCallback(async (): Promise<void> => {
+		setIsLoading(true);
 		const rows = await staffDirectoryApi.get(12); // strategy auto
 		const mapped = (rows || []).map((item: PDStaffDirectoryItem) => ({
 			name: item.name,
@@ -35,11 +47,14 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 			titleName: item.titleName,
 		}));
 		setStaff(mapped.length ? mapped : defaultItems);
-	};
+		setIsLoading(false);
+	}, [staffDirectoryApi]);
 
 	React.useEffect(() => {
+		const shouldLoad = (props.fetchOnMount ?? true) || hasRequestedLoad;
+		if (!shouldLoad) return;
 		pnpWrapper.loadCachedThenFresh(load);
-	}, []);
+	}, [props.fetchOnMount, hasRequestedLoad, pnpWrapper, load]);
 
 	/*
 		search term
@@ -47,6 +62,11 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 	const [searchTerm, setSearchTerm] = React.useState("");
 	function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>): void {
 		setSearchTerm(e.target.value);
+	}
+
+	function handleSearchFocus(): void {
+		if ((props.fetchOnMount ?? true) || hasRequestedLoad) return;
+		setHasRequestedLoad(true);
 	}
 
 	/*
@@ -86,14 +106,17 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 					<ClearableInput
 						placeholder="Search any field..."
 						onChange={handleSearchChange}
+						onFocus={handleSearchFocus}
 					/>
 				</form>
 
 				{/* status text */}
 				<p className="mt-2 text-xs text-slate-500">
-					{staff.length < 2
-						? "Loading directory…"
-						: `Showing ${filteredStaff.length} of ${staff.length} matches.`}
+					{!(props.fetchOnMount ?? true) && !hasRequestedLoad
+						? "Focus search to load directory…"
+						: isLoading
+							? "Loading directory…"
+							: `Showing ${filteredStaff.length} of ${staff.length} matches.`}
 				</p>
 
 				{/* Staff List */}

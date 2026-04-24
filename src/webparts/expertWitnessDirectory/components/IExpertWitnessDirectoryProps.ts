@@ -9,4 +9,7 @@ export interface IExpertWitnessDirectoryProps {
 
   /** SPFx client for REST calls */
   spHttpClient: SPHttpClient;
+
+  /** If false, delay first fetch until search input focus */
+  fetchOnMount: boolean;
 }
