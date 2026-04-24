@@ -3,6 +3,7 @@ import { WebPartContext } from "@microsoft/sp-webpart-base";
 import * as Utils from "@utils";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
+import { ENV_CANVIEW } from "@utils/rolebased/ENV";
 
 type RoleView = React.ComponentType<RoleBasedViewProps>;
 type RoleViews = Partial<Record<RoleKey, RoleView>>;
@@ -46,7 +47,18 @@ export function PDRoleBasedSelect({
 		roles: RoleKey[],
 		role: RoleKey,
 	) => {
-		return Utils.hasRole(roles, role);
+		// IT should be able to view-as any role.
+		if (Utils.isIT(roles)) return true;
+		if (Utils.hasRole(roles, role)) return true;
+
+		// Allow "View As" expansion based on ENV.CANVIEW_<ROLEKEY>
+		// Example: CANVIEW_ATTORNEY="PDINTRANET LOP CDD"
+		const canView = new Set<string>();
+		for (const rk of ENV.ROLESELECT_ORDER.split(" ")) {
+			if (!Utils.hasRole(roles, rk)) continue;
+			for (const v of ENV_CANVIEW(rk)) canView.add(v);
+		}
+		return canView.has(role);
 	};
 
 	function forceRole(role: string): void {

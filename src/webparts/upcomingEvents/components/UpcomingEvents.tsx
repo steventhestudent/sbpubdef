@@ -8,6 +8,7 @@ import RoleBasedViewProps from "@type/RoleBasedViewProps";
 import { GraphClient, MSGraphClientV3 } from "@utils/graph/GraphClient";
 import { getEventLocalStart } from "@utils/calendar";
 import * as Utils from "@utils";
+import { ENV_CANVIEW } from "@utils/rolebased/ENV";
 
 const PAGE_SIZE = 5;
 
@@ -140,7 +141,13 @@ function PDIntranetView({
 		// If the current user is IT, always show all departments.
 		return allItems.filter((el) => {
 			if (isUserIT) return true;
-			return el.PDDepartment === sourceRole;
+			const effectiveRole = sourceRole || "EVERYONE";
+			const allowed = new Set<string>([
+				"EVERYONE",
+				effectiveRole,
+				...ENV_CANVIEW(effectiveRole),
+			]);
+			return allowed.has(el.PDDepartment || "");
 		});
 	}, [allItems, isUserIT, sourceRole]);
 
