@@ -8,7 +8,6 @@ import "@styles/custom-overrides.css";
 
 import { Log } from "@microsoft/sp-core-library";
 import { BaseApplicationCustomizer } from "@microsoft/sp-application-base";
-import * as Utils from "@utils";
 import * as strings from "ThemeInjectorApplicationCustomizerStrings";
 import { DismissibleAnnouncementStrip } from "./DismissibleAnnouncementStrip";
 import { CompactMode } from "./CompactMode";
@@ -50,62 +49,81 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 			const doc = document as Document & Record<string, unknown>;
 			const win = window as unknown as Window & Record<string, unknown>;
 
-			const findActiveContainer = (): Element | null => {
-				const containers = document.querySelectorAll(
-					".ms-HorizontalNavItems",
-				);
-				return containers[containers.length - 1] ?? null;
+			const allContainers = (): Element[] =>
+				Array.from(document.querySelectorAll(".ms-HorizontalNavItems"));
+
+			const currentHash = (): string | null => {
+				const raw = (location.hash || "").replace(/^#/, "");
+				if (!raw) return null;
+				try {
+					return decodeURIComponent(raw);
+				} catch {
+					return raw;
+				}
 			};
 
 			const setSelectedInContainer = (
 				container: Element,
 				hash: string,
 			): void => {
-				Array.from(container.querySelectorAll("a span")).forEach(
-					($0: HTMLSpanElement) =>
-						$0.classList.remove("is-selected"),
-				);
-				const selected = container.querySelector(
-					`a span[data-role-hash="${CSS.escape(hash)}"]`,
-				) as HTMLSpanElement | null;
-				if (selected) {
-					selected.classList.add("is-selected");
+				for (const el of Array.from(
+					container.querySelectorAll("a, a span"),
+				) as Array<HTMLAnchorElement | HTMLSpanElement>) {
+					el.classList.remove("is-selected");
+				}
+
+				const aSelected = container.querySelector(
+					`a[data-role-hash="${CSS.escape(hash)}"]`,
+				) as HTMLAnchorElement | null;
+				if (aSelected) {
+					aSelected.classList.add("is-selected");
+					(
+						(aSelected.querySelector(
+							"span",
+						) as HTMLSpanElement | null) ?? null
+					)?.classList.add("is-selected");
 					return;
 				}
-				for (const span of Array.from(
-					container.querySelectorAll("a span"),
-				) as HTMLSpanElement[]) {
-					const a = span.closest("a") as HTMLAnchorElement | null;
-					const hrefHash = (a?.href || "").split("#")[1];
+
+				// Fallback: match by href hash.
+				for (const a of Array.from(
+					container.querySelectorAll("a"),
+				) as HTMLAnchorElement[]) {
+					const hrefHash = (a.href || "").split("#")[1];
 					if (hrefHash === hash) {
-						span.classList.add("is-selected");
+						a.classList.add("is-selected");
+						(
+							(a.querySelector(
+								"span",
+							) as HTMLSpanElement | null) ?? null
+						)?.classList.add("is-selected");
 						return;
 					}
 				}
 			};
 
 			const decorateContainer = (container: Element): void => {
-				Array.from(container.querySelectorAll("a span")).forEach(
-					(el: HTMLSpanElement) => {
-						const a = el.closest("a") as HTMLAnchorElement | null;
-						const hash = (a?.href || "").split("#")[1];
-						el.classList.remove("is-selected");
-						if (
-							hash &&
-							hash.replace("View-As-", "") ===
-								Utils.roleViewPriority(
-									Utils.cachedGroupNames(),
-								)
-						)
-							el.classList.add("is-selected");
-						if (hash) el.dataset.roleHash = hash;
-						if (hash && a) a.href = `#${hash}`;
-					},
-				);
+				for (const a of Array.from(
+					container.querySelectorAll("a"),
+				) as HTMLAnchorElement[]) {
+					const hash = (a.href || "").split("#")[1];
+					if (!hash) continue;
+					a.dataset.roleHash = hash;
+					// Keep anchor hash-only to avoid SP hard nav.
+					a.href = `#${hash}`;
+
+					const span = a.querySelector(
+						"span",
+					) as HTMLSpanElement | null;
+					if (span) span.dataset.roleHash = hash;
+				}
+
+				const selectedHash = currentHash();
+				if (selectedHash)
+					setSelectedInContainer(container, selectedHash);
 			};
 
-			const initial = findActiveContainer();
-			if (initial) decorateContainer(initial);
+			for (const c of allContainers()) decorateContainer(c);
 
 			// Document-level capture handler survives SP header re-renders.
 			const docKey = "__sbpubdefNavRoleHashDocHandler";
@@ -129,8 +147,20 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 					if (location.hash !== `#${hash}`)
 						location.hash = `#${hash}`;
 
-					const container = findActiveContainer();
-					if (container) setSelectedInContainer(container, hash);
+					const clickedContainer = a.closest(
+						".ms-HorizontalNavItems",
+					) as Element | null;
+					if (clickedContainer) {
+						decorateContainer(clickedContainer);
+						setSelectedInContainer(clickedContainer, hash);
+					}
+
+					// If SP swaps headers after click, re-apply selection after DOM settles.
+					requestAnimationFrame(() => {
+						for (const c of allContainers()) decorateContainer(c);
+						for (const c of allContainers())
+							setSelectedInContainer(c, hash);
+					});
 				};
 
 				doc[docKey] = docClickHandler;
@@ -142,9 +172,16 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 			// When SP swaps header variants on scroll, re-decorate new nav DOM.
 			const moKey = "__sbpubdefNavRoleHashMO";
 			if (!win[moKey]) {
+				let raf: number | null = null;
 				const mo = new MutationObserver(() => {
-					const container = findActiveContainer();
-					if (container) decorateContainer(container);
+					if (raf) cancelAnimationFrame(raf);
+					raf = requestAnimationFrame(() => {
+						for (const c of allContainers()) decorateContainer(c);
+						const sel = currentHash();
+						if (sel)
+							for (const c of allContainers())
+								setSelectedInContainer(c, sel);
+					});
 				});
 				win[moKey] = mo;
 				mo.observe(document.body, {
