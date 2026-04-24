@@ -89,6 +89,9 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 		? staff.filter((member) => matchesSearch(member, searchTerm))
 		: staff;
 
+	const isDeferredInitialLoad =
+		!(props.fetchOnMount ?? true) && !hasRequestedLoad;
+
 	return (
 		<Collapsible
 			instanceId={props.context.instanceId}
@@ -111,66 +114,72 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 				</form>
 
 				{/* status text */}
-				<p className="mt-2 text-xs text-slate-500">
-					{!(props.fetchOnMount ?? true) && !hasRequestedLoad
-						? "Focus search to load directory…"
-						: isLoading
+				{!isDeferredInitialLoad && (
+					<p className="mt-2 text-xs text-slate-500">
+						{isLoading
 							? "Loading directory…"
 							: `Showing ${filteredStaff.length} of ${staff.length} matches.`}
-				</p>
+					</p>
+				)}
 
 				{/* Staff List */}
 				<div className="mt-2 max-h-[300px] overflow-y-auto rounded-md border border-slate-400">
-					<ul className="divide-y divide-slate-300">
-						{filteredStaff.length === 0 ? (
-							<li className="py-3 text-center text-sm text-slate-600">
-								No matching staff found.
-							</li>
-						) : (
-							filteredStaff.slice(0, 3).map((member) => {
-								const initials = member.name
-									? member.name
-											.split(" ")
-											.map((n) => n[0])
-											.join("")
-											.substring(0, 2)
-											.toUpperCase()
-									: "?";
+					{isDeferredInitialLoad ? (
+						<div className="py-3 text-center text-sm text-slate-600">
+							Focus the search box to load the directory.
+						</div>
+					) : (
+						<ul className="divide-y divide-slate-300">
+							{filteredStaff.length === 0 ? (
+								<li className="py-3 text-center text-sm text-slate-600">
+									No matching staff found.
+								</li>
+							) : (
+								filteredStaff.slice(0, 3).map((member) => {
+									const initials = member.name
+										? member.name
+												.split(" ")
+												.map((n) => n[0])
+												.join("")
+												.substring(0, 2)
+												.toUpperCase()
+										: "?";
 
-								return (
-									<li
-										key={member.username}
-										className="flex items-center px-1 py-3"
-									>
-										<div className="flex items-center gap-2">
-											<span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-700">
-												{initials}
-											</span>
-											<div>
-												<p className="text-sm font-medium text-slate-800">
-													{member.name}
-												</p>
-												<p className="text-xs text-slate-600">
-													{member.titleName}
-												</p>
-												<p className="text-xs text-slate-600">
-													EXT: {member.ext || "—"}
-												</p>
-												<p className="text-xs text-slate-600">
-													Work:{" "}
-													{member.workCell || "—"}
-												</p>
-												<p className="text-xs text-slate-600">
-													Cell:{" "}
-													{member.personalCell || "—"}
-												</p>
+									return (
+										<li
+											key={member.username}
+											className="flex items-center px-1 py-3"
+										>
+											<div className="flex items-center gap-2">
+												<span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-700">
+													{initials}
+												</span>
+												<div>
+													<p className="text-sm font-medium text-slate-800">
+														{member.name}
+													</p>
+													<p className="text-xs text-slate-600">
+														{member.titleName}
+													</p>
+													<p className="text-xs text-slate-600">
+														EXT: {member.ext || "—"}
+													</p>
+													<p className="text-xs text-slate-600">
+														Work:{" "}
+														{member.workCell || "—"}
+													</p>
+													<p className="text-xs text-slate-600">
+														Cell:{" "}
+														{member.personalCell || "—"}
+													</p>
+												</div>
 											</div>
-										</div>
-									</li>
-								);
-							})
-						)}
-					</ul>
+										</li>
+									);
+								})
+							)}
+						</ul>
+					)}
 				</div>
 			</div>
 		</Collapsible>

@@ -88,6 +88,8 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 
 	const visible = filtered.slice(0, MAX_VISIBLE);
 	const directoryUrl = `${props.siteUrl}/Lists/Expert%20Directory/AllItems.aspx`;
+	const isDeferredInitialLoad =
+		!(props.fetchOnMount ?? true) && !hasRequestedLoad;
 
 	return (
 		<Collapsible
@@ -118,18 +120,23 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 				</div>
 
 				{/* status text */}
-				<p className="mt-2 text-xs text-slate-500">
-					{!(props.fetchOnMount ?? true) && !hasRequestedLoad
-						? "Focus search to load directory…"
-						: isLoading
-						? "Loading directory…"
-						: error
-							? error
-							: `Showing ${filtered.length} of ${experts.length} matches.`}
-				</p>
+				{!isDeferredInitialLoad && (
+					<p className="mt-2 text-xs text-slate-500">
+						{isLoading
+							? "Loading directory…"
+							: error
+								? error
+								: `Showing ${filtered.length} of ${experts.length} matches.`}
+					</p>
+				)}
 
 				{/* list */}
-				{!isLoading && !error && (
+				{isDeferredInitialLoad ? (
+					<div className="mt-3 rounded-md border border-slate-400 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+						Focus the search box to load the directory.
+					</div>
+				) : (
+					!isLoading && !error && (
 					<>
 						{filtered.length === 0 ? (
 							<div className="mt-3 rounded-md border border-slate-400 bg-slate-50 px-3 py-2 text-sm text-slate-600">
@@ -209,6 +216,7 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 							</a>
 						</div>
 					</>
+					)
 				)}
 			</div>
 		</Collapsible>
