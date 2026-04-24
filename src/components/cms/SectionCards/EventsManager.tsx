@@ -23,6 +23,8 @@ export function EventsManager({
 }): JSX.Element {
 	const [items, setItems] = React.useState<PDEvent[]>([]);
 	const [limit, setLimit] = React.useState(50);
+	const pageSize = 10;
+	const [shown, setShown] = React.useState(pageSize);
 	const [loading, setLoading] = React.useState(false);
 	const [error, setError] = React.useState<string | undefined>(undefined);
 
@@ -46,6 +48,10 @@ export function EventsManager({
 		pnpWrapper.loadCachedThenFresh(load);
 	}, [load]);
 
+	React.useEffect(() => {
+		setShown(pageSize);
+	}, [query]);
+
 	const filtered = query.trim()
 		? items.filter((i) =>
 				`${i.title} ${i.location ?? ""} ${i.PDDepartment ?? ""}`
@@ -54,9 +60,11 @@ export function EventsManager({
 			)
 		: items;
 
+	const paged = React.useMemo(() => filtered.slice(0, shown), [filtered, shown]);
+
 	const visibleIds = React.useMemo(
-		() => filtered.map((i) => String(i.id)),
-		[filtered],
+		() => paged.map((i) => String(i.id)),
+		[paged],
 	);
 	const selectedVisibleCount = React.useMemo(() => {
 		if (!selectionMode) return 0;
@@ -108,7 +116,7 @@ export function EventsManager({
 						</tr>
 					</thead>
 					<tbody className="divide-y divide-slate-200">
-						{filtered.map((it) => {
+						{paged.map((it) => {
 							const d = it.date ? new Date(it.date) : undefined;
 							const startLabel =
 								d && !Number.isNaN(d.getTime())
@@ -175,7 +183,13 @@ export function EventsManager({
 			<div className="flex items-center justify-end">
 				<button
 					className="rounded-md border border-slate-300 px-3 py-1.5 text-sm hover:bg-white disabled:opacity-50"
-					onClick={() => setLimit((n) => n + 50)}
+					onClick={() => {
+						if (shown < filtered.length) {
+							setShown((n) => n + pageSize);
+						} else {
+							setLimit((n) => n + 50);
+						}
+					}}
 					disabled={loading}
 				>
 					{loading ? "Loading…" : "Load more"}
