@@ -85,11 +85,62 @@ export const CMSContainer: ({
 			.map((s) => Number(s))
 			.filter((n) => Number.isFinite(n) && n > 0);
 
+		async function resolveListTitle(title: string): Promise<string> {
+			const key = title.trim();
+			const web = pnpWrapper.web();
+			try {
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				await web.lists.getByTitle(key).select("Id")();
+				return key;
+			} catch {
+				// fall through
+			}
+			const all: Array<{ Title: string }> = await web.lists.select("Title")();
+
+			const normalizeTitle = (s: string): string =>
+				s.replace(/\s+/g, "").trim().toLowerCase();
+
+			const primaryCandidates = [
+				key,
+				key.replace(/([a-zA-Z])(\d+)/g, "$1 $2"),
+			].filter(Boolean);
+			const strippedFallback = key.replace(/\d+$/, "");
+
+			for (const c of primaryCandidates) {
+				const exact = all.find(
+					(l) => String(l.Title).toLowerCase() === c.toLowerCase(),
+				);
+				if (exact?.Title) return exact.Title;
+			}
+
+			for (const n of primaryCandidates.map(normalizeTitle)) {
+				const hit = all.find((l) => normalizeTitle(String(l.Title)) === n);
+				if (hit?.Title) return hit.Title;
+			}
+
+			if (strippedFallback) {
+				const exactStripped = all.find(
+					(l) =>
+						String(l.Title).toLowerCase() === strippedFallback.toLowerCase(),
+				);
+				if (exactStripped?.Title) return exactStripped.Title;
+				const strippedNorm = normalizeTitle(strippedFallback);
+				const starts = all.find((l) =>
+					normalizeTitle(String(l.Title)).startsWith(strippedNorm),
+				);
+				if (starts?.Title) return starts.Title;
+			}
+
+			return key;
+		}
+
 		try {
 			const web = pnpWrapper.web();
 
 			if (activeTab === "assignments") {
-				const listTitle = ENV.LIST_ASSIGNMENTS || "Assignments1";
+				const listTitle = await resolveListTitle(
+					ENV.LIST_ASSIGNMENTS || "Assignments1",
+				);
 				await Promise.allSettled(
 					ids.map((id) =>
 						web.lists.getByTitle(listTitle).items.getById(id).delete(),

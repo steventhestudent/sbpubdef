@@ -25,7 +25,18 @@ export function ContentTable({
 	onToggleSelect?: (id: string) => void;
 	onSelectAll?: (ids: string[], select: boolean) => void;
 }): JSX.Element {
-	const visibleIds = React.useMemo(() => items.map((i) => i.id), [items]);
+	const filteredItems = React.useMemo(() => {
+		const q = query.trim().toLowerCase();
+		if (!q) return items;
+		return items.filter((it) =>
+			`${it.title ?? ""} ${it.owner ?? ""}`.toLowerCase().includes(q),
+		);
+	}, [items, query]);
+
+	const visibleIds = React.useMemo(
+		() => filteredItems.map((i) => i.id),
+		[filteredItems],
+	);
 	const selectedVisibleCount = React.useMemo(() => {
 		if (!selectionMode) return 0;
 		const set = new Set(selectedIds);
@@ -76,7 +87,7 @@ export function ContentTable({
 					</tr>
 				</thead>
 				<tbody className="divide-y divide-slate-200">
-					{items.map((it) => (
+					{filteredItems.map((it) => (
 						<tr key={it.id} className="hover:bg-slate-50">
 							{selectionMode && (
 								<td className="px-3 py-3">

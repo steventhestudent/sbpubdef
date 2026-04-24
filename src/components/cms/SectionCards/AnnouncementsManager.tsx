@@ -61,7 +61,15 @@ export function AnnouncementsManager({
 		announcementsApi.pnpWrapper.loadCachedThenFresh(load); // pnpWrapper.cacheVal is "true" <--- not bool: true (subsequent req's are not cached)
 	}, [limit]);
 
-	const visibleIds = React.useMemo(() => items.map((i) => i.id), [items]);
+	const filtered = React.useMemo(() => {
+		const q = query.trim().toLowerCase();
+		if (!q) return items;
+		return items.filter((it) =>
+			`${it.title ?? ""} ${it.owner ?? ""}`.toLowerCase().includes(q),
+		);
+	}, [items, query]);
+
+	const visibleIds = React.useMemo(() => filtered.map((i) => i.id), [filtered]);
 	const selectedVisibleCount = React.useMemo(() => {
 		if (!selectionMode) return 0;
 		const set = new Set(selectedIds);
@@ -113,7 +121,7 @@ export function AnnouncementsManager({
 						</tr>
 					</thead>
 					<tbody className="divide-y divide-slate-200">
-						{items.map((it) => (
+						{filtered.map((it) => (
 							<tr key={it.id} className="hover:bg-slate-50">
 								{selectionMode && (
 									<td className="px-3 py-3">
@@ -156,7 +164,7 @@ export function AnnouncementsManager({
 								</td>
 							</tr>
 						))}
-						{!items.length && !loading ? (
+						{!filtered.length && !loading ? (
 							<tr>
 								<td
 									colSpan={selectionMode ? 7 : 6}
