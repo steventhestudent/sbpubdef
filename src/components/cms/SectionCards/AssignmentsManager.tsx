@@ -27,6 +27,8 @@ export function AssignmentsManager({
 	const [skip, setSkip] = React.useState(0);
 	const [loading, setLoading] = React.useState(false);
 	const [error, setError] = React.useState<string | undefined>(undefined);
+	const [resolvedListTitle, setResolvedListTitle] =
+		React.useState<string>("");
 	const pageSize = 25;
 
 	function normalizeTitle(s: string): string {
@@ -44,23 +46,33 @@ export function AssignmentsManager({
 			// fall through
 		}
 		const all: Array<{ Title: string }> = await web.lists.select("Title")();
-		const candidates = [
-			key,
-			key.replace(/([a-zA-Z])(\d+)/g, "$1 $2"),
-			key.replace(/\d+$/, ""),
-		].filter(Boolean);
-		for (const c of candidates) {
-			const exact = all.find((l) => String(l.Title).toLowerCase() === c.toLowerCase());
+
+		// IMPORTANT: avoid falling back to the deprecated list "Assignments"
+		// when the intended list key is "Assignments1".
+		const primaryCandidates = [key, key.replace(/([a-zA-Z])(\d+)/g, "$1 $2")].filter(
+			Boolean,
+		);
+		const strippedFallback = key.replace(/\d+$/, "");
+
+		for (const c of primaryCandidates) {
+			const exact = all.find(
+				(l) => String(l.Title).toLowerCase() === c.toLowerCase(),
+			);
 			if (exact?.Title) return exact.Title;
 		}
-		const norms = candidates.map(normalizeTitle);
-		for (const n of norms) {
+
+		for (const n of primaryCandidates.map(normalizeTitle)) {
 			const hit = all.find((l) => normalizeTitle(String(l.Title)) === n);
 			if (hit?.Title) return hit.Title;
 		}
-		const stripped = key.replace(/\d+$/, "");
-		const strippedNorm = stripped ? normalizeTitle(stripped) : "";
-		if (strippedNorm) {
+
+		// Only now allow stripped exact match (Assignments) as last resort.
+		if (strippedFallback) {
+			const exactStripped = all.find(
+				(l) => String(l.Title).toLowerCase() === strippedFallback.toLowerCase(),
+			);
+			if (exactStripped?.Title) return exactStripped.Title;
+			const strippedNorm = normalizeTitle(strippedFallback);
 			const starts = all.find((l) =>
 				normalizeTitle(String(l.Title)).startsWith(strippedNorm),
 			);
@@ -74,7 +86,10 @@ export function AssignmentsManager({
 		setError(undefined);
 		try {
 			const web = pnpWrapper.web();
-			const listTitle = await resolveListTitle(ENV.LIST_ASSIGNMENTS || "Assignments1");
+			const listTitle = await resolveListTitle(
+				ENV.LIST_ASSIGNMENTS || "Assignments1",
+			);
+			setResolvedListTitle(listTitle);
 			const statusField = ENV.INTERNALCOLUMN_ASSIGNMENTSTATUS || "Status";
 			const rows = (await web.lists
 				.getByTitle(listTitle)
@@ -93,14 +108,22 @@ export function AssignmentsManager({
 			const mapped: AssignmentRow[] = (rows || []).map((r) => ({
 				id: Number(r.Id),
 				title: String(r.Title || "(untitled)"),
-				employeeEmail: typeof r.EmployeeEmail === "string" ? r.EmployeeEmail : undefined,
+				employeeEmail:
+					typeof r.EmployeeEmail === "string"
+						? r.EmployeeEmail
+						: undefined,
 				dueDate: typeof r.DueDate === "string" ? r.DueDate : undefined,
 				status:
-					typeof (r as Record<string, unknown>)[statusField] === "string"
-						? ((r as Record<string, unknown>)[statusField] as string)
+					typeof (r as Record<string, unknown>)[statusField] ===
+					"string"
+						? ((r as Record<string, unknown>)[
+								statusField
+							] as string)
 						: undefined,
 				percentComplete:
-					typeof r.PercentComplete === "number" ? r.PercentComplete : undefined,
+					typeof r.PercentComplete === "number"
+						? r.PercentComplete
+						: undefined,
 			}));
 
 			setItems((prev) => (reset ? mapped : [...prev, ...mapped]));
@@ -132,24 +155,32 @@ export function AssignmentsManager({
 					{error}
 				</div>
 			) : null}
+			<div className="text-xs text-slate-500">
+				List: {resolvedListTitle || "(resolving…)"} | Loaded:{" "}
+				{items.length} | Showing: {filtered.length}
+			</div>
 			<div className="overflow-x-auto">
 				<table className="min-w-full divide-y divide-slate-200">
 					<thead className="bg-slate-50">
 						<tr>
 							{selectionMode && <th className="w-10 px-3 py-2" />}
-							{["Title", "Employee", "Due", "Status", ""].map((h) => (
-								<th
-									key={h}
-									className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
-								>
-									{h}
-								</th>
-							))}
+							{["ID", "Title", "Employee", "Due", "Status"].map(
+								(h) => (
+									<th
+										key={h}
+										className="px-4 py-2 text-left text-xs font-semibold tracking-wide text-slate-600 uppercase"
+									>
+										{h}
+									</th>
+								),
+							)}
 						</tr>
 					</thead>
 					<tbody className="divide-y divide-slate-200">
 						{filtered.map((it) => {
-							const due = it.dueDate ? new Date(it.dueDate) : undefined;
+							const due = it.dueDate
+								? new Date(it.dueDate)
+								: undefined;
 							const dueLabel =
 								due && !Number.isNaN(due.getTime())
 									? due.toLocaleDateString()
@@ -160,12 +191,21 @@ export function AssignmentsManager({
 										<td className="px-3 py-3">
 											<input
 												type="checkbox"
-												checked={selectedIds?.includes(String(it.id))}
-												onChange={() => onToggleSelect(String(it.id))}
+												checked={selectedIds?.includes(
+													String(it.id),
+												)}
+												onChange={() =>
+													onToggleSelect(
+														String(it.id),
+													)
+												}
 												aria-label={`Select ${it.title}`}
 											/>
 										</td>
 									)}
+									<td className="px-4 py-3 text-xs text-slate-600">
+										#{it.id}
+									</td>
 									<td className="px-4 py-3 text-sm text-slate-800">
 										{it.title}
 									</td>
@@ -177,9 +217,6 @@ export function AssignmentsManager({
 									</td>
 									<td className="px-4 py-3 text-sm text-slate-700">
 										{it.status || "—"}
-									</td>
-									<td className="px-4 py-3 text-right text-sm text-slate-600">
-										#{it.id}
 									</td>
 								</tr>
 							);
@@ -212,4 +249,3 @@ export function AssignmentsManager({
 		</div>
 	);
 }
-

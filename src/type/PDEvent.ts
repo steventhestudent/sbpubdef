@@ -19,4 +19,5 @@ export type PDEvent = {
 	detailsUrl?: string;
 	siteUrl?: string;
 	PDDepartment?: string;
+	author?: string;
 };

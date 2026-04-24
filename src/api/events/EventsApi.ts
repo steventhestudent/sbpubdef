@@ -40,8 +40,11 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 					"EndDate",
 					"fAllDayEvent",
 					"Location",
+					"Author/Title",
+					"Author/EMail",
 					ENV.INTERNALCOLUMN_PDDEPARTMENT,
 				)
+				.expand("Author")
 				.filter(this.odata)
 				.orderBy("EventDate", true) // ascending
 				.top(limitPerSite)();
@@ -63,6 +66,11 @@ export class EventsApi extends EventApi<PDEvent, EventGetOpts> {
 					detailsUrl: `${siteOrigin}/sites/${ENV.HUB_NAME}/_layouts/15/Event.aspx?ListGuid=${listGuid}&ItemId=${i.Id}`,
 					siteUrl: siteUrl || window.location.pathname,
 					PDDepartment: i[ENV.INTERNALCOLUMN_PDDEPARTMENT],
+					author:
+						typeof (i as unknown as { Author?: { Title?: unknown } }).Author
+							?.Title === "string"
+							? ((i as unknown as { Author: { Title: string } }).Author.Title)
+							: undefined,
 				}),
 			);
 		});

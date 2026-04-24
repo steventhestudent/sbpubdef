@@ -40,7 +40,7 @@ export function AnnouncementsManager({
 					? el.published.toLocaleDateString()
 					: "—";
 				return {
-					id: `${i}`,
+					id: `${i + 1}`,
 					title: el.title,
 					site: el.siteUrl ?? "",
 					when,
@@ -65,7 +65,7 @@ export function AnnouncementsManager({
 					<thead className="bg-slate-50">
 						<tr>
 							{selectionMode && <th className="w-10 px-3 py-2" />}
-							{["Title", "When", "Owner", "Site", "Status", ""].map((h) => (
+							{["ID", "Title", "When", "Owner", "Site", "Status"].map((h) => (
 								<th
 									key={h}
 									className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
@@ -88,6 +88,9 @@ export function AnnouncementsManager({
 										/>
 									</td>
 								)}
+								<td className="px-4 py-3 text-xs text-slate-600">
+									#{it.id}
+								</td>
 								<td className="px-4 py-3 text-sm text-slate-800">
 									<a
 										href={it.url}
@@ -109,16 +112,6 @@ export function AnnouncementsManager({
 								</td>
 								<td className="px-4 py-3 text-sm text-slate-700">
 									{it.status}
-								</td>
-								<td className="px-4 py-3 text-right text-sm">
-									<a
-										href={it.url}
-										className="text-blue-700 hover:underline"
-										target="_blank"
-										rel="noreferrer"
-									>
-										Open
-									</a>
 								</td>
 							</tr>
 						))}

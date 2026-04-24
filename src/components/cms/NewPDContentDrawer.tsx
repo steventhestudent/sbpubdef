@@ -7,6 +7,14 @@ import {
 	AssignmentView,
 	type AssignmentFormState,
 } from "./NewContentDrawerViews/AssignmentView";
+import {
+	BannerView,
+	type BannerFormState,
+} from "./NewContentDrawerViews/BannerView";
+import {
+	AssignmentCatalogView,
+	type AssignmentCatalogFormState,
+} from "./NewContentDrawerViews/AssignmentCatalogView";
 import type {
 	AudienceEntry,
 	ContentTypeKey,
@@ -34,7 +42,9 @@ export function NewPDContentDrawer({
 			return v === "announcement" ||
 				v === "procedureChecklist" ||
 				v === "pdEvent" ||
-				v === "assignment"
+				v === "assignment" ||
+				v === "banner" ||
+				v === "assignmentCatalog"
 				? v
 				: undefined;
 		} catch {
@@ -47,8 +57,9 @@ export function NewPDContentDrawer({
 		[pnpWrapper],
 	);
 
-	const [contentType, setContentType] =
-		React.useState<ContentTypeKey>(() => getStoredContentType() || defaultContentType);
+	const [contentType, setContentType] = React.useState<ContentTypeKey>(
+		() => getStoredContentType() || defaultContentType,
+	);
 	const [busy, setBusy] = React.useState(false);
 
 	// Shared
@@ -75,9 +86,10 @@ export function NewPDContentDrawer({
 		// Lazy import to avoid pulling office data into non-event paths.
 		try {
 			// eslint-disable-next-line @typescript-eslint/no-var-requires
-			const m = require("@webparts/officeInformation/components/Offices") as {
-				offices?: Array<{ name?: string; lines?: string[] }>;
-			};
+			const m =
+				require("@webparts/officeInformation/components/Offices") as {
+					offices?: Array<{ name?: string; lines?: string[] }>;
+				};
 			const offices = m.offices || [];
 			return offices
 				.map((o) => {
@@ -104,6 +116,36 @@ export function NewPDContentDrawer({
 			dueDate: "",
 			createCalendarEvent: false,
 			sendEmail: false,
+		});
+
+	// Banner
+	const [bannerForm, setBannerForm] = React.useState<BannerFormState>({
+		showBanner: true,
+		bannerMessageHtml: "",
+	});
+	const [bannerItemId, setBannerItemId] = React.useState<number | undefined>(
+		undefined,
+	);
+
+	// Assignment Catalog (view-only for now)
+	const [assignmentCatalogForm, setAssignmentCatalogForm] =
+		React.useState<AssignmentCatalogFormState>({
+			title: "",
+			assignmentKey: "",
+			assignmentType: "",
+			category: "",
+			summary: "",
+			instructions: "",
+			active: true,
+			targetRolesText: "",
+			dueDaysAfterAssigned: undefined,
+			createCalendarEvent: false,
+			sendAssignmentEmail: false,
+			displayOrder: undefined,
+			estimatedMinutes: undefined,
+			finalStepCompletionMode: "",
+			contentVersion: "",
+			quizPassingScore: undefined,
 		});
 
 	React.useEffect(() => {
@@ -145,7 +187,62 @@ export function NewPDContentDrawer({
 			createCalendarEvent: false,
 			sendEmail: false,
 		});
+
+		setBannerForm({ showBanner: true, bannerMessageHtml: "" });
+		setBannerItemId(undefined);
+		setAssignmentCatalogForm({
+			title: "",
+			assignmentKey: "",
+			assignmentType: "",
+			category: "",
+			summary: "",
+			instructions: "",
+			active: true,
+			targetRolesText: "",
+			dueDaysAfterAssigned: undefined,
+			createCalendarEvent: false,
+			sendAssignmentEmail: false,
+			displayOrder: undefined,
+			estimatedMinutes: undefined,
+			finalStepCompletionMode: "",
+			contentVersion: "",
+			quizPassingScore: undefined,
+		});
 	}, [open, defaultContentType]);
+
+	React.useEffect(() => {
+		if (!open) return;
+		if (contentType !== "banner") return;
+		(async () => {
+			try {
+				const listTitle = ENV.LIST_SITESETTINGS || "SiteSettings";
+				const rows = (await pnpWrapper
+					.web()
+					.lists.getByTitle(listTitle)
+					.items.select("Id", "BannerMessage", "ShowBanner")
+					.orderBy("Id", false)
+					.top(1)()) as Array<Record<string, unknown>>;
+				const r = rows?.[0];
+				setBannerItemId(
+					typeof r?.Id === "number"
+						? r.Id
+						: Number(r?.Id) || undefined,
+				);
+				setBannerForm({
+					bannerMessageHtml:
+						typeof r?.BannerMessage === "string"
+							? r.BannerMessage
+							: "",
+					showBanner:
+						typeof r?.ShowBanner === "boolean"
+							? r.ShowBanner
+							: r?.ShowBanner !== false,
+				});
+			} catch {
+				// ignore (stay on defaults)
+			}
+		})().catch(() => {});
+	}, [open, contentType]);
 
 	React.useEffect(() => {
 		try {
@@ -282,8 +379,12 @@ export function NewPDContentDrawer({
 			if (spacedDigits !== raw) cands.add(spacedDigits);
 			const stripped = raw.replace(/\d+$/, "");
 			if (stripped && stripped !== raw) cands.add(stripped);
-			const strippedSpaced = stripped.replace(/([a-zA-Z])(\d+)/g, "$1 $2");
-			if (strippedSpaced && strippedSpaced !== stripped) cands.add(strippedSpaced);
+			const strippedSpaced = stripped.replace(
+				/([a-zA-Z])(\d+)/g,
+				"$1 $2",
+			);
+			if (strippedSpaced && strippedSpaced !== stripped)
+				cands.add(strippedSpaced);
 			return Array.from(cands);
 		}
 		async function resolveListTitle(title: string): Promise<string> {
@@ -295,19 +396,24 @@ export function NewPDContentDrawer({
 			} catch {
 				// fall through
 			}
-			const all: Array<{ Title: string }> = await web.lists.select("Title")();
+			const all: Array<{ Title: string }> =
+				await web.lists.select("Title")();
 			const candidates = candidateTitles(key);
 			const candidateNorms = candidates.map((c) => normalizeTitle(c));
 
 			for (const c of candidates) {
 				const exact = all.find(
-					(l) => String(l?.Title ?? "").trim().toLowerCase() === c.toLowerCase(),
+					(l) =>
+						String(l?.Title ?? "")
+							.trim()
+							.toLowerCase() === c.toLowerCase(),
 				);
 				if (exact?.Title) return exact.Title;
 			}
 			for (const wantedNorm of candidateNorms) {
 				const normMatch = all.find(
-					(l) => normalizeTitle(String(l?.Title ?? "")) === wantedNorm,
+					(l) =>
+						normalizeTitle(String(l?.Title ?? "")) === wantedNorm,
 				);
 				if (normMatch?.Title) return normMatch.Title;
 			}
@@ -315,7 +421,9 @@ export function NewPDContentDrawer({
 			const strippedNorm = stripped ? normalizeTitle(stripped) : "";
 			if (strippedNorm) {
 				const starts = all.find((l) =>
-					normalizeTitle(String(l?.Title ?? "")).startsWith(strippedNorm),
+					normalizeTitle(String(l?.Title ?? "")).startsWith(
+						strippedNorm,
+					),
 				);
 				if (starts?.Title) return starts.Title;
 			}
@@ -335,7 +443,9 @@ export function NewPDContentDrawer({
 
 		let assignedById: number | undefined = undefined;
 		try {
-			const meEmail = (pnpWrapper.ctx.pageContext.user.email || "").trim();
+			const meEmail = (
+				pnpWrapper.ctx.pageContext.user.email || ""
+			).trim();
 			if (meEmail) {
 				const ensured = await (
 					web as unknown as {
@@ -367,9 +477,10 @@ export function NewPDContentDrawer({
 			const assignmentId =
 				typeof (addRes as unknown as { Id?: number }).Id === "number"
 					? (addRes as unknown as { Id: number }).Id
-					: typeof (addRes as unknown as { data?: { Id?: number } }).data?.Id ===
-							"number"
-						? (addRes as unknown as { data: { Id: number } }).data.Id
+					: typeof (addRes as unknown as { data?: { Id?: number } })
+								.data?.Id === "number"
+						? (addRes as unknown as { data: { Id: number } }).data
+								.Id
 						: undefined;
 			return { email: u.email, assignmentId };
 		};
@@ -396,8 +507,10 @@ export function NewPDContentDrawer({
 			});
 		};
 
-		const createdForUsers: Array<{ email: string; assignmentId?: number }> = [];
-		const roleAudience: Array<Extract<AudienceEntry, { kind: "role" }>> = [];
+		const createdForUsers: Array<{ email: string; assignmentId?: number }> =
+			[];
+		const roleAudience: Array<Extract<AudienceEntry, { kind: "role" }>> =
+			[];
 
 		for (const a of assignmentForm.audience) {
 			if (a.kind === "user") createdForUsers.push(await createForUser(a));
@@ -413,7 +526,9 @@ export function NewPDContentDrawer({
 			const appId = (ENV.FUNCTION_API_APP_ID || "").trim();
 			if (!appId) throw new Error("ENV.FUNCTION_API_APP_ID is not set.");
 
-			const toEmails = createdForUsers.map((c) => c.email).filter(Boolean);
+			const toEmails = createdForUsers
+				.map((c) => c.email)
+				.filter(Boolean);
 			if (!toEmails.length) {
 				alert(
 					"Send Email is enabled, but no individual people were selected (only departments). Emails were not sent.",
@@ -425,8 +540,12 @@ export function NewPDContentDrawer({
 			const client: AadHttpClient =
 				await pnpWrapper.ctx.aadHttpClientFactory.getClient(appId);
 
-			const due = assignmentForm.dueDate ? `Due: ${assignmentForm.dueDate}` : "";
-			const reason = assignmentForm.reason?.trim() ? assignmentForm.reason.trim() : "";
+			const due = assignmentForm.dueDate
+				? `Due: ${assignmentForm.dueDate}`
+				: "";
+			const reason = assignmentForm.reason?.trim()
+				? assignmentForm.reason.trim()
+				: "";
 			const cat =
 				assignmentForm.assignmentCatalogTitle?.trim() ||
 				assignmentForm.assignmentCatalogKey?.trim() ||
@@ -435,11 +554,17 @@ export function NewPDContentDrawer({
 			const deptNote = roleAudience.length
 				? `<div style="margin-top:8px; color:#64748b; font-size:12px;">Note: Department audience selected (${roleAudience
 						.map((r) => r.label)
-						.join(", ")}). Bulk member expansion is not yet enabled in CMS, so only individually-selected people received this email.</div>`
+						.join(
+							", ",
+						)}). Bulk member expansion is not yet enabled in CMS, so only individually-selected people received this email.</div>`
 				: "";
 
 			const itemLinks = createdForUsers
-				.filter((c) => typeof c.assignmentId === "number" && Number.isFinite(c.assignmentId))
+				.filter(
+					(c) =>
+						typeof c.assignmentId === "number" &&
+						Number.isFinite(c.assignmentId),
+				)
 				.map((c) => {
 					const href = `${window.location.origin}${pnpWrapper.ctx.pageContext.web.serverRelativeUrl}/Lists/${encodeURIComponent(listTitle)}/DispForm.aspx?ID=${c.assignmentId}`;
 					return `<li><a href="${href}">Assignment item #${c.assignmentId}</a> (${c.email})</li>`;
@@ -451,7 +576,9 @@ export function NewPDContentDrawer({
 				`<div><b>New assignment:</b> ${title}</div>`,
 				`<div><b>Catalog:</b> ${cat}</div>`,
 				due ? `<div><b>${due}</b></div>` : "",
-				reason ? `<div style="margin-top:8px;"><b>Reason:</b><br/>${reason}</div>` : "",
+				reason
+					? `<div style="margin-top:8px;"><b>Reason:</b><br/>${reason}</div>`
+					: "",
 				itemLinks
 					? `<div style="margin-top:10px;"><b>Links</b><ul>${itemLinks}</ul></div>`
 					: "",
@@ -485,6 +612,34 @@ export function NewPDContentDrawer({
 		}
 	}
 
+	async function submitBanner(): Promise<void> {
+		const listTitle = ENV.LIST_SITESETTINGS || "SiteSettings";
+		const web = pnpWrapper.web();
+		const payload = {
+			Title: "SiteSettings",
+			BannerMessage: bannerForm.bannerMessageHtml,
+			ShowBanner: bannerForm.showBanner,
+		};
+		if (bannerItemId) {
+			await web.lists
+				.getByTitle(listTitle)
+				.items.getById(bannerItemId)
+				.update(payload);
+		} else {
+			const res = await web.lists
+				.getByTitle(listTitle)
+				.items.add(payload);
+			const newId =
+				typeof (res as unknown as { Id?: number }).Id === "number"
+					? (res as unknown as { Id: number }).Id
+					: typeof (res as unknown as { data?: { Id?: number } }).data
+								?.Id === "number"
+						? (res as unknown as { data: { Id: number } }).data.Id
+						: undefined;
+			setBannerItemId(newId);
+		}
+	}
+
 	function handleSubmit(): void {
 		if (busy) return;
 		setBusy(true);
@@ -494,6 +649,11 @@ export function NewPDContentDrawer({
 				await submitProcedureChecklist();
 			else if (contentType === "pdEvent") await submitPdEvent();
 			else if (contentType === "assignment") await submitAssignment();
+			else if (contentType === "banner") await submitBanner();
+			else if (contentType === "assignmentCatalog")
+				throw new Error(
+					"Assignment Catalog submission is not implemented yet (it will eventually write to multiple lists).",
+				);
 			onClose();
 		})().catch((err: unknown) => {
 			const msg = err instanceof Error ? err.message : String(err);
@@ -552,6 +712,10 @@ export function NewPDContentDrawer({
 						>
 							<option value="announcement">Announcement</option>
 							<option value="assignment">Assignment</option>
+							<option value="assignmentCatalog">
+								Assignment Catalog
+							</option>
+							<option value="banner">Banner</option>
 							<option value="pdEvent">Event</option>
 							<option value="procedureChecklist">
 								Procedure Checklist
@@ -734,7 +898,10 @@ export function NewPDContentDrawer({
 									/>
 									{pcPdf ? (
 										<div className="mt-1 text-xs text-slate-600">
-											Selected: <span className="font-medium">{pcPdf.name}</span>
+											Selected:{" "}
+											<span className="font-medium">
+												{pcPdf.name}
+											</span>
 										</div>
 									) : (
 										<div className="mt-1 text-xs text-slate-500">
@@ -742,6 +909,34 @@ export function NewPDContentDrawer({
 										</div>
 									)}
 								</div>
+							</div>
+						</>
+					)}
+
+					{contentType === "assignmentCatalog" && (
+						<>
+							<div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+								This is a draft view only. Submission will
+								eventually write to multiple lists
+								(`AssignmentCatalog`, `AssignmentSteps`,
+								`AssignmentQuizQuestions`).
+							</div>
+							<AssignmentCatalogView
+								value={assignmentCatalogForm}
+								onChange={setAssignmentCatalogForm}
+							/>
+						</>
+					)}
+
+					{contentType === "banner" && (
+						<>
+							<BannerView
+								value={bannerForm}
+								onChange={setBannerForm}
+							/>
+							<div className="text-xs text-slate-500">
+								Saves to `
+								{ENV.LIST_SITESETTINGS || "SiteSettings"}`.
 							</div>
 						</>
 					)}
@@ -861,9 +1056,11 @@ export function NewPDContentDrawer({
 						<button
 							className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
 							onClick={handleSubmit}
-							disabled={busy}
+							disabled={
+								busy || contentType === "assignmentCatalog"
+							}
 						>
-							Create
+							{contentType === "banner" ? "Save" : "Create"}
 						</button>
 					</div>
 				</div>

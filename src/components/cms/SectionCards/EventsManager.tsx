@@ -64,7 +64,7 @@ export function EventsManager({
 					<thead className="bg-slate-50">
 						<tr>
 							{selectionMode && <th className="w-10 px-3 py-2" />}
-							{["Title", "Start", "Location", "Department", ""].map((h) => (
+							{["ID", "Title", "Start", "Owner", "Location", "Department"].map((h) => (
 								<th
 									key={h}
 									className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600"
@@ -93,6 +93,9 @@ export function EventsManager({
 											/>
 										</td>
 									)}
+									<td className="px-4 py-3 text-xs text-slate-600">
+										#{String(it.id)}
+									</td>
 									<td className="px-4 py-3 text-sm text-slate-800">
 										{it.detailsUrl ? (
 											<a
@@ -111,13 +114,13 @@ export function EventsManager({
 										{startLabel}
 									</td>
 									<td className="px-4 py-3 text-sm text-slate-700">
+										{it.author || "—"}
+									</td>
+									<td className="px-4 py-3 text-sm text-slate-700">
 										{it.location || "—"}
 									</td>
 									<td className="px-4 py-3 text-sm text-slate-700">
 										{it.PDDepartment || "—"}
-									</td>
-									<td className="px-4 py-3 text-right text-xs text-slate-600">
-										#{String(it.id)}
 									</td>
 								</tr>
 							);
@@ -125,7 +128,7 @@ export function EventsManager({
 						{!filtered.length && !loading ? (
 							<tr>
 								<td
-									colSpan={selectionMode ? 6 : 5}
+									colSpan={selectionMode ? 7 : 6}
 									className="px-4 py-6 text-sm text-slate-500"
 								>
 									No events found.
