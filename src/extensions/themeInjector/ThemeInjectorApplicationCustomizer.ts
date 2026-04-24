@@ -51,6 +51,56 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 				".ms-HorizontalNavItems",
 			);
 			const container = containers[containers.length - 1];
+			if (!container) return;
+
+			// intercept navbar link click: Use a single capturing click handler so SharePoint's own handlers
+			// (often attached to the anchor) don't win the race and hard-navigate.
+			const handlerKey = "__sbpubdefNavRoleHashHandler";
+			const existing = (container as any)[handlerKey] as
+				| ((e: MouseEvent) => void)
+				| undefined;
+			if (existing)
+				container.removeEventListener("click", existing, {
+					capture: true,
+				} as any);
+
+			const setSelected = (hash: string) => {
+				Array.from(container.querySelectorAll("a span")).forEach(
+					($0: HTMLSpanElement) => $0.classList.remove("is-selected"),
+				);
+				const selected = container.querySelector(
+					`a span[data-role-hash="${CSS.escape(hash)}"]`,
+				) as HTMLSpanElement | null;
+				selected?.classList.add("is-selected");
+			};
+
+			const clickHandler = (e: MouseEvent) => {
+				const target = e.target as Element | null;
+				if (!target) return;
+
+				// Accept clicks anywhere within the anchor/span.
+				const span = target.closest(
+					"a span[data-role-hash]",
+				) as HTMLSpanElement | null;
+				if (!span) return;
+				const hash = span.dataset.roleHash;
+				if (!hash) return;
+
+				e.preventDefault();
+				e.stopPropagation();
+				// In some SP builds, other listeners are on the same element.
+				(e as any).stopImmediatePropagation?.();
+
+				// Update URL hash without letting SP do a full navigation.
+				if (location.hash !== `#${hash}`) location.hash = `#${hash}`;
+				setSelected(hash);
+			};
+
+			(container as any)[handlerKey] = clickHandler;
+			container.addEventListener("click", clickHandler, {
+				capture: true,
+			});
+
 			Array.from(container.querySelectorAll("a span")).forEach(
 				(el: HTMLSpanElement, i) => {
 					const hash = (
@@ -63,17 +113,10 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 							Utils.roleViewPriority(Utils.cachedGroupNames())
 					)
 						el.classList.add("is-selected");
-					el.onmousedown = (e) => {
-						if (!hash) return;
-						e.preventDefault();
-						(el.parentNode as HTMLAnchorElement).href = "#" + hash;
-						Array.from(
-							container.querySelectorAll("a span"),
-						).forEach(($0: HTMLSpanElement, i) =>
-							$0.classList.remove("is-selected"),
-						);
-						el.classList.add("is-selected");
-					};
+					if (hash) el.dataset.roleHash = hash;
+					// Keep the anchor href stable; the click handler will update location.hash.
+					if (hash)
+						(el.parentNode as HTMLAnchorElement).href = `#${hash}`;
 				},
 			);
 		})();
