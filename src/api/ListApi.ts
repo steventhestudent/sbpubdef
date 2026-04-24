@@ -1,5 +1,7 @@
 import { BaseApi, StrategyOpts } from "@api/BaseApi";
 import { IList } from "@pnp/sp/lists";
+import "@pnp/sp/security";
+import { PermissionKind } from "@pnp/sp/security";
 
 export abstract class ListApi<
 	TRow,
@@ -47,5 +49,21 @@ export abstract class ListApi<
 		if (this.listRef) return this.listRef;
 		this.listRef = this.web().lists.getByTitle(this.listName);
 		return this.listRef;
+	}
+
+	async currentUserCanWrite(): Promise<boolean> {
+		try {
+			// "EditListItems" is the minimal permission that enables list item writes/updates.
+			return await this.list().currentUserHasPermissions(
+				PermissionKind.EditListItems,
+			);
+		} catch (e) {
+			// If permissions can't be evaluated (feature/endpoint blocked), default to read-only.
+			console.warn(
+				`Failed to evaluate write permissions for list "${this.listName}"`,
+				e,
+			);
+			return false;
+		}
 	}
 }

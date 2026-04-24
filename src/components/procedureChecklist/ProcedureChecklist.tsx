@@ -10,11 +10,9 @@ import { ProcedureStepItem } from "@type/ProcedureSteps";
 import { ProcedureStepsApi } from "@api/ProcedureChecklist/ProcedureStepsApi";
 
 export function ProcedureChecklist({
-	userGroupNames,
 	pnpWrapper,
-	sourceRole,
 }: RoleBasedViewProps): JSX.Element {
-	const editorMode: boolean = sourceRole === "IT"; //todo: check if user has group that can edit this list
+	const [editorMode, setEditorMode] = React.useState<boolean>(false);
 	const [procedures, setProcedures] = React.useState<
 		ProcedureChecklistItem[]
 	>([]);
@@ -35,6 +33,8 @@ export function ProcedureChecklist({
 	const procedureStepsApi = new ProcedureStepsApi(pnpWrapper);
 
 	const load: () => Promise<void> = async () => {
+		const canWrite = await procedureChecklistApi.currentUserCanWrite();
+		setEditorMode(canWrite);
 		const rows = await procedureChecklistApi.get(150);
 		const mapped = (rows || []).map((item: ProcedureChecklistItem) => ({
 			id: item.id,
