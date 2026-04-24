@@ -5,6 +5,7 @@ import type {
   AssignmentCatalogItem,
   AssignmentStepItem,
   AssignmentQuizQuestion,
+  QuizQuestionType,
   UserAssignmentItem,
 } from "../types/AssignmentTypes";
 
@@ -79,6 +80,10 @@ function getProp<T>(r: Record<string, unknown>, key: string): T | undefined {
 function getFirstDefined<T>(...vals: Array<T | undefined>): T | undefined {
   for (const v of vals) if (v !== undefined && v !== null) return v;
   return undefined;
+}
+
+function toQuizQuestionType(v: unknown): QuizQuestionType {
+  return v === "OpenAnswer" ? "OpenAnswer" : "MultipleChoice";
 }
 
 export class AssignmentsSpService {
@@ -354,7 +359,13 @@ export class AssignmentsSpService {
     limit = 200,
   ): Promise<AssignmentQuizQuestion[]> {
     const list = await this.getListByTitle(
-      (ENV as any).LIST_ASSIGNMENTQUIZQUESTIONS || "AssignmentQuizQuestions",
+      ((): string => {
+        const envVal = (ENV as { LIST_ASSIGNMENTQUIZQUESTIONS?: unknown })
+          .LIST_ASSIGNMENTQUIZQUESTIONS;
+        return typeof envVal === "string" && envVal.trim()
+          ? envVal
+          : "AssignmentQuizQuestions";
+      })(),
     );
 
     // Your quiz list uses a plain Number foreign key `AssignmentCatalogId` (no lookup).
@@ -399,7 +410,7 @@ export class AssignmentsSpService {
           assignmentCatalogId: catalogId,
           questionOrder: order,
           questionText: getProp<string>(r, "QuestionText") ?? "",
-          questionType: (getProp<string>(r, "QuestionType") ?? "MultipleChoice") as any,
+          questionType: toQuizQuestionType(getProp<unknown>(r, "QuestionType")),
           choicesText: getProp<string>(r, "ChoicesText"),
           correctAnswer: getProp<string>(r, "CorrectAnswer"),
           explanation: getProp<string>(r, "Explanation"),

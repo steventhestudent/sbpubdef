@@ -33,14 +33,10 @@
 			},
 			"screenshotPaths": [
 				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/ATTORNEY.jpg",
-				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/CDD.jpg",
-				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/COMPLIANCEOFFICER.jpg",
 				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/EVERYONE.jpg",
 				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/HR.jpg",
 				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/IT.jpg",
-				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/LOP.jpg",
-				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/PDINTRANET.jpg",
-				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/TRIALSUPERVISOR.jpg"
+				"https://raw.githubusercontent.com/steventhestudent/sbpubdef/main/docs/sharepoint-store/screenshots/PDINTRANET.jpg"
 			],
 			"videoUrl": "",
 			"categories": ["Productivity", "Collaboration"]

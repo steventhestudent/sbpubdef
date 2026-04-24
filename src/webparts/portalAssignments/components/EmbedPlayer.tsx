@@ -168,11 +168,11 @@ export function EmbedPlayer({
       if (cancelled) return;
       if (!allowedOrigins.has(ev.origin)) return;
       const raw = ev.data;
-      let msg: any = undefined;
+      let msg: unknown = undefined;
       if (typeof raw === "string") {
         // Many YT messages are JSON strings.
         try {
-          msg = JSON.parse(raw);
+          msg = JSON.parse(raw) as unknown;
         } catch {
           // If it's not JSON, still log for debugging.
           log("yt msg (string)", raw.slice(0, 200));
@@ -180,16 +180,19 @@ export function EmbedPlayer({
         }
       } else if (typeof raw === "object" && raw) {
         // Some environments deliver objects directly.
-        msg = raw;
+        msg = raw as unknown;
       } else {
         return;
       }
 
-      // Debug: show any message we get from YT origins.
-      log("yt msg", msg);
+      const msgObj: Record<string, unknown> | null =
+        typeof msg === "object" && msg ? (msg as Record<string, unknown>) : null;
 
-      if (msg?.event === "onStateChange") {
-        const s = Number(msg?.info);
+      // Debug: show any message we get from YT origins.
+      log("yt msg", msgObj ?? msg);
+
+      if (msgObj?.event === "onStateChange") {
+        const s = Number(msgObj?.info);
         // 1 playing, 2 paused, 0 ended (per iframe API)
         if (s === 1) setYtPlaying(true);
         if (s === 2) setYtPlaying(false);
@@ -202,12 +205,18 @@ export function EmbedPlayer({
       }
 
       // infoDelivery contains currentTime/duration among other things.
-      if (msg?.event === "infoDelivery" && msg?.info) {
-        const info = msg.info;
+      if (msgObj?.event === "infoDelivery" && msgObj?.info) {
+        const info =
+          typeof msgObj.info === "object" && msgObj.info
+            ? (msgObj.info as Record<string, unknown>)
+            : null;
+        if (!info) return;
         const cur =
-          typeof info.currentTime === "number" ? info.currentTime : undefined;
+          typeof info.currentTime === "number"
+            ? (info.currentTime as number)
+            : undefined;
         const dur =
-          typeof info.duration === "number" ? info.duration : undefined;
+          typeof info.duration === "number" ? (info.duration as number) : undefined;
         if (cur !== undefined && cur >= 0) {
           // Infer play/pause: if currentTime advances, we're playing.
           const prev = lastTRef.current || 0;

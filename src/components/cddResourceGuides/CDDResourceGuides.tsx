@@ -303,7 +303,17 @@ export function CDDResourceGuides({
 					const fileData = await filesResponse.json();
 
 					const documents: ICddDocument[] = await Promise.all(
-						fileData.value.map(async (file: any) => {
+						fileData.value.map(
+							async (
+								file: {
+									Name: string;
+									ServerRelativeUrl: string;
+									ListItemAllFields?: {
+										Tags?: string;
+										Label?: string;
+									};
+								},
+							) => {
 							let url = file.ServerRelativeUrl;
 
 							/**
@@ -341,7 +351,8 @@ export function CDDResourceGuides({
 								url,
 								tags,
 							};
-						}),
+						},
+						),
 					);
 
 					const subfolderResponse = await fetch(
@@ -372,7 +383,17 @@ export function CDDResourceGuides({
 						const subFileData = await subFilesResponse.json();
 
 						const subDocuments: ICddDocument[] = await Promise.all(
-							subFileData.value.map(async (file: any) => {
+							subFileData.value.map(
+								async (
+									file: {
+										Name: string;
+										ServerRelativeUrl: string;
+										ListItemAllFields?: {
+											Tags?: string;
+											Label?: string;
+										};
+									},
+								) => {
 								let url = file.ServerRelativeUrl;
 
 								// Same .url handling for subcategory files
@@ -406,7 +427,8 @@ export function CDDResourceGuides({
 									url,
 									tags,
 								};
-							}),
+							},
+							),
 						);
 
 						subcategories.push({

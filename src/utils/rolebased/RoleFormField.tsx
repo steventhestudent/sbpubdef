@@ -7,7 +7,7 @@ export default function RoleFormField({
 }: {
 	value?: string;
 	onChange?: React.ChangeEventHandler<HTMLSelectElement>;
-}) {
+}): JSX.Element {
 	return (
 		<div>
 			<label
