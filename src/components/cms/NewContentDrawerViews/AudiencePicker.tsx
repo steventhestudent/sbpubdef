@@ -33,7 +33,7 @@ export function AudiencePicker({
 	value,
 	onChange,
 	label = "Audience",
-	placeholder = "Type 2+ letters to search roles or people…",
+	placeholder = "role or person…",
 }: {
 	pnpWrapper: PNPWrapper;
 	value: AudienceEntry[];
@@ -66,7 +66,11 @@ export function AudiencePicker({
 				return norm(hay).includes(q);
 			})
 			.slice(0, 8)
-			.map(({ rk, label }) => ({ kind: "role" as const, roleKey: rk, label }));
+			.map(({ rk, label }) => ({
+				kind: "role" as const,
+				roleKey: rk,
+				label,
+			}));
 	}, [query]);
 
 	React.useEffect(() => {
@@ -85,23 +89,34 @@ export function AudiencePicker({
 			let users: Suggestion[] = [];
 			try {
 				const safe = q.replace(/'/g, "''");
-				const rows: Array<{ Email?: string; Title?: string; LoginName?: string }> =
-					await (
-						web as unknown as {
-							siteUsers: {
-								select: (...fields: string[]) => {
-									filter: (f: string) => { top: (n: number) => () => Promise<
-										Array<{ Email?: string; Title?: string; LoginName?: string }>
-									> };
+				const rows: Array<{
+					Email?: string;
+					Title?: string;
+					LoginName?: string;
+				}> = await (
+					web as unknown as {
+						siteUsers: {
+							select: (...fields: string[]) => {
+								filter: (f: string) => {
+									top: (
+										n: number,
+									) => () => Promise<
+										Array<{
+											Email?: string;
+											Title?: string;
+											LoginName?: string;
+										}>
+									>;
 								};
 							};
-						}
-					).siteUsers
-						.select("Email", "Title", "LoginName")
-						.filter(
-							`substringof('${safe}',Title) or substringof('${safe}',Email) or substringof('${safe}',LoginName)`,
-						)
-						.top(10)();
+						};
+					}
+				).siteUsers
+					.select("Email", "Title", "LoginName")
+					.filter(
+						`substringof('${safe}',Title) or substringof('${safe}',Email) or substringof('${safe}',LoginName)`,
+					)
+					.top(10)();
 				users = (rows || [])
 					.map((u) => {
 						const email = (u.Email || "").trim();
@@ -121,10 +136,13 @@ export function AudiencePicker({
 			const combined = uniqBy(
 				[...roleSuggestions, ...users].filter((s) => {
 					const key =
-						s.kind === "role" ? `role:${s.roleKey}` : `user:${s.email}`;
+						s.kind === "role"
+							? `role:${s.roleKey}`
+							: `user:${s.email}`;
 					return !selectedKeys.has(key);
 				}),
-				(s) => (s.kind === "role" ? `role:${s.roleKey}` : `user:${s.email}`),
+				(s) =>
+					s.kind === "role" ? `role:${s.roleKey}` : `user:${s.email}`,
 			);
 
 			if (cancelled) return;
@@ -133,7 +151,11 @@ export function AudiencePicker({
 			setLoading(false);
 		})().catch(() => {
 			if (cancelled) return;
-			setSuggestions(roleSuggestions.filter((s) => !selectedKeys.has(`role:${s.roleKey}`)));
+			setSuggestions(
+				roleSuggestions.filter(
+					(s) => !selectedKeys.has(`role:${s.roleKey}`),
+				),
+			);
 			setLoading(false);
 		});
 
@@ -148,11 +170,17 @@ export function AudiencePicker({
 				? { kind: "role", roleKey: entry.roleKey, label: entry.label }
 				: { kind: "user", email: entry.email, label: entry.label };
 		const key =
-			next.kind === "role" ? `role:${next.roleKey}` : `user:${next.email}`;
+			next.kind === "role"
+				? `role:${next.roleKey}`
+				: `user:${next.email}`;
 		if (selectedKeys.has(key)) return;
 		onChange([...value, next]);
 		setQuery("");
-		setSuggestions(roleSuggestions.filter((s) => !selectedKeys.has(`role:${s.roleKey}`)));
+		setSuggestions(
+			roleSuggestions.filter(
+				(s) => !selectedKeys.has(`role:${s.roleKey}`),
+			),
+		);
 		setActiveIdx(0);
 	}
 
@@ -167,7 +195,9 @@ export function AudiencePicker({
 		}
 		if (e.key === "ArrowDown") {
 			e.preventDefault();
-			setActiveIdx((i) => Math.min(i + 1, Math.max(0, suggestions.length - 1)));
+			setActiveIdx((i) =>
+				Math.min(i + 1, Math.max(0, suggestions.length - 1)),
+			);
 			return;
 		}
 		if (e.key === "ArrowUp") {
@@ -178,13 +208,20 @@ export function AudiencePicker({
 		if (e.key === "Enter" || e.key === "Tab") {
 			if (!suggestions.length) return;
 			e.preventDefault();
-			add(suggestions[Math.max(0, Math.min(activeIdx, suggestions.length - 1))]);
+			add(
+				suggestions[
+					Math.max(0, Math.min(activeIdx, suggestions.length - 1))
+				],
+			);
 		}
 	}
 
 	return (
 		<div>
-			<label className="block text-sm font-medium text-slate-700" htmlFor="audience">
+			<label
+				className="block text-sm font-medium text-slate-700"
+				htmlFor="audience"
+			>
 				{label}
 			</label>
 
@@ -192,11 +229,17 @@ export function AudiencePicker({
 				<div className="flex flex-wrap gap-2">
 					{value.map((v, i) => (
 						<span
-							key={v.kind === "role" ? `role:${v.roleKey}` : `user:${v.email}`}
+							key={
+								v.kind === "role"
+									? `role:${v.roleKey}`
+									: `user:${v.email}`
+							}
 							className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700"
 						>
 							<span className="max-w-[240px] truncate">
-								{v.kind === "role" ? `Dept: ${v.label}` : v.label}
+								{v.kind === "role"
+									? `Dept: ${v.label}`
+									: v.label}
 							</span>
 							<button
 								type="button"
@@ -222,12 +265,18 @@ export function AudiencePicker({
 				{(loading || suggestions.length > 0) && (
 					<div className="mt-2 rounded-md border border-slate-200 bg-white">
 						{loading && (
-							<div className="px-3 py-2 text-xs text-slate-500">Searching…</div>
+							<div className="px-3 py-2 text-xs text-slate-500">
+								Searching…
+							</div>
 						)}
 						{suggestions.map((s, idx) => (
 							<button
 								type="button"
-								key={s.kind === "role" ? `role:${s.roleKey}` : `user:${s.email}`}
+								key={
+									s.kind === "role"
+										? `role:${s.roleKey}`
+										: `user:${s.email}`
+								}
 								onMouseDown={(e) => e.preventDefault()}
 								onClick={() => add(s)}
 								className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-slate-50 ${
@@ -235,7 +284,9 @@ export function AudiencePicker({
 								}`}
 							>
 								<span className="truncate">
-									{s.kind === "role" ? `Dept: ${s.label}` : s.label}
+									{s.kind === "role"
+										? `Dept: ${s.label}`
+										: s.label}
 								</span>
 								<span className="ml-3 text-xs text-slate-500">
 									{idx === activeIdx ? "Tab to add" : ""}
@@ -253,4 +304,3 @@ export function AudiencePicker({
 		</div>
 	);
 }
-

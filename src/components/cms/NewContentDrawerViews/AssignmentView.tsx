@@ -69,7 +69,7 @@ export function AssignmentView({
 				value={value.audience}
 				onChange={(aud) => onChange({ ...value, audience: aud })}
 				label="Audience"
-				placeholder="Type 2+ letters (department or person). Tab adds."
+				placeholder="role or person…"
 			/>
 
 			<div>
