@@ -30,7 +30,7 @@ export function ComplianceResourcesPanel(): JSX.Element {
 							onClick={() => openHref(r.href)}
 							className="flex h-full w-full flex-col rounded-md border border-slate-200 bg-white px-3 py-2.5 text-left text-sm shadow-sm transition hover:border-slate-400 hover:bg-slate-50/80 focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:outline-none"
 						>
-							<span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+							<span className="text-xs font-semibold tracking-wide text-slate-600 uppercase">
 								{r.tag}
 							</span>
 							<span className="mt-1 font-medium text-slate-900">
@@ -47,25 +47,24 @@ export function ComplianceResourcesPanel(): JSX.Element {
 	);
 }
 
-const statusStyles: Record<
-	"operational" | "maintenance" | "planned",
-	string
-> = {
-	operational: "bg-emerald-100 text-emerald-900 ring-emerald-600/30",
-	maintenance: "bg-orange-100 text-orange-950 ring-orange-600/30",
-	planned: "bg-sky-100 text-sky-950 ring-sky-600/30",
-};
+const statusStyles: Record<"operational" | "maintenance" | "planned", string> =
+	{
+		operational: "bg-emerald-100 text-emerald-900 ring-emerald-600/30",
+		maintenance: "bg-orange-100 text-orange-950 ring-orange-600/30",
+		planned: "bg-sky-100 text-sky-950 ring-sky-600/30",
+	};
 
-const statusLabel: Record<
-	"operational" | "maintenance" | "planned",
-	string
-> = {
+const statusLabel: Record<"operational" | "maintenance" | "planned", string> = {
 	operational: "Operational",
 	maintenance: "Maintenance window",
 	planned: "Planned change",
 };
 
-export function ITResourcesPanel({ cmsHref }: { cmsHref: string }): JSX.Element {
+export function ITResourcesPanel({
+	cmsHref,
+}: {
+	cmsHref: string;
+}): JSX.Element {
 	return (
 		<div className="m-4 space-y-4 rounded-lg border border-slate-200 bg-white px-4 py-4 text-slate-900 shadow-sm">
 			<div className="flex flex-wrap items-start justify-between gap-2">
@@ -74,9 +73,9 @@ export function ITResourcesPanel({ cmsHref }: { cmsHref: string }): JSX.Element 
 				</p>
 				<a
 					href={cmsHref}
-					className="shrink-0 rounded border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-medium text-blue-800 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none"
+					className="ml-auto shrink-0 rounded border border-slate-300 bg-slate-50 px-2.5 py-1 text-xs font-medium text-blue-800 hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none"
 				>
-					CMS
+					✎ PD CMS
 				</a>
 			</div>
 			<div className="grid gap-3 sm:grid-cols-2">
@@ -107,10 +106,7 @@ export function ITResourcesPanel({ cmsHref }: { cmsHref: string }): JSX.Element 
 	);
 }
 
-const hrIconGlyph: Record<
-	"people" | "heart" | "calendar" | "doc",
-	string
-> = {
+const hrIconGlyph: Record<"people" | "heart" | "calendar" | "doc", string> = {
 	people: "◎",
 	heart: "♥",
 	calendar: "▦",
@@ -129,7 +125,7 @@ export function HRResourcesPanel(): JSX.Element {
 						<button
 							type="button"
 							onClick={() => openHref(link.href)}
-							className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-rose-50/90 focus-visible:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-inset focus-visible:outline-none"
+							className="flex w-full items-start gap-3 px-4 py-3 text-left transition hover:bg-rose-50/90 focus-visible:bg-rose-50 focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:outline-none focus-visible:ring-inset"
 						>
 							<span
 								className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-100 text-lg text-rose-800"
@@ -139,7 +135,8 @@ export function HRResourcesPanel(): JSX.Element {
 							</span>
 							<span className="min-w-0">
 								<span className="block text-xs font-medium text-rose-700/80">
-									{String(i + 1).padStart(2, "0")} — Quick link
+									{String(i + 1).padStart(2, "0")} — Quick
+									link
 								</span>
 								<span className="mt-0.5 block font-medium text-slate-900">
 									{link.label}
