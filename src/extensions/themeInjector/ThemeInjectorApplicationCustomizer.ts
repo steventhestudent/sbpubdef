@@ -47,6 +47,9 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 		})();
 
 		(function navItemsColor() {
+			const doc = document as Document & Record<string, unknown>;
+			const win = window as unknown as Window & Record<string, unknown>;
+
 			const findActiveContainer = (): Element | null => {
 				const containers = document.querySelectorAll(
 					".ms-HorizontalNavItems",
@@ -57,7 +60,7 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 			const setSelectedInContainer = (
 				container: Element,
 				hash: string,
-			) => {
+			): void => {
 				Array.from(container.querySelectorAll("a span")).forEach(
 					($0: HTMLSpanElement) =>
 						$0.classList.remove("is-selected"),
@@ -81,7 +84,7 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 				}
 			};
 
-			const decorateContainer = (container: Element) => {
+			const decorateContainer = (container: Element): void => {
 				Array.from(container.querySelectorAll("a span")).forEach(
 					(el: HTMLSpanElement) => {
 						const a = el.closest("a") as HTMLAnchorElement | null;
@@ -106,8 +109,8 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 
 			// Document-level capture handler survives SP header re-renders.
 			const docKey = "__sbpubdefNavRoleHashDocHandler";
-			if (!(document as any)[docKey]) {
-				const docClickHandler = (e: MouseEvent) => {
+			if (!doc[docKey]) {
+				const docClickHandler = (e: MouseEvent): void => {
 					const target = e.target as Element | null;
 					if (!target) return;
 
@@ -121,7 +124,7 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 
 					e.preventDefault();
 					e.stopPropagation();
-					(e as any).stopImmediatePropagation?.();
+					e.stopImmediatePropagation();
 
 					if (location.hash !== `#${hash}`)
 						location.hash = `#${hash}`;
@@ -130,7 +133,7 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 					if (container) setSelectedInContainer(container, hash);
 				};
 
-				(document as any)[docKey] = docClickHandler;
+				doc[docKey] = docClickHandler;
 				document.addEventListener("click", docClickHandler, {
 					capture: true,
 				});
@@ -138,12 +141,12 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 
 			// When SP swaps header variants on scroll, re-decorate new nav DOM.
 			const moKey = "__sbpubdefNavRoleHashMO";
-			if (!(window as any)[moKey]) {
+			if (!win[moKey]) {
 				const mo = new MutationObserver(() => {
 					const container = findActiveContainer();
 					if (container) decorateContainer(container);
 				});
-				(window as any)[moKey] = mo;
+				win[moKey] = mo;
 				mo.observe(document.body, {
 					childList: true,
 					subtree: true,
