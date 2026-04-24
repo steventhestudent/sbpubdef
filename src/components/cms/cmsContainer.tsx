@@ -4,15 +4,15 @@ import { SectionCard } from "@components/cms/SectionCard";
 import { TabButton } from "@components/cms/TabButton";
 import { BulkActionsBar } from "@components/cms/BulkActionsBar";
 import { MultiSitePicker } from "@components/cms/MultiSitePicker";
-import { AnnouncementsManager } from "@components/cms/AnnouncementsManager";
-import { EventsManager } from "@components/cms/EventsManager";
-import { FormsManager } from "@components/cms/FormsManager";
-import { TrainingsManager } from "@components/cms/TrainingsManager";
-import { SubmissionsManager } from "@components/cms/SubmissionsManager";
-import { AuditLog } from "@components/cms/AuditLog";
-import { ContentTable } from "@components/cms/ContentTable";
+
+import { AnnouncementsManager } from "@components/cms/SectionCards/AnnouncementsManager";
+import { EventsManager } from "@components/cms/SectionCards/EventsManager";
+import { FormsManager } from "@components/cms/SectionCards/FormsManager";
+import { TrainingsManager } from "@components/cms/SectionCards/TrainingsManager";
+import { SubmissionsManager } from "@components/cms/SectionCards/SubmissionsManager";
+
+import { AuditLog } from "@components/cms/SectionCards/AuditLog";
 import { HelpDrawer } from "@components/cms/HelpDrawer";
-import { mockRows } from "@components/cms/MockRows";
 import { NewPDAnnouncementDrawer } from "@components/cms/NewPDAnnouncementDrawer";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { AnnouncementsApi } from "@api/announcements";
@@ -23,13 +23,7 @@ type TabKey =
 	| "forms"
 	| "trainings"
 	| "submissions"
-	| "publish-queue"
 	| "audit";
-
-export function PublishQueue({ sites }: { sites: string[] }): JSX.Element {
-	const items = mockRows("QUE", 3, { includeStatus: true });
-	return <ContentTable kind="Queued" items={items} sites={sites} query="" />;
-}
 
 /**
  * CMS.aspx Dashboard — Attorney-Facing Content Management
@@ -80,7 +74,7 @@ export const CMSContainer: ({
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
 							placeholder="Search titles, owners, tags…"
-							className="w-64 rounded-md border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+							className="w-64 rounded-md border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:outline-none"
 							aria-label="Search content"
 						/>
 						<button
@@ -139,12 +133,6 @@ export const CMSContainer: ({
 						title="User Submissions"
 						active={activeTab === "submissions"}
 						onClick={() => setActiveTab("submissions")}
-					/>
-					<TabButton
-						id="publish-queue"
-						title="Publish Queue"
-						active={activeTab === "publish-queue"}
-						onClick={() => setActiveTab("publish-queue")}
 					/>
 					<TabButton
 						id="audit"
@@ -219,12 +207,6 @@ export const CMSContainer: ({
 					{activeTab === "submissions" && (
 						<SectionCard title="User Form Submissions">
 							<SubmissionsManager sites={sites} query={query} />
-						</SectionCard>
-					)}
-
-					{activeTab === "publish-queue" && (
-						<SectionCard title="Publish Queue">
-							<PublishQueue sites={sites} />
 						</SectionCard>
 					)}
 
