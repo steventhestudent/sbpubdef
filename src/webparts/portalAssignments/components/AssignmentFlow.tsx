@@ -70,7 +70,7 @@ export function AssignmentFlow({
 	const [quiz, setQuiz] = React.useState<AssignmentQuizQuestion[]>([]);
 	const [answers, setAnswers] = React.useState<Record<number, string>>({});
 	const [quizResult, setQuizResult] = React.useState<
-		{ passed: boolean; scorePercent: number } | undefined
+		{ passed: boolean; scorePercent: number; attemptNumber?: number } | undefined
 	>(undefined);
 	const [submittingQuiz, setSubmittingQuiz] = React.useState(false);
 	const [loading, setLoading] = React.useState(true);
@@ -303,19 +303,40 @@ export function AssignmentFlow({
 				assignment.id,
 				answers,
 			);
+			const merged = mergeAssignment(assignment, patch);
 			setQuizResult({
 				passed: attempt.passed,
 				scorePercent: attempt.scorePercent,
+				attemptNumber: attempt.attemptNumber,
 			});
-			onUpdated(mergeAssignment(assignment, patch));
+			onUpdated(merged);
 
-			// Auto-complete mode
-			if (
-				String(catalog?.finalStepCompletionMode ?? "").toLowerCase() ===
-					"afterquizpass" &&
-				attempt.passed
-			) {
-				// backend may have auto-completed; refresh local model from patch
+			// Same completion path as "Mark Complete" when catalog mode is satisfied after a passing quiz.
+			if (attempt.passed) {
+				const mode = (catalog?.finalStepCompletionMode ?? "")
+					.trim()
+					.toLowerCase();
+				const embedOk = !requiresEmbed || finalEmbedDone;
+				const afterQuizOnly = mode === "afterquizpass";
+				const afterEmbedAndQuiz =
+					/afterfinalembedandquizpass/.test(mode) && embedOk;
+				if (afterQuizOnly || afterEmbedAndQuiz) {
+					setSaving(true);
+					try {
+						const completePatch = await mutations.complete(
+							assignment.id,
+						);
+						onUpdated(mergeAssignment(merged, completePatch));
+					} catch (e: unknown) {
+						const msg =
+							e instanceof Error
+								? e.message
+								: "Failed to finalize assignment after quiz.";
+						setErr(msg);
+					} finally {
+						setSaving(false);
+					}
+				}
 			}
 		} catch (e: unknown) {
 			const msg =
@@ -615,6 +636,15 @@ export function AssignmentFlow({
 										<div className="text-xs text-slate-600">
 											{quizResult ? (
 												<>
+													{quizResult.attemptNumber != null ? (
+														<>
+															Attempt{" "}
+															<span className="font-semibold">
+																{quizResult.attemptNumber}
+															</span>
+															{" · "}
+														</>
+													) : null}
 													Score:{" "}
 													<span className="font-semibold">
 														{

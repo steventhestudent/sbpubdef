@@ -63,5 +63,6 @@ export type QuizAttemptResult = {
   scorePercent: number;
   passed: boolean;
   submittedOn: string;
+  attemptNumber?: number;
 };
 

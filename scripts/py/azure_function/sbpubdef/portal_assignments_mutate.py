@@ -18,15 +18,13 @@ import azure.functions as func
 
 from .entra_jwt import caller_email_from_claims, decode_and_validate_access_token
 from .local_upload import (
+    add_list_item,
     authenticate,
     get_list_id,
     get_list_item,
     get_list_items,
-    get_list_column_names,
     get_site_id,
-    lookup_id_field,
     odata_escape,
-    upsert_list_item,
     update_list_item,
 )
 
@@ -567,22 +565,30 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 passing_i = 70
             passed = score >= passing_i
 
-            # record attempt (upsert latest per assignment+employee)
-            attempt_fields = {
-                "Title": f"{item_id} - {caller_email}",
+            prior = get_list_items(
+                site_id,
+                quiz_attempts_list_id,
+                fields_filter=(
+                    f"fields/EmployeeEmail eq '{odata_escape(caller_email)}' "
+                    f"and fields/{assignment_fk} eq {_odata_number(item_id)}"
+                ),
+                top=999,
+                fields_select=["id"],
+            )
+            attempt_number = len(prior) + 1
+            answers_blob = json.dumps(answers_by_order, ensure_ascii=False, sort_keys=True)
+            attempt_fields: dict[str, Any] = {
+                "Title": f"Attempt {attempt_number} — assignment {item_id}",
                 assignment_fk: item_id,
                 "EmployeeEmail": caller_email,
                 "ScorePercent": score,
                 "Passed": passed,
                 "SubmittedOn": now_iso,
+                "Answers": answers_blob,
             }
-            upsert_list_item(
-                site_id,
-                quiz_attempts_list_id,
-                unique_filter=f"fields/EmployeeEmail eq '{odata_escape(caller_email)}' and fields/{assignment_fk} eq {item_id}",
-                field_data=attempt_fields,
-                fields_select=["EmployeeEmail"],
-            )
+            created = add_list_item(site_id, quiz_attempts_list_id, attempt_fields)
+            if isinstance(created, dict) and created.get("error"):
+                return _json_response({"error": f"Failed to record quiz attempt: {created}"}, status=500)
 
             # If mode allows auto-complete after quiz pass, do it here.
             mode = str(cat_fields.get("FinalStepCompletionMode") or "").strip()
@@ -613,6 +619,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                         "scorePercent": score,
                         "passed": passed,
                         "submittedOn": now_iso,
+                        "attemptNumber": attempt_number,
                     },
                 }
             )

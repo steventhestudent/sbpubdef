@@ -20,6 +20,8 @@ export type QuizAttemptResult = {
 	scorePercent: number;
 	passed: boolean;
 	submittedOn: string;
+	/** 1-based count for this user + assignment (new row each submit). */
+	attemptNumber?: number;
 };
 
 export class AssignmentsMutationsApi {
