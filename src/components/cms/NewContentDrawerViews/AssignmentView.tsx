@@ -3,10 +3,13 @@ import type { PNPWrapper } from "@utils/PNPWrapper";
 
 import type { AudienceEntry } from "./types";
 import { AudiencePicker } from "./AudiencePicker";
+import { AssignmentCatalogPicker } from "./AssignmentCatalogPicker";
 
 export type AssignmentFormState = {
 	title: string;
-	assignmentCatalogId: string;
+	assignmentCatalogId?: number;
+	assignmentCatalogTitle?: string;
+	assignmentCatalogKey?: string;
 	audience: AudienceEntry[];
 	reason: string;
 	assignedDate: string;
@@ -44,25 +47,22 @@ export function AssignmentView({
 				/>
 			</div>
 
-			<div>
-				<label
-					className="block text-sm font-medium text-slate-700"
-					htmlFor="as-catalog"
-				>
-					AssignmentCatalogId
-				</label>
-				<input
-					id="as-catalog"
-					value={value.assignmentCatalogId}
-					onChange={(e) =>
-						onChange({
-							...value,
-							assignmentCatalogId: e.target.value,
-						})
-					}
-					className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-				/>
-			</div>
+			<AssignmentCatalogPicker
+				pnpWrapper={pnpWrapper}
+				value={{
+					id: value.assignmentCatalogId,
+					title: value.assignmentCatalogTitle,
+					assignmentKey: value.assignmentCatalogKey,
+				}}
+				onChange={(sel) =>
+					onChange({
+						...value,
+						assignmentCatalogId: sel.id,
+						assignmentCatalogTitle: sel.title,
+						assignmentCatalogKey: sel.assignmentKey,
+					})
+				}
+			/>
 
 			<AudiencePicker
 				pnpWrapper={pnpWrapper}

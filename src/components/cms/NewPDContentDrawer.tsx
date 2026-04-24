@@ -58,7 +58,9 @@ export function NewPDContentDrawer({
 	const [assignmentForm, setAssignmentForm] =
 		React.useState<AssignmentFormState>({
 			title: "",
-			assignmentCatalogId: "",
+			assignmentCatalogId: undefined,
+			assignmentCatalogTitle: "",
+			assignmentCatalogKey: "",
 			audience: [],
 			reason: "",
 			assignedDate: "",
@@ -90,7 +92,9 @@ export function NewPDContentDrawer({
 
 		setAssignmentForm({
 			title: "",
-			assignmentCatalogId: "",
+			assignmentCatalogId: undefined,
+			assignmentCatalogTitle: "",
+			assignmentCatalogKey: "",
 			audience: [],
 			reason: "",
 			assignedDate: "",
@@ -206,9 +210,9 @@ export function NewPDContentDrawer({
 	async function submitAssignment(): Promise<void> {
 		const title = assignmentForm.title.trim();
 		if (!title) throw new Error("Please enter a title.");
-		const catalogId = Number(assignmentForm.assignmentCatalogId);
+		const catalogId = assignmentForm.assignmentCatalogId;
 		if (!Number.isFinite(catalogId))
-			throw new Error("AssignmentCatalogId must be a number.");
+			throw new Error("Please choose an AssignmentCatalog item.");
 		if (!assignmentForm.audience.length)
 			throw new Error(
 				"Please choose an audience (department or person).",
@@ -235,7 +239,7 @@ export function NewPDContentDrawer({
 			}
 			await web.lists.getByTitle(listTitle).items.add({
 				Title: title,
-				AssignmentCatalogId: catalogId,
+				AssignmentCatalogIdId: catalogId,
 				EmployeeId: employeeId,
 				EmployeeEmail: u.email,
 				Reason: assignmentForm.reason.trim() || undefined,
@@ -253,7 +257,7 @@ export function NewPDContentDrawer({
 		): Promise<void> => {
 			await web.lists.getByTitle(listTitle).items.add({
 				Title: title,
-				AssignmentCatalogId: catalogId,
+				AssignmentCatalogIdId: catalogId,
 				Reason: [
 					assignmentForm.reason.trim(),
 					assignmentForm.reason.trim() ? "" : undefined,
@@ -273,6 +277,11 @@ export function NewPDContentDrawer({
 		for (const a of assignmentForm.audience) {
 			if (a.kind === "user") await createForUser(a);
 			else await createForRole(a);
+		}
+
+		if (assignmentForm.sendEmail) {
+			// TODO: Implement sending email via Azure Function SendEmail (requires API App ID + URL).
+			// We'll wire this up next once we confirm the correct app id/url to use in CMS.
 		}
 	}
 
