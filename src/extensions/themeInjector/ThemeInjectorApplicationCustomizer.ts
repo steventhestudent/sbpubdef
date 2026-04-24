@@ -49,6 +49,23 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 			const doc = document as Document & Record<string, unknown>;
 			const win = window as unknown as Window & Record<string, unknown>;
 
+			const forcedKey = "__sbpubdefForcedRoleHash";
+			const getForcedHash = (): string | null => {
+				try {
+					const v = sessionStorage.getItem(forcedKey);
+					return v && v.length ? v : null;
+				} catch {
+					return null;
+				}
+			};
+			const setForcedHash = (hash: string): void => {
+				try {
+					sessionStorage.setItem(forcedKey, hash);
+				} catch {
+					// ignore
+				}
+			};
+
 			const allContainers = (): Element[] =>
 				Array.from(document.querySelectorAll(".ms-HorizontalNavItems"));
 
@@ -118,12 +135,15 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 					if (span) span.dataset.roleHash = hash;
 				}
 
-				const selectedHash = currentHash();
+				const selectedHash = getForcedHash() ?? currentHash();
 				if (selectedHash)
 					setSelectedInContainer(container, selectedHash);
 			};
 
 			for (const c of allContainers()) decorateContainer(c);
+			// If SP clears the URL hash during header swaps, keep the user's last forced role.
+			const forced = getForcedHash();
+			if (forced && !currentHash()) location.hash = `#${forced}`;
 
 			// Document-level capture handler survives SP header re-renders.
 			const docKey = "__sbpubdefNavRoleHashDocHandler";
@@ -144,6 +164,7 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 					e.stopPropagation();
 					e.stopImmediatePropagation();
 
+					setForcedHash(hash);
 					if (location.hash !== `#${hash}`)
 						location.hash = `#${hash}`;
 
@@ -177,7 +198,7 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 					if (raf) cancelAnimationFrame(raf);
 					raf = requestAnimationFrame(() => {
 						for (const c of allContainers()) decorateContainer(c);
-						const sel = currentHash();
+						const sel = getForcedHash() ?? currentHash();
 						if (sel)
 							for (const c of allContainers())
 								setSelectedInContainer(c, sel);
