@@ -1,4 +1,5 @@
 import * as React from "react";
+import { AadHttpClient } from "@microsoft/sp-http";
 import RoleFormField from "@utils/rolebased/RoleFormField";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { AnnouncementsApi } from "@api/announcements";
@@ -24,13 +25,30 @@ export function NewPDContentDrawer({
 	pnpWrapper: PNPWrapper;
 	defaultContentType?: ContentTypeKey;
 }): JSX.Element {
+	const CONTENT_TYPE_LS_KEY = "cms.newContentDrawer.contentType";
+
+	function getStoredContentType(): ContentTypeKey | undefined {
+		try {
+			const raw = localStorage.getItem(CONTENT_TYPE_LS_KEY) || "";
+			const v = raw.trim() as ContentTypeKey;
+			return v === "announcement" ||
+				v === "procedureChecklist" ||
+				v === "pdEvent" ||
+				v === "assignment"
+				? v
+				: undefined;
+		} catch {
+			return undefined;
+		}
+	}
+
 	const announcementsApi = React.useMemo(
 		() => new AnnouncementsApi(pnpWrapper),
 		[pnpWrapper],
 	);
 
 	const [contentType, setContentType] =
-		React.useState<ContentTypeKey>(defaultContentType);
+		React.useState<ContentTypeKey>(() => getStoredContentType() || defaultContentType);
 	const [busy, setBusy] = React.useState(false);
 
 	// Shared
@@ -72,7 +90,7 @@ export function NewPDContentDrawer({
 	React.useEffect(() => {
 		if (!open) return;
 		setBusy(false);
-		setContentType(defaultContentType);
+		setContentType(getStoredContentType() || defaultContentType);
 		setDepartment("EVERYONE");
 
 		setAnnTitle("");
@@ -103,6 +121,14 @@ export function NewPDContentDrawer({
 			sendEmail: false,
 		});
 	}, [open, defaultContentType]);
+
+	React.useEffect(() => {
+		try {
+			localStorage.setItem(CONTENT_TYPE_LS_KEY, contentType);
+		} catch {
+			// ignore
+		}
+	}, [contentType]);
 
 	function stripToText(html: string, maxLen = 240): string {
 		const div = document.createElement("div");
@@ -219,37 +245,108 @@ export function NewPDContentDrawer({
 			);
 
 		const web = pnpWrapper.web();
-		const listTitle = ENV.LIST_ASSIGNMENTS || "Assignments1";
-		const nowIso = new Date().toISOString();
 
-		const createForUser = async (
-			u: Extract<AudienceEntry, { kind: "user" }>,
-		): Promise<void> => {
-			let employeeId: number | undefined = undefined;
+		function normalizeTitle(input: string): string {
+			return input.replace(/\s+/g, "").trim().toLowerCase();
+		}
+		function candidateTitles(input: string): string[] {
+			const raw = input.trim();
+			const cands = new Set<string>();
+			if (raw) cands.add(raw);
+			const spacedDigits = raw.replace(/([a-zA-Z])(\d+)/g, "$1 $2");
+			if (spacedDigits !== raw) cands.add(spacedDigits);
+			const stripped = raw.replace(/\d+$/, "");
+			if (stripped && stripped !== raw) cands.add(stripped);
+			const strippedSpaced = stripped.replace(/([a-zA-Z])(\d+)/g, "$1 $2");
+			if (strippedSpaced && strippedSpaced !== stripped) cands.add(strippedSpaced);
+			return Array.from(cands);
+		}
+		async function resolveListTitle(title: string): Promise<string> {
+			const key = title.trim();
 			try {
+				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+				await web.lists.getByTitle(key).select("Id")();
+				return key;
+			} catch {
+				// fall through
+			}
+			const all: Array<{ Title: string }> = await web.lists.select("Title")();
+			const candidates = candidateTitles(key);
+			const candidateNorms = candidates.map((c) => normalizeTitle(c));
+
+			for (const c of candidates) {
+				const exact = all.find(
+					(l) => String(l?.Title ?? "").trim().toLowerCase() === c.toLowerCase(),
+				);
+				if (exact?.Title) return exact.Title;
+			}
+			for (const wantedNorm of candidateNorms) {
+				const normMatch = all.find(
+					(l) => normalizeTitle(String(l?.Title ?? "")) === wantedNorm,
+				);
+				if (normMatch?.Title) return normMatch.Title;
+			}
+			const stripped = key.replace(/\d+$/, "");
+			const strippedNorm = stripped ? normalizeTitle(stripped) : "";
+			if (strippedNorm) {
+				const starts = all.find((l) =>
+					normalizeTitle(String(l?.Title ?? "")).startsWith(strippedNorm),
+				);
+				if (starts?.Title) return starts.Title;
+			}
+			return key;
+		}
+
+		const listTitle = await resolveListTitle(
+			ENV.LIST_ASSIGNMENTS || "Assignments1",
+		);
+		const nowIso = new Date().toISOString();
+		const assignedIso = assignmentForm.assignedDate
+			? new Date(assignmentForm.assignedDate).toISOString()
+			: nowIso;
+		const dueIso = assignmentForm.dueDate
+			? new Date(assignmentForm.dueDate).toISOString()
+			: undefined;
+
+		let assignedById: number | undefined = undefined;
+		try {
+			const meEmail = (pnpWrapper.ctx.pageContext.user.email || "").trim();
+			if (meEmail) {
 				const ensured = await (
 					web as unknown as {
 						ensureUser: (email: string) => Promise<{ Id?: number }>;
 					}
-				).ensureUser(u.email);
-				employeeId =
+				).ensureUser(meEmail);
+				assignedById =
 					typeof ensured?.Id === "number" ? ensured.Id : undefined;
-			} catch {
-				employeeId = undefined;
 			}
-			await web.lists.getByTitle(listTitle).items.add({
+		} catch {
+			assignedById = undefined;
+		}
+
+		const createForUser = async (
+			u: Extract<AudienceEntry, { kind: "user" }>,
+		): Promise<{ email: string; assignmentId?: number }> => {
+			const addRes = await web.lists.getByTitle(listTitle).items.add({
 				Title: title,
 				AssignmentCatalogIdId: catalogId,
-				EmployeeId: employeeId,
 				EmployeeEmail: u.email,
 				Reason: assignmentForm.reason.trim() || undefined,
-				AssignedBy: pnpWrapper.ctx.pageContext.user.displayName,
-				AssignedDate: assignmentForm.assignedDate || nowIso,
-				DueDate: assignmentForm.dueDate || undefined,
+				AssignedById: assignedById,
+				AssignedDate: assignedIso,
+				DueDate: dueIso,
 				Statuc: "Not Started",
 				CalendarEventCreated: assignmentForm.createCalendarEvent,
 				AssignmentEmailSent: assignmentForm.sendEmail,
 			});
+			const assignmentId =
+				typeof (addRes as unknown as { Id?: number }).Id === "number"
+					? (addRes as unknown as { Id: number }).Id
+					: typeof (addRes as unknown as { data?: { Id?: number } }).data?.Id ===
+							"number"
+						? (addRes as unknown as { data: { Id: number } }).data.Id
+						: undefined;
+			return { email: u.email, assignmentId };
 		};
 
 		const createForRole = async (
@@ -265,23 +362,101 @@ export function NewPDContentDrawer({
 				]
 					.filter(Boolean)
 					.join("\n"),
-				AssignedBy: pnpWrapper.ctx.pageContext.user.displayName,
-				AssignedDate: assignmentForm.assignedDate || nowIso,
-				DueDate: assignmentForm.dueDate || undefined,
+				AssignedById: assignedById,
+				AssignedDate: assignedIso,
+				DueDate: dueIso,
 				Statuc: "Not Started",
 				CalendarEventCreated: assignmentForm.createCalendarEvent,
 				AssignmentEmailSent: assignmentForm.sendEmail,
 			});
 		};
 
+		const createdForUsers: Array<{ email: string; assignmentId?: number }> = [];
+		const roleAudience: Array<Extract<AudienceEntry, { kind: "role" }>> = [];
+
 		for (const a of assignmentForm.audience) {
-			if (a.kind === "user") await createForUser(a);
-			else await createForRole(a);
+			if (a.kind === "user") createdForUsers.push(await createForUser(a));
+			else {
+				roleAudience.push(a);
+				await createForRole(a);
+			}
 		}
 
 		if (assignmentForm.sendEmail) {
-			// TODO: Implement sending email via Azure Function SendEmail (requires API App ID + URL).
-			// We'll wire this up next once we confirm the correct app id/url to use in CMS.
+			const base = (ENV.FUNCTION_BASE_URL || "").replace(/\/$/, "");
+			if (!base) throw new Error("ENV.FUNCTION_BASE_URL is not set.");
+			const appId = (ENV.FUNCTION_API_APP_ID || "").trim();
+			if (!appId) throw new Error("ENV.FUNCTION_API_APP_ID is not set.");
+
+			const toEmails = createdForUsers.map((c) => c.email).filter(Boolean);
+			if (!toEmails.length) {
+				alert(
+					"Send Email is enabled, but no individual people were selected (only departments). Emails were not sent.",
+				);
+				return;
+			}
+
+			const url = `${base}/api/SendEmail`;
+			const client: AadHttpClient =
+				await pnpWrapper.ctx.aadHttpClientFactory.getClient(appId);
+
+			const due = assignmentForm.dueDate ? `Due: ${assignmentForm.dueDate}` : "";
+			const reason = assignmentForm.reason?.trim() ? assignmentForm.reason.trim() : "";
+			const cat =
+				assignmentForm.assignmentCatalogTitle?.trim() ||
+				assignmentForm.assignmentCatalogKey?.trim() ||
+				`Catalog #${catalogId}`;
+
+			const deptNote = roleAudience.length
+				? `<div style="margin-top:8px; color:#64748b; font-size:12px;">Note: Department audience selected (${roleAudience
+						.map((r) => r.label)
+						.join(", ")}). Bulk member expansion is not yet enabled in CMS, so only individually-selected people received this email.</div>`
+				: "";
+
+			const itemLinks = createdForUsers
+				.filter((c) => typeof c.assignmentId === "number" && Number.isFinite(c.assignmentId))
+				.map((c) => {
+					const href = `${window.location.origin}${pnpWrapper.ctx.pageContext.web.serverRelativeUrl}/Lists/${encodeURIComponent(listTitle)}/DispForm.aspx?ID=${c.assignmentId}`;
+					return `<li><a href="${href}">Assignment item #${c.assignmentId}</a> (${c.email})</li>`;
+				})
+				.join("");
+
+			const body = [
+				`<div style="font-family:Segoe UI, Arial, sans-serif; font-size:14px;">`,
+				`<div><b>New assignment:</b> ${title}</div>`,
+				`<div><b>Catalog:</b> ${cat}</div>`,
+				due ? `<div><b>${due}</b></div>` : "",
+				reason ? `<div style="margin-top:8px;"><b>Reason:</b><br/>${reason}</div>` : "",
+				itemLinks
+					? `<div style="margin-top:10px;"><b>Links</b><ul>${itemLinks}</ul></div>`
+					: "",
+				deptNote,
+				`</div>`,
+			]
+				.filter(Boolean)
+				.join("");
+
+			const payload = {
+				to_email: toEmails,
+				subject: `New assignment: ${title}`,
+				body,
+				content_type: "HTML",
+			};
+
+			const response = await client.post(
+				url,
+				AadHttpClient.configurations.v1,
+				{
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(payload),
+				},
+			);
+			if (!response.ok) {
+				const errText = await response.text().catch(() => "");
+				throw new Error(
+					`Failed to send email via function (${response.status}) ${errText}`,
+				);
+			}
 		}
 	}
 
@@ -354,7 +529,7 @@ export function NewPDContentDrawer({
 							<option value="assignment">Assignment</option>
 							<option value="pdEvent">Event</option>
 							<option value="procedureChecklist">
-								Procedure checklist (PDF)
+								Procedure Checklist
 							</option>
 						</select>
 					</div>
