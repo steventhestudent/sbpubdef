@@ -2,8 +2,14 @@ import * as React from "react";
 import RoleFormField from "@utils/rolebased/RoleFormField";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { AnnouncementsApi } from "@api/announcements";
-import { AssignmentView, type AssignmentFormState } from "./NewContentDrawerViews/AssignmentView";
-import type { AudienceEntry, ContentTypeKey } from "./NewContentDrawerViews/types";
+import {
+	AssignmentView,
+	type AssignmentFormState,
+} from "./NewContentDrawerViews/AssignmentView";
+import type {
+	AudienceEntry,
+	ContentTypeKey,
+} from "./NewContentDrawerViews/types";
 
 export function NewPDContentDrawer({
 	open,
@@ -49,16 +55,17 @@ export function NewPDContentDrawer({
 	const [evAllDay, setEvAllDay] = React.useState(false);
 
 	// Assignment
-	const [assignmentForm, setAssignmentForm] = React.useState<AssignmentFormState>({
-		title: "",
-		assignmentCatalogId: "",
-		audience: [],
-		reason: "",
-		assignedDate: "",
-		dueDate: "",
-		createCalendarEvent: false,
-		sendEmail: false,
-	});
+	const [assignmentForm, setAssignmentForm] =
+		React.useState<AssignmentFormState>({
+			title: "",
+			assignmentCatalogId: "",
+			audience: [],
+			reason: "",
+			assignedDate: "",
+			dueDate: "",
+			createCalendarEvent: false,
+			sendEmail: false,
+		});
 
 	React.useEffect(() => {
 		if (!open) return;
@@ -203,17 +210,26 @@ export function NewPDContentDrawer({
 		if (!Number.isFinite(catalogId))
 			throw new Error("AssignmentCatalogId must be a number.");
 		if (!assignmentForm.audience.length)
-			throw new Error("Please choose an audience (department or person).");
+			throw new Error(
+				"Please choose an audience (department or person).",
+			);
 
 		const web = pnpWrapper.web();
 		const listTitle = ENV.LIST_ASSIGNMENTS || "Assignments1";
 		const nowIso = new Date().toISOString();
 
-		const createForUser = async (u: Extract<AudienceEntry, { kind: "user" }>): Promise<void> => {
+		const createForUser = async (
+			u: Extract<AudienceEntry, { kind: "user" }>,
+		): Promise<void> => {
 			let employeeId: number | undefined = undefined;
 			try {
-				const ensured = await (web as unknown as { ensureUser: (email: string) => Promise<{ Id?: number }> }).ensureUser(u.email);
-				employeeId = typeof ensured?.Id === "number" ? ensured.Id : undefined;
+				const ensured = await (
+					web as unknown as {
+						ensureUser: (email: string) => Promise<{ Id?: number }>;
+					}
+				).ensureUser(u.email);
+				employeeId =
+					typeof ensured?.Id === "number" ? ensured.Id : undefined;
 			} catch {
 				employeeId = undefined;
 			}
@@ -232,7 +248,9 @@ export function NewPDContentDrawer({
 			});
 		};
 
-		const createForRole = async (r: Extract<AudienceEntry, { kind: "role" }>): Promise<void> => {
+		const createForRole = async (
+			r: Extract<AudienceEntry, { kind: "role" }>,
+		): Promise<void> => {
 			await web.lists.getByTitle(listTitle).items.add({
 				Title: title,
 				AssignmentCatalogId: catalogId,
@@ -324,11 +342,11 @@ export function NewPDContentDrawer({
 							className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
 						>
 							<option value="announcement">Announcement</option>
+							<option value="assignment">Assignment</option>
+							<option value="pdEvent">Event</option>
 							<option value="procedureChecklist">
 								Procedure checklist (PDF)
 							</option>
-							<option value="pdEvent">PD event</option>
-							<option value="assignment">Assignment</option>
 						</select>
 					</div>
 

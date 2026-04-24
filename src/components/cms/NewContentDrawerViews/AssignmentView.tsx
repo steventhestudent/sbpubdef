@@ -30,13 +30,16 @@ export function AssignmentView({
 				<label
 					className="block text-sm font-medium text-slate-700"
 					htmlFor="as-title"
+					title="How the user sees the assignment."
 				>
 					Title
 				</label>
 				<input
 					id="as-title"
 					value={value.title}
-					onChange={(e) => onChange({ ...value, title: e.target.value })}
+					onChange={(e) =>
+						onChange({ ...value, title: e.target.value })
+					}
 					className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
 				/>
 			</div>
@@ -52,7 +55,10 @@ export function AssignmentView({
 					id="as-catalog"
 					value={value.assignmentCatalogId}
 					onChange={(e) =>
-						onChange({ ...value, assignmentCatalogId: e.target.value })
+						onChange({
+							...value,
+							assignmentCatalogId: e.target.value,
+						})
 					}
 					className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
 				/>
@@ -76,7 +82,9 @@ export function AssignmentView({
 				<input
 					id="as-reason"
 					value={value.reason}
-					onChange={(e) => onChange({ ...value, reason: e.target.value })}
+					onChange={(e) =>
+						onChange({ ...value, reason: e.target.value })
+					}
 					className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
 				/>
 			</div>
@@ -110,7 +118,9 @@ export function AssignmentView({
 						id="as-due-date"
 						type="date"
 						value={value.dueDate}
-						onChange={(e) => onChange({ ...value, dueDate: e.target.value })}
+						onChange={(e) =>
+							onChange({ ...value, dueDate: e.target.value })
+						}
 						className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
 					/>
 				</div>
@@ -126,7 +136,10 @@ export function AssignmentView({
 						type="checkbox"
 						checked={value.createCalendarEvent}
 						onChange={(e) =>
-							onChange({ ...value, createCalendarEvent: e.target.checked })
+							onChange({
+								...value,
+								createCalendarEvent: e.target.checked,
+							})
 						}
 						className="h-4 w-4 rounded border-slate-300"
 					/>
@@ -151,4 +164,3 @@ export function AssignmentView({
 		</>
 	);
 }
-
