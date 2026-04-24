@@ -2,12 +2,8 @@ import * as React from "react";
 import RoleFormField from "@utils/rolebased/RoleFormField";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { AnnouncementsApi } from "@api/announcements";
-
-type ContentTypeKey =
-	| "announcement"
-	| "procedureChecklist"
-	| "pdEvent"
-	| "assignment";
+import { AssignmentView, type AssignmentFormState } from "./NewContentDrawerViews/AssignmentView";
+import type { AudienceEntry, ContentTypeKey } from "./NewContentDrawerViews/types";
 
 export function NewPDContentDrawer({
 	open,
@@ -53,16 +49,16 @@ export function NewPDContentDrawer({
 	const [evAllDay, setEvAllDay] = React.useState(false);
 
 	// Assignment
-	const [asTitle, setAsTitle] = React.useState("");
-	const [asCatalogId, setAsCatalogId] = React.useState("");
-	const [asEmployeeName, setAsEmployeeName] = React.useState("");
-	const [asEmployeeEmail, setAsEmployeeEmail] = React.useState("");
-	const [asReason, setAsReason] = React.useState("");
-	const [asAssignedDate, setAsAssignedDate] = React.useState("");
-	const [asDueDate, setAsDueDate] = React.useState("");
-	const [asCreateCalendarEvent, setAsCreateCalendarEvent] =
-		React.useState(false);
-	const [asSendEmail, setAsSendEmail] = React.useState(false);
+	const [assignmentForm, setAssignmentForm] = React.useState<AssignmentFormState>({
+		title: "",
+		assignmentCatalogId: "",
+		audience: [],
+		reason: "",
+		assignedDate: "",
+		dueDate: "",
+		createCalendarEvent: false,
+		sendEmail: false,
+	});
 
 	React.useEffect(() => {
 		if (!open) return;
@@ -85,15 +81,16 @@ export function NewPDContentDrawer({
 		setEvLocation("");
 		setEvAllDay(false);
 
-		setAsTitle("");
-		setAsCatalogId("");
-		setAsEmployeeName("");
-		setAsEmployeeEmail("");
-		setAsReason("");
-		setAsAssignedDate("");
-		setAsDueDate("");
-		setAsCreateCalendarEvent(false);
-		setAsSendEmail(false);
+		setAssignmentForm({
+			title: "",
+			assignmentCatalogId: "",
+			audience: [],
+			reason: "",
+			assignedDate: "",
+			dueDate: "",
+			createCalendarEvent: false,
+			sendEmail: false,
+		});
 	}, [open, defaultContentType]);
 
 	function stripToText(html: string, maxLen = 240): string {
@@ -200,31 +197,65 @@ export function NewPDContentDrawer({
 	}
 
 	async function submitAssignment(): Promise<void> {
-		const title = asTitle.trim();
+		const title = assignmentForm.title.trim();
 		if (!title) throw new Error("Please enter a title.");
-		const catalogId = Number(asCatalogId);
+		const catalogId = Number(assignmentForm.assignmentCatalogId);
 		if (!Number.isFinite(catalogId))
 			throw new Error("AssignmentCatalogId must be a number.");
-		if (!asEmployeeEmail.trim())
-			throw new Error("Please enter an employee email.");
+		if (!assignmentForm.audience.length)
+			throw new Error("Please choose an audience (department or person).");
 
+		const web = pnpWrapper.web();
 		const listTitle = ENV.LIST_ASSIGNMENTS || "Assignments1";
-		await pnpWrapper
-			.web()
-			.lists.getByTitle(listTitle)
-			.items.add({
+		const nowIso = new Date().toISOString();
+
+		const createForUser = async (u: Extract<AudienceEntry, { kind: "user" }>): Promise<void> => {
+			let employeeId: number | undefined = undefined;
+			try {
+				const ensured = await (web as unknown as { ensureUser: (email: string) => Promise<{ Id?: number }> }).ensureUser(u.email);
+				employeeId = typeof ensured?.Id === "number" ? ensured.Id : undefined;
+			} catch {
+				employeeId = undefined;
+			}
+			await web.lists.getByTitle(listTitle).items.add({
 				Title: title,
 				AssignmentCatalogId: catalogId,
-				Employee: asEmployeeName.trim() || undefined,
-				EmployeeEmail: asEmployeeEmail.trim(),
-				Reason: asReason.trim() || undefined,
+				EmployeeId: employeeId,
+				EmployeeEmail: u.email,
+				Reason: assignmentForm.reason.trim() || undefined,
 				AssignedBy: pnpWrapper.ctx.pageContext.user.displayName,
-				AssignedDate: asAssignedDate || new Date().toISOString(),
-				DueDate: asDueDate || undefined,
+				AssignedDate: assignmentForm.assignedDate || nowIso,
+				DueDate: assignmentForm.dueDate || undefined,
 				Statuc: "Not Started",
-				CalendarEventCreated: asCreateCalendarEvent,
-				AssignmentEmailSent: asSendEmail,
+				CalendarEventCreated: assignmentForm.createCalendarEvent,
+				AssignmentEmailSent: assignmentForm.sendEmail,
 			});
+		};
+
+		const createForRole = async (r: Extract<AudienceEntry, { kind: "role" }>): Promise<void> => {
+			await web.lists.getByTitle(listTitle).items.add({
+				Title: title,
+				AssignmentCatalogId: catalogId,
+				Reason: [
+					assignmentForm.reason.trim(),
+					assignmentForm.reason.trim() ? "" : undefined,
+					`Audience: Dept=${r.roleKey} (${r.label})`,
+				]
+					.filter(Boolean)
+					.join("\n"),
+				AssignedBy: pnpWrapper.ctx.pageContext.user.displayName,
+				AssignedDate: assignmentForm.assignedDate || nowIso,
+				DueDate: assignmentForm.dueDate || undefined,
+				Statuc: "Not Started",
+				CalendarEventCreated: assignmentForm.createCalendarEvent,
+				AssignmentEmailSent: assignmentForm.sendEmail,
+			});
+		};
+
+		for (const a of assignmentForm.audience) {
+			if (a.kind === "user") await createForUser(a);
+			else await createForRole(a);
+		}
 	}
 
 	function handleSubmit(): void {
@@ -561,143 +592,11 @@ export function NewPDContentDrawer({
 					)}
 
 					{contentType === "assignment" && (
-						<>
-							<div>
-								<label
-									className="block text-sm font-medium text-slate-700"
-									htmlFor="as-title"
-								>
-									Title
-								</label>
-								<input
-									id="as-title"
-									value={asTitle}
-									onChange={(e) => setAsTitle(e.target.value)}
-									className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-								/>
-							</div>
-							<div className="grid grid-cols-2 gap-3">
-								<div>
-									<label
-										className="block text-sm font-medium text-slate-700"
-										htmlFor="as-emp-name"
-									>
-										Employee
-									</label>
-									<input
-										id="as-emp-name"
-										value={asEmployeeName}
-										onChange={(e) =>
-											setAsEmployeeName(e.target.value)
-										}
-										className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-									/>
-								</div>
-								<div>
-									<label
-										className="block text-sm font-medium text-slate-700"
-										htmlFor="as-emp-email"
-									>
-										EmployeeEmail
-									</label>
-									<input
-										id="as-emp-email"
-										value={asEmployeeEmail}
-										onChange={(e) =>
-											setAsEmployeeEmail(e.target.value)
-										}
-										className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-									/>
-								</div>
-							</div>
-							<div>
-								<label
-									className="block text-sm font-medium text-slate-700"
-									htmlFor="as-reason"
-								>
-									Reason
-								</label>
-								<input
-									id="as-reason"
-									value={asReason}
-									onChange={(e) =>
-										setAsReason(e.target.value)
-									}
-									className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-								/>
-							</div>
-							<div className="grid grid-cols-2 gap-3">
-								<div>
-									<label
-										className="block text-sm font-medium text-slate-700"
-										htmlFor="as-assigned-date"
-									>
-										AssignedDate
-									</label>
-									<input
-										id="as-assigned-date"
-										type="date"
-										value={asAssignedDate}
-										onChange={(e) =>
-											setAsAssignedDate(e.target.value)
-										}
-										className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-									/>
-								</div>
-								<div>
-									<label
-										className="block text-sm font-medium text-slate-700"
-										htmlFor="as-due-date"
-									>
-										DueDate
-									</label>
-									<input
-										id="as-due-date"
-										type="date"
-										value={asDueDate}
-										onChange={(e) =>
-											setAsDueDate(e.target.value)
-										}
-										className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-									/>
-								</div>
-							</div>
-
-							<div className="space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-								<label
-									className="flex items-center gap-2 text-sm text-slate-700"
-									htmlFor="as-cal"
-								>
-									<input
-										id="as-cal"
-										type="checkbox"
-										checked={asCreateCalendarEvent}
-										onChange={(e) =>
-											setAsCreateCalendarEvent(
-												e.target.checked,
-											)
-										}
-										className="h-4 w-4 rounded border-slate-300"
-									/>
-									<span>Create Calendar Event?</span>
-								</label>
-								<label
-									className="flex items-center gap-2 text-sm text-slate-700"
-									htmlFor="as-email"
-								>
-									<input
-										id="as-email"
-										type="checkbox"
-										checked={asSendEmail}
-										onChange={(e) =>
-											setAsSendEmail(e.target.checked)
-										}
-										className="h-4 w-4 rounded border-slate-300"
-									/>
-									<span>Send Email?</span>
-								</label>
-							</div>
-						</>
+						<AssignmentView
+							pnpWrapper={pnpWrapper}
+							value={assignmentForm}
+							onChange={setAssignmentForm}
+						/>
 					)}
 
 					<div className="flex items-center justify-end gap-2 pt-2">
