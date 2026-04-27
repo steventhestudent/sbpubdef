@@ -2,37 +2,31 @@ import "@pnp/sp/items";
 import "@pnp/sp/lists";
 import type { PNPWrapper } from "@utils/PNPWrapper";
 import type {
-  AssignmentCatalogItem,
-  AssignmentStepItem,
-  AssignmentQuizQuestion,
-  QuizQuestionType,
-  UserAssignmentItem,
+	AssignmentCatalogItem,
+	AssignmentStepItem,
+	AssignmentQuizQuestion,
+	QuizQuestionType,
+	UserAssignmentItem,
 } from "../types/AssignmentTypes";
 
-type ListNameConfig = {
-  assignments: string;
-  catalog: string;
-  steps: string;
-};
-
 function toYesNo(v: unknown): boolean | undefined {
-  if (typeof v === "boolean") return v;
-  if (typeof v === "number") return v !== 0;
-  if (typeof v === "string") {
-    const s = v.trim().toLowerCase();
-    if (s === "true" || s === "yes" || s === "1") return true;
-    if (s === "false" || s === "no" || s === "0") return false;
-  }
-  return undefined;
+	if (typeof v === "boolean") return v;
+	if (typeof v === "number") return v !== 0;
+	if (typeof v === "string") {
+		const s = v.trim().toLowerCase();
+		if (s === "true" || s === "yes" || s === "1") return true;
+		if (s === "false" || s === "no" || s === "0") return false;
+	}
+	return undefined;
 }
 
 function safeNumber(v: unknown): number | undefined {
-  if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (typeof v === "string" && v.trim() !== "") {
-    const n = Number(v);
-    if (Number.isFinite(n)) return n;
-  }
-  return undefined;
+	if (typeof v === "number" && Number.isFinite(v)) return v;
+	if (typeof v === "string" && v.trim() !== "") {
+		const n = Number(v);
+		if (Number.isFinite(n)) return n;
+	}
+	return undefined;
 }
 
 /**
@@ -43,439 +37,389 @@ function safeNumber(v: unknown): number | undefined {
  *
  * This normalizes to a UI-friendly 0..100 number.
  */
-function normalizePercentCompleteFromSharePoint(raw: number | undefined): number | undefined {
-  if (raw === undefined) return undefined;
-  if (!Number.isFinite(raw)) return undefined;
+function normalizePercentCompleteFromSharePoint(
+	raw: number | undefined,
+): number | undefined {
+	if (raw === undefined) return undefined;
+	if (!Number.isFinite(raw)) return undefined;
 
-  let n = raw;
-  // Unwind accidental repeated "% scaling" (10000 -> 100, 5000 -> 50, etc.)
-  while (n > 100) {
-    n = n / 100;
-  }
+	let n = raw;
+	while (n > 100) {
+		n = n / 100;
+	}
 
-  // 0..1 (inclusive) => percent
-  if (n > 0 && n <= 1) {
-    return Math.round(n * 100);
-  }
+	if (n > 0 && n <= 1) {
+		return Math.round(n * 100);
+	}
 
-  return Math.round(n);
+	return Math.round(n);
 }
 
 function normalizeEmbedUrls(raw: unknown): string[] {
-  if (!raw) return [];
-  if (Array.isArray(raw)) return raw.map(String).map((s) => s.trim()).filter(Boolean);
-  if (typeof raw === "string") {
-    return raw
-      .split(/\r?\n/g)
-      .map((s) => s.trim())
-      .filter(Boolean);
-  }
-  return [String(raw)].map((s) => s.trim()).filter(Boolean);
+	if (!raw) return [];
+	if (Array.isArray(raw)) {
+		return raw
+			.map(String)
+			.map((s) => s.trim())
+			.filter(Boolean);
+	}
+	if (typeof raw === "string") {
+		return raw
+			.split(/\r?\n/g)
+			.map((s) => s.trim())
+			.filter(Boolean);
+	}
+	return [String(raw)].map((s) => s.trim()).filter(Boolean);
 }
 
 function getProp<T>(r: Record<string, unknown>, key: string): T | undefined {
-  return r[key] as T | undefined;
+	return r[key] as T | undefined;
 }
 
 function getFirstDefined<T>(...vals: Array<T | undefined>): T | undefined {
-  for (const v of vals) if (v !== undefined && v !== null) return v;
-  return undefined;
+	for (const v of vals) {
+		if (v !== undefined && v !== null) return v;
+	}
+	return undefined;
 }
 
 function toQuizQuestionType(v: unknown): QuizQuestionType {
-  return v === "OpenAnswer" ? "OpenAnswer" : "MultipleChoice";
+	return v === "OpenAnswer" ? "OpenAnswer" : "MultipleChoice";
 }
 
 export class AssignmentsSpService {
-  private pnp: PNPWrapper;
-  private lists: ListNameConfig;
-  private resolvedTitles = new Map<string, string>();
+	private pnp: PNPWrapper;
+	constructor(pnpWrapper: PNPWrapper) {
+		this.pnp = pnpWrapper;
+	}
 
-  constructor(pnpWrapper: PNPWrapper, lists?: Partial<ListNameConfig>) {
-    this.pnp = pnpWrapper;
-    // Dev-friendly: default to ENV but allow overrides and fallbacks
-    this.lists = {
-      assignments: lists?.assignments || ENV.LIST_ASSIGNMENTS || "Assignments",
-      catalog: lists?.catalog || ENV.LIST_ASSIGNMENTCATALOG || "AssignmentCatalog",
-      steps: lists?.steps || ENV.LIST_ASSIGNMENTSTEPS || "AssignmentSteps",
-    };
-  }
+	private web(): ReturnType<PNPWrapper["web"]> {
+		return this.pnp.web();
+	}
 
-  private web(): ReturnType<PNPWrapper["web"]> {
-    return this.pnp.web(); // current web
-  }
+	public statusFieldName(): string {
+		return ENV.INTERNALCOLUMN_ASSIGNMENTSTATUS?.trim() || "Status";
+	}
 
-  private normalizeTitle(input: string): string {
-    return input.replace(/\s+/g, "").trim().toLowerCase();
-  }
+	private embedCompletionFieldName(): string {
+		return ENV.INTERNALCOLUMN_FINALEMBEDCOMPLETED?.trim() || "";
+	}
 
-  private candidateTitles(input: string): string[] {
-    const raw = input.trim();
-    const cands = new Set<string>();
-    if (raw) cands.add(raw);
+	public async getMyAssignments(
+		email: string,
+		limit = 200,
+	): Promise<UserAssignmentItem[]> {
+		const list = this.web().lists.getByTitle(ENV.LIST_ASSIGNMENTS);
+		const statusField = this.statusFieldName();
+		const embedField = this.embedCompletionFieldName();
 
-    // "Assignments1" -> "Assignments 1"
-    const spacedDigits = raw.replace(/([a-zA-Z])(\d+)/g, "$1 $2");
-    if (spacedDigits !== raw) cands.add(spacedDigits);
+		const rows: Array<Record<string, unknown>> = await list.items
+			.select(
+				"Id",
+				"Title",
+				"AssignmentCatalogIdId",
+				"EmployeeEmail",
+				"Reason",
+				"DueDate",
+				statusField,
+				"CurrentStepOrder",
+				"PercentComplete",
+				"LastOpenedOn",
+				"CompletedOn",
+				...(embedField ? [embedField] : []),
+			)
+			.filter(`EmployeeEmail eq '${email.replace(/'/g, "''")}'`)
+			.orderBy("DueDate", true)
+			.top(limit)();
 
-    // "Assignments1" -> "Assignments"
-    const stripped = raw.replace(/\d+$/, "");
-    if (stripped && stripped !== raw) cands.add(stripped);
+		return (rows || []).map((r) => {
+			const status =
+				getFirstDefined<string>(
+					getProp<string>(r, statusField),
+					getProp<string>(r, "Status"),
+					getProp<string>(r, "AssignmentStatus"),
+				) ?? undefined;
 
-    // also try stripping then spacing (rare)
-    const strippedSpaced = stripped.replace(/([a-zA-Z])(\d+)/g, "$1 $2");
-    if (strippedSpaced && strippedSpaced !== stripped) cands.add(strippedSpaced);
+			const catalogId = safeNumber(
+				getFirstDefined<unknown>(
+					getProp<unknown>(r, "AssignmentCatalogIdId"),
+					getProp<unknown>(r, "AssignmentCatalogId"),
+				),
+			);
 
-    return Array.from(cands);
-  }
+			return {
+				id: getProp<number>(r, "Id") ?? 0,
+				title: getProp<string>(r, "Title") ?? "(untitled)",
+				assignmentCatalogId: catalogId,
+				employeeEmail: getProp<string>(r, "EmployeeEmail"),
+				reason: getProp<string>(r, "Reason"),
+				dueDate: getProp<string>(r, "DueDate"),
+				status,
+				currentStepOrder: safeNumber(
+					getProp<unknown>(r, "CurrentStepOrder"),
+				),
+				percentComplete: normalizePercentCompleteFromSharePoint(
+					safeNumber(getProp<unknown>(r, "PercentComplete")),
+				),
+				lastOpenedOn: getProp<string>(r, "LastOpenedOn"),
+				completedOn: getProp<string>(r, "CompletedOn"),
+				finalEmbedCompleted: embedField
+					? toYesNo(getProp<unknown>(r, embedField))
+					: undefined,
+			};
+		});
+	}
 
-  private async resolveListTitle(title: string): Promise<string> {
-    const key = title.trim();
-    const cached = this.resolvedTitles.get(key);
-    if (cached) return cached;
+	public async getAssignmentById(
+		id: number,
+	): Promise<UserAssignmentItem | undefined> {
+		const list = this.web().lists.getByTitle(ENV.LIST_ASSIGNMENTS);
+		const statusField = this.statusFieldName();
+		const embedField = this.embedCompletionFieldName();
 
-    // Fast path: assume it's correct
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      await this.web().lists.getByTitle(key).select("Id")();
-      this.resolvedTitles.set(key, key);
-      return key;
-    } catch {
-      // fall through
-    }
+		const r: Record<string, unknown> = await list.items
+			.getById(id)
+			.select(
+				"Id",
+				"Title",
+				"AssignmentCatalogIdId",
+				"EmployeeEmail",
+				"Reason",
+				"DueDate",
+				statusField,
+				"CurrentStepOrder",
+				"PercentComplete",
+				"LastOpenedOn",
+				"CompletedOn",
+				...(embedField ? [embedField] : []),
+			)();
 
-    // Slow path: enumerate list titles and find best match
-    const all: Array<{ Title: string }> = await this.web().lists
-      .select("Title")();
+		const status =
+			getFirstDefined<string>(
+				getProp<string>(r, statusField),
+				getProp<string>(r, "Status"),
+				getProp<string>(r, "AssignmentStatus"),
+			) ?? undefined;
 
-    const candidates = this.candidateTitles(key);
-    const candidateNorms = candidates.map((c) => this.normalizeTitle(c));
+		const catalogId = safeNumber(
+			getFirstDefined<unknown>(
+				getProp<unknown>(r, "AssignmentCatalogIdId"),
+				getProp<unknown>(r, "AssignmentCatalogId"),
+			),
+		);
 
-    // Prefer exact title match (case-insensitive) among candidates
-    for (const c of candidates) {
-      const exact = all.find(
-        (l) =>
-          String(l?.Title ?? "").trim().toLowerCase() === c.toLowerCase(),
-      );
-      if (exact?.Title) {
-        this.resolvedTitles.set(key, exact.Title);
-        return exact.Title;
-      }
-    }
+		return {
+			id: getProp<number>(r, "Id") ?? 0,
+			title: getProp<string>(r, "Title") ?? "(untitled)",
+			assignmentCatalogId: catalogId,
+			employeeEmail: getProp<string>(r, "EmployeeEmail"),
+			reason: getProp<string>(r, "Reason"),
+			dueDate: getProp<string>(r, "DueDate"),
+			status,
+			currentStepOrder: safeNumber(
+				getProp<unknown>(r, "CurrentStepOrder"),
+			),
+			percentComplete: normalizePercentCompleteFromSharePoint(
+				safeNumber(getProp<unknown>(r, "PercentComplete")),
+			),
+			lastOpenedOn: getProp<string>(r, "LastOpenedOn"),
+			completedOn: getProp<string>(r, "CompletedOn"),
+			finalEmbedCompleted: embedField
+				? toYesNo(getProp<unknown>(r, embedField))
+				: undefined,
+		};
+	}
 
-    // Then try normalized match (removing spaces) among candidates
-    for (const wantedNorm of candidateNorms) {
-      const norm = all.find(
-        (l) => this.normalizeTitle(String(l?.Title ?? "")) === wantedNorm,
-      );
-      if (norm?.Title) {
-        this.resolvedTitles.set(key, norm.Title);
-        return norm.Title;
-      }
-    }
+	public async getCatalogItemById(
+		id: number,
+	): Promise<AssignmentCatalogItem | undefined> {
+		const list = this.web().lists.getByTitle(ENV.LIST_ASSIGNMENTCATALOG);
 
-    // Finally: if we stripped trailing digits, allow "startsWith" match (Assignments -> Assignments 2026, etc.)
-    const stripped = key.replace(/\d+$/, "");
-    const strippedNorm = stripped ? this.normalizeTitle(stripped) : "";
-    if (strippedNorm) {
-      const starts = all.find((l) =>
-        this.normalizeTitle(String(l?.Title ?? "")).startsWith(strippedNorm),
-      );
-      if (starts?.Title) {
-        this.resolvedTitles.set(key, starts.Title);
-        return starts.Title;
-      }
-    }
+		const contentVersionField =
+			ENV.INTERNALCOLUMN_CONTENTVERSION?.trim() || "ContentVersion";
 
-    // Last resort: keep original (caller will get the real error)
-    this.resolvedTitles.set(key, key);
-    return key;
-  }
+		const r: Record<string, unknown> = await list.items
+			.getById(id)
+			.select(
+				"Id",
+				"Title",
+				"AssignmentKey",
+				"Summary",
+				"Instructions",
+				"Active",
+				"EstimatedMinutes",
+				"FinalStepCompletionMode",
+				"QuizPassingScore",
+				contentVersionField,
+			)();
 
-  private async getListByTitle(
-    title: string,
-  ): Promise<ReturnType<ReturnType<PNPWrapper["web"]>["lists"]["getByTitle"]>> {
-    const resolved = await this.resolveListTitle(title);
-    return this.web().lists.getByTitle(resolved);
-  }
+		return {
+			id: getProp<number>(r, "Id") ?? 0,
+			title: getProp<string>(r, "Title") ?? "(untitled)",
+			assignmentKey: getProp<string>(r, "AssignmentKey"),
+			summary: getProp<string>(r, "Summary"),
+			instructions: getProp<string>(r, "Instructions"),
+			active: toYesNo(getProp<unknown>(r, "Active")),
+			estimatedMinutes: safeNumber(
+				getProp<unknown>(r, "EstimatedMinutes"),
+			),
+			finalStepCompletionMode: getProp<string>(
+				r,
+				"FinalStepCompletionMode",
+			),
+			quizPassingScore: safeNumber(
+				getProp<unknown>(r, "QuizPassingScore"),
+			),
+			contentVersion:
+				getProp<string | number>(r, contentVersionField) ??
+				getProp<string | number>(r, "ContentVersion"),
+		};
+	}
 
-  public statusFieldName(): string {
-    // Dev-friendly: prefer internal name (e.g. "Statuc"), otherwise default "Status"
-    return ENV.INTERNALCOLUMN_ASSIGNMENTSTATUS?.trim() || "Status";
-  }
+	public async getQuizQuestionsForCatalog(
+		catalogId: number,
+		limit = 200,
+	): Promise<AssignmentQuizQuestion[]> {
+		const quizQuestionsListName = (() => {
+			const envVal = (ENV as { LIST_ASSIGNMENTQUIZQUESTIONS?: unknown })
+				.LIST_ASSIGNMENTQUIZQUESTIONS;
+			return typeof envVal === "string" && envVal.trim()
+				? envVal.trim()
+				: "AssignmentQuizQuestions";
+		})();
 
-  private embedCompletionFieldName(): string {
-    return ENV.INTERNALCOLUMN_FINALEMBEDCOMPLETED?.trim() || "";
-  }
+		const list = this.web().lists.getByTitle(quizQuestionsListName);
 
-  public async getMyAssignments(email: string, limit = 200): Promise<UserAssignmentItem[]> {
-    const list = await this.getListByTitle(this.lists.assignments);
-    const statusField = this.statusFieldName();
-    const embedField = this.embedCompletionFieldName();
+		const baseQuery = list.items.select(
+			"Id",
+			"AssignmentCatalogId",
+			"QuestionOrder",
+			"QuestionText",
+			"QuestionType",
+			"ChoicesText",
+			"CorrectAnswer",
+			"Explanation",
+			"Active",
+		);
 
-    // Column names are not yet normalized in dev; select broadly and map defensively.
-    const rows: Array<Record<string, unknown>> = await list.items
-      .select(
-        "Id",
-        "Title",
-        "AssignmentCatalogIdId",
-        "EmployeeEmail",
-        "Reason",
-        "DueDate",
-        statusField,
-        "CurrentStepOrder",
-        "PercentComplete",
-        "LastOpenedOn",
-        "CompletedOn",
-        ...(embedField ? [embedField] : []),
-      )
-      .filter(`EmployeeEmail eq '${email.replace(/'/g, "''")}'`)
-      .orderBy("DueDate", true)
-      .top(limit)();
+		let rows: Array<Record<string, unknown>> = [];
+		try {
+			rows = await baseQuery
+				.filter(`AssignmentCatalogId eq ${catalogId}`)
+				.orderBy("QuestionOrder", true)
+				.top(limit)();
+		} catch {
+			rows = [];
+		}
 
-    return (rows || []).map((r) => {
-      const status =
-        getFirstDefined<string>(
-          getProp<string>(r, statusField),
-          getProp<string>(r, "Status"),
-          getProp<string>(r, "AssignmentStatus"),
-        ) ?? undefined;
+		if (!rows.length) {
+			try {
+				const all = await baseQuery
+					.orderBy("QuestionOrder", true)
+					.top(limit)();
+				rows = (all || []).filter(
+					(r) =>
+						safeNumber(
+							getProp<unknown>(r, "AssignmentCatalogId"),
+						) === catalogId,
+				);
+			} catch {
+				rows = [];
+			}
+		}
 
-      const catalogId = safeNumber(
-        getFirstDefined<unknown>(
-          getProp<unknown>(r, "AssignmentCatalogIdId"),
-          getProp<unknown>(r, "AssignmentCatalogId"),
-        ),
-      );
-      return {
-        id: getProp<number>(r, "Id") ?? 0,
-        title: getProp<string>(r, "Title") ?? "(untitled)",
-        assignmentCatalogId: catalogId,
-        employeeEmail: getProp<string>(r, "EmployeeEmail"),
-        reason: getProp<string>(r, "Reason"),
-        dueDate: getProp<string>(r, "DueDate"),
-        status: status,
-        currentStepOrder: safeNumber(getProp<unknown>(r, "CurrentStepOrder")),
-        percentComplete: normalizePercentCompleteFromSharePoint(
-          safeNumber(getProp<unknown>(r, "PercentComplete")),
-        ),
-        lastOpenedOn: getProp<string>(r, "LastOpenedOn"),
-        completedOn: getProp<string>(r, "CompletedOn"),
-        finalEmbedCompleted: embedField
-          ? toYesNo(getProp<unknown>(r, embedField))
-          : undefined,
-      };
-    });
-  }
+		return (rows || [])
+			.map((r) => {
+				const order =
+					safeNumber(getProp<unknown>(r, "QuestionOrder")) ?? 0;
 
-  public async getAssignmentById(id: number): Promise<UserAssignmentItem | undefined> {
-    const list = await this.getListByTitle(this.lists.assignments);
-    const statusField = this.statusFieldName();
-    const embedField = this.embedCompletionFieldName();
-    const r: Record<string, unknown> = await list.items.getById(id).select(
-      "Id",
-      "Title",
-      "AssignmentCatalogIdId",
-      "EmployeeEmail",
-      "Reason",
-      "DueDate",
-      statusField,
-      "CurrentStepOrder",
-      "PercentComplete",
-      "LastOpenedOn",
-      "CompletedOn",
-      ...(embedField ? [embedField] : []),
-    )();
+				return {
+					id: getProp<number>(r, "Id") ?? 0,
+					assignmentCatalogId: catalogId,
+					questionOrder: order,
+					questionText: getProp<string>(r, "QuestionText") ?? "",
+					questionType: toQuizQuestionType(
+						getProp<unknown>(r, "QuestionType"),
+					),
+					choicesText: getProp<string>(r, "ChoicesText"),
+					correctAnswer: getProp<string>(r, "CorrectAnswer"),
+					explanation: getProp<string>(r, "Explanation"),
+					active: toYesNo(getProp<unknown>(r, "Active")),
+				} satisfies AssignmentQuizQuestion;
+			})
+			.filter((q) => q.questionOrder > 0 && q.questionText.trim() !== "");
+	}
 
-    const status =
-      getFirstDefined<string>(
-        getProp<string>(r, statusField),
-        getProp<string>(r, "Status"),
-        getProp<string>(r, "AssignmentStatus"),
-      ) ?? undefined;
+	public async getStepsForCatalog(
+		catalogId: number,
+		limit = 200,
+	): Promise<AssignmentStepItem[]> {
+		const list = this.web().lists.getByTitle(ENV.LIST_ASSIGNMENTSTEPS);
 
-    const catalogId = safeNumber(
-      getFirstDefined<unknown>(
-        getProp<unknown>(r, "AssignmentCatalogIdId"),
-        getProp<unknown>(r, "AssignmentCatalogId"),
-      ),
-    );
-    return {
-      id: getProp<number>(r, "Id") ?? 0,
-      title: getProp<string>(r, "Title") ?? "(untitled)",
-      assignmentCatalogId: catalogId,
-      employeeEmail: getProp<string>(r, "EmployeeEmail"),
-      reason: getProp<string>(r, "Reason"),
-      dueDate: getProp<string>(r, "DueDate"),
-      status: status,
-      currentStepOrder: safeNumber(getProp<unknown>(r, "CurrentStepOrder")),
-      percentComplete: normalizePercentCompleteFromSharePoint(
-        safeNumber(getProp<unknown>(r, "PercentComplete")),
-      ),
-      lastOpenedOn: getProp<string>(r, "LastOpenedOn"),
-      completedOn: getProp<string>(r, "CompletedOn"),
-      finalEmbedCompleted: embedField
-        ? toYesNo(getProp<unknown>(r, embedField))
-        : undefined,
-    };
-  }
+		const baseQuery = list.items.select(
+			"Id",
+			"Title",
+			"AssignmentCatalogIdId",
+			"StepOrder",
+			"StepTitle",
+			"BodyHtml",
+			"EmbedUrl",
+			"RequireEmbedCompletion",
+			"AllowMarkCompleteHere",
+			"EstimatedMinutes",
+		);
 
-  public async getCatalogItemById(id: number): Promise<AssignmentCatalogItem | undefined> {
-    const list = await this.getListByTitle(this.lists.catalog);
-    const r: Record<string, unknown> = await list.items
-      .getById(id)
-      .select(
-        "Id",
-        "Title",
-        "AssignmentKey",
-        "Summary",
-        "Instructions",
-        "Active",
-        "EstimatedMinutes",
-        "FinalStepCompletionMode",
-        "QuizPassingScore",
-        ENV.INTERNALCOLUMN_CONTENTVERSION || "ContentVersion",
-      )();
+		let rows: Array<Record<string, unknown>> = [];
+		try {
+			rows = await baseQuery
+				.filter(`AssignmentCatalogIdId eq ${catalogId}`)
+				.orderBy("StepOrder", true)
+				.top(limit)();
+		} catch {
+			rows = [];
+		}
 
-    return {
-      id: getProp<number>(r, "Id") ?? 0,
-      title: getProp<string>(r, "Title") ?? "(untitled)",
-      assignmentKey: getProp<string>(r, "AssignmentKey"),
-      summary: getProp<string>(r, "Summary"),
-      instructions: getProp<string>(r, "Instructions"),
-      active: toYesNo(getProp<unknown>(r, "Active")),
-      estimatedMinutes: safeNumber(getProp<unknown>(r, "EstimatedMinutes")),
-      finalStepCompletionMode: getProp<string>(r, "FinalStepCompletionMode"),
-      quizPassingScore: safeNumber(getProp<unknown>(r, "QuizPassingScore")),
-      contentVersion:
-        (ENV.INTERNALCOLUMN_CONTENTVERSION
-          ? getProp<string | number>(r, ENV.INTERNALCOLUMN_CONTENTVERSION)
-          : undefined) ?? getProp<string | number>(r, "ContentVersion"),
-    };
-  }
+		if (!rows.length) {
+			try {
+				const all = await baseQuery
+					.orderBy("StepOrder", true)
+					.top(limit)();
+				rows = (all || []).filter(
+					(r) =>
+						safeNumber(
+							getProp<unknown>(r, "AssignmentCatalogIdId"),
+						) === catalogId,
+				);
+			} catch {
+				rows = [];
+			}
+		}
 
-  public async getQuizQuestionsForCatalog(
-    catalogId: number,
-    limit = 200,
-  ): Promise<AssignmentQuizQuestion[]> {
-    const list = await this.getListByTitle(
-      ((): string => {
-        const envVal = (ENV as { LIST_ASSIGNMENTQUIZQUESTIONS?: unknown })
-          .LIST_ASSIGNMENTQUIZQUESTIONS;
-        return typeof envVal === "string" && envVal.trim()
-          ? envVal
-          : "AssignmentQuizQuestions";
-      })(),
-    );
+		return (rows || []).map((r) => {
+			const stepOrder = safeNumber(getProp<unknown>(r, "StepOrder")) ?? 0;
 
-    // Your quiz list uses a plain Number foreign key `AssignmentCatalogId` (no lookup).
-    // Do NOT select lookup-only fields like `AssignmentCatalogIdId` / `...LookupId` since PnP will 400.
-    const baseQuery = list.items.select(
-      "Id",
-      "AssignmentCatalogId",
-      "QuestionOrder",
-      "QuestionText",
-      "QuestionType",
-      "ChoicesText",
-      "CorrectAnswer",
-      "Explanation",
-      "Active",
-    );
-
-    let rows: Array<Record<string, unknown>> = [];
-    try {
-      rows = await baseQuery
-        .filter(`AssignmentCatalogId eq ${catalogId}`)
-        .orderBy("QuestionOrder", true)
-        .top(limit)();
-    } catch {
-      rows = [];
-    }
-
-    if (!rows.length) {
-      // Last resort: fetch unfiltered and filter client-side.
-      try {
-        const all = await baseQuery.orderBy("QuestionOrder", true).top(limit)();
-        rows = (all || []).filter((r) => safeNumber(getProp<unknown>(r, "AssignmentCatalogId")) === catalogId);
-      } catch {
-        rows = [];
-      }
-    }
-
-    return (rows || [])
-      .map((r) => {
-        const order = safeNumber(getProp<unknown>(r, "QuestionOrder")) ?? 0;
-        return {
-          id: getProp<number>(r, "Id") ?? 0,
-          assignmentCatalogId: catalogId,
-          questionOrder: order,
-          questionText: getProp<string>(r, "QuestionText") ?? "",
-          questionType: toQuizQuestionType(getProp<unknown>(r, "QuestionType")),
-          choicesText: getProp<string>(r, "ChoicesText"),
-          correctAnswer: getProp<string>(r, "CorrectAnswer"),
-          explanation: getProp<string>(r, "Explanation"),
-          active: toYesNo(getProp<unknown>(r, "Active")),
-        } satisfies AssignmentQuizQuestion;
-      })
-      .filter((q) => q.questionOrder > 0 && q.questionText.trim() !== "");
-  }
-
-  public async getStepsForCatalog(catalogId: number, limit = 200): Promise<AssignmentStepItem[]> {
-    const list = await this.getListByTitle(this.lists.steps);
-    // SharePoint REST: lookup columns must be filtered by the `<FieldName>Id` shadow field.
-    // Even though the internal column name is `AssignmentCatalogId`, REST requires `AssignmentCatalogIdId`.
-    const baseQuery = list.items.select(
-      "Id",
-      "Title",
-      "AssignmentCatalogIdId",
-      "StepOrder",
-      "StepTitle",
-      "BodyHtml",
-      "EmbedUrl",
-      "RequireEmbedCompletion",
-      "AllowMarkCompleteHere",
-      "EstimatedMinutes",
-    );
-
-    let rows: Array<Record<string, unknown>> = [];
-    try {
-      rows = await baseQuery
-        .filter(`AssignmentCatalogIdId eq ${catalogId}`)
-        .orderBy("StepOrder", true)
-        .top(limit)();
-    } catch {
-      rows = [];
-    }
-
-    if (!rows.length) {
-      try {
-        const all = await baseQuery.orderBy("StepOrder", true).top(limit)();
-        rows = (all || []).filter(
-          (r) =>
-            safeNumber(getProp<unknown>(r, "AssignmentCatalogIdId")) === catalogId,
-        );
-      } catch {
-        rows = [];
-      }
-    }
-
-    return (rows || []).map((r) => {
-      const stepOrder = safeNumber(getProp<unknown>(r, "StepOrder")) ?? 0;
-      return {
-        id: getProp<number>(r, "Id") ?? 0,
-        assignmentCatalogId: catalogId,
-        stepKey: undefined,
-        stepOrder,
-        stepTitle: getFirstDefined<string>(getProp<string>(r, "StepTitle"), getProp<string>(r, "Title")),
-        bodyHtml: getProp<string>(r, "BodyHtml"),
-        embedUrls: normalizeEmbedUrls(getProp<unknown>(r, "EmbedUrl")),
-        requireEmbedCompletion: toYesNo(getProp<unknown>(r, "RequireEmbedCompletion")),
-        requireStepView: undefined,
-        allowMarkCompleteHere: toYesNo(getProp<unknown>(r, "AllowMarkCompleteHere")),
-        estimatedMinutes: safeNumber(getProp<unknown>(r, "EstimatedMinutes")),
-      };
-    });
-  }
-
+			return {
+				id: getProp<number>(r, "Id") ?? 0,
+				assignmentCatalogId: catalogId,
+				stepKey: undefined,
+				stepOrder,
+				stepTitle: getFirstDefined<string>(
+					getProp<string>(r, "StepTitle"),
+					getProp<string>(r, "Title"),
+				),
+				bodyHtml: getProp<string>(r, "BodyHtml"),
+				embedUrls: normalizeEmbedUrls(getProp<unknown>(r, "EmbedUrl")),
+				requireEmbedCompletion: toYesNo(
+					getProp<unknown>(r, "RequireEmbedCompletion"),
+				),
+				requireStepView: undefined,
+				allowMarkCompleteHere: toYesNo(
+					getProp<unknown>(r, "AllowMarkCompleteHere"),
+				),
+				estimatedMinutes: safeNumber(
+					getProp<unknown>(r, "EstimatedMinutes"),
+				),
+			};
+		});
+	}
 }
-

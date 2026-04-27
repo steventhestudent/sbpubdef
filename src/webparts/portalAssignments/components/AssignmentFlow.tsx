@@ -11,6 +11,8 @@ import type {
 	UserAssignmentItem,
 } from "../types/AssignmentTypes";
 import { EmbedPlayer } from "./EmbedPlayer";
+import { AssignmentFlowQuizPane } from "@components/portalAssignments/AssignmentFlowQuizPane";
+import { AssignmentFlowSidebar } from "@components/portalAssignments/AssignmentFlowSidebar";
 
 function clamp(n: number, min: number, max: number): number {
 	return Math.max(min, Math.min(max, n));
@@ -24,11 +26,11 @@ function asDateLabel(iso?: string): string {
 }
 
 function isVideoLikeEmbed(url: string): boolean {
-  return (
-    /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|youtube-nocookie\.com)\b/i.test(
-      url,
-    ) || /\.(mp4|webm|ogg)(\?|#|$)/i.test(url)
-  );
+	return (
+		/^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be|youtube-nocookie\.com)\b/i.test(
+			url,
+		) || /\.(mp4|webm|ogg)(\?|#|$)/i.test(url)
+	);
 }
 
 function mergeAssignment(
@@ -70,7 +72,8 @@ export function AssignmentFlow({
 	const [quiz, setQuiz] = React.useState<AssignmentQuizQuestion[]>([]);
 	const [answers, setAnswers] = React.useState<Record<number, string>>({});
 	const [quizResult, setQuizResult] = React.useState<
-		{ passed: boolean; scorePercent: number; attemptNumber?: number } | undefined
+		| { passed: boolean; scorePercent: number; attemptNumber?: number }
+		| undefined
 	>(undefined);
 	const [submittingQuiz, setSubmittingQuiz] = React.useState(false);
 	const [loading, setLoading] = React.useState(true);
@@ -425,380 +428,147 @@ export function AssignmentFlow({
 			) : null}
 
 			<div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-[240px_1fr]">
-				<aside className="rounded-lg border border-slate-200 bg-white">
-					<div className="border-b border-slate-200 px-3 py-2 text-xs font-semibold tracking-wide text-slate-600 uppercase">
-						Steps
-					</div>
-					<ul className="p-2">
-						{steps.map((s) => {
-							const active = s.stepOrder === activeOrder;
-							const viewed =
-								(assignment.currentStepOrder ?? 0) >=
-								s.stepOrder;
-							const disabled =
-								pane === "step" &&
-								stepNavigationBlocked &&
-								s.stepOrder !== activeOrder;
-							return (
-								<li key={s.id}>
-									<button
-										className={[
-											"w-full rounded-md px-2 py-2 text-left text-sm",
-											active
-												? "bg-blue-50 text-blue-900"
-												: "text-slate-800 hover:bg-slate-50",
-											disabled
-												? "opacity-50 cursor-not-allowed hover:bg-transparent"
-												: "",
-										].join(" ")}
-										disabled={disabled}
-										onClick={async () => {
-											setPane("step");
-											setActiveOrder(s.stepOrder);
-											await persistProgress(s.stepOrder);
-										}}
-									>
-										<div className="flex items-center justify-between gap-2">
-											<span className="font-medium">
-												{s.stepOrder}.{" "}
-												{s.stepTitle ?? "Step"}
-												{typeof s.estimatedMinutes ===
-													"number" &&
-												s.estimatedMinutes > 0 ? (
-													<span className="text-xs text-slate-500">
-														&nbsp; ~
-														{s.estimatedMinutes}min
-													</span>
-												) : (
-													<></>
-												)}
-											</span>
-											{viewed ? (
-												<span className="text-xs text-slate-500">
-													Viewed
-												</span>
-											) : (
-												<span className="text-xs text-slate-400">
-													—
-												</span>
-											)}
-										</div>
-									</button>
-								</li>
-							);
-						})}
-						{hasQuiz ? (
-							<li key="__quiz__" className="mt-1">
-								<button
-									className={[
-										"w-full rounded-md px-2 py-2 text-left text-sm",
-										pane === "quiz"
-											? "bg-purple-50 text-purple-900"
-											: "text-slate-800 hover:bg-slate-50",
-										!quizUnlocked
-											? "opacity-50 cursor-not-allowed hover:bg-transparent"
-											: "",
-									].join(" ")}
-									disabled={!quizUnlocked}
-									onClick={() => setPane("quiz")}
-								>
-									<div className="flex items-center justify-between gap-2">
-										<span className="font-medium">
-											{maxStepOrder + 1}. Quiz
-										</span>
-										<span className="text-xs text-slate-400">
-											{quizUnlocked ? "—" : "Locked"}
-										</span>
-									</div>
-								</button>
-							</li>
-						) : null}
-					</ul>
-				</aside>
+				<AssignmentFlowSidebar
+					steps={steps}
+					activeOrder={activeOrder}
+					setActiveOrder={setActiveOrder}
+					persistProgress={persistProgress}
+					pane={pane}
+					setPane={setPane}
+					assignment={assignment}
+					stepNavigationBlocked={stepNavigationBlocked}
+					hasQuiz={hasQuiz}
+					quizUnlocked={quizUnlocked}
+					maxStepOrder={maxStepOrder}
+				/>
 
 				<main className="rounded-lg border border-slate-200 bg-white p-3">
 					{pane === "quiz" ? (
-						<div>
-							<div className="flex items-center justify-between gap-2">
-								<div className="text-base font-semibold text-slate-900">
-									Quiz
-								</div>
-								<button
-									className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
-									onClick={() => setPane("step")}
-								>
-									← Back to steps
-								</button>
-							</div>
-
-							<div className="mt-1 text-xs text-slate-600">
-								Passing score:{" "}
-								<span className="font-semibold">
-									{passingScore}%
-								</span>
-							</div>
-
-							{quiz.length === 0 ? (
-								<div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
-									No quiz questions found for this assignment.
-								</div>
-							) : (
-								<>
-									<div className="mt-3 space-y-4">
-										{quiz.map((q) => {
-											const val =
-												answers[q.questionOrder] ?? "";
-											const type = String(
-												q.questionType ||
-													"MultipleChoice",
-											);
-											const choices = (
-												q.choicesText || ""
-											)
-												.split(/\r?\n/g)
-												.map((s) => s.trim())
-												.filter(Boolean);
-											return (
-												<div
-													key={q.id}
-													className="rounded-md border border-slate-200 bg-white p-3"
-												>
-													<div className="text-sm font-semibold text-slate-900">
-														{q.questionOrder}.{" "}
-														{q.questionText}
-													</div>
-													{type.toLowerCase() ===
-													"openanswer" ? (
-														<textarea
-															className="mt-2 w-full rounded-md border border-slate-200 p-2 text-sm"
-															rows={3}
-															value={val}
-															onChange={(e) =>
-																setAnswers(
-																	(prev) => ({
-																		...prev,
-																		[q.questionOrder]:
-																			e
-																				.target
-																				.value,
-																	}),
-																)
-															}
-															placeholder="Type your answer…"
-														/>
-													) : (
-														<div className="mt-2 space-y-2">
-															{choices.map(
-																(c) => {
-																	const key =
-																		c
-																			.split(
-																				".",
-																			)[0]
-																			?.trim() ||
-																		c;
-																	return (
-																		<label
-																			key={
-																				c
-																			}
-																			className="flex items-start gap-2 text-sm text-slate-800"
-																		>
-																			<input
-																				type="radio"
-																				name={`q-${q.id}`}
-																				checked={
-																					val ===
-																					key
-																				}
-																				onChange={() =>
-																					setAnswers(
-																						(
-																							prev,
-																						) => ({
-																							...prev,
-																							[q.questionOrder]:
-																								key,
-																						}),
-																					)
-																				}
-																			/>
-																			<span>
-																				{c}
-																			</span>
-																		</label>
-																	);
-																},
-															)}
-														</div>
-													)}
-												</div>
-											);
-										})}
-									</div>
-
-									<div className="mt-3 flex items-center justify-between gap-3">
-										<div className="text-xs text-slate-600">
-											{quizResult ? (
-												<>
-													{quizResult.attemptNumber !== undefined ? (
-														<>
-															Attempt{" "}
-															<span className="font-semibold">
-																{quizResult.attemptNumber}
-															</span>
-															{" · "}
-														</>
-													) : null}
-													Score:{" "}
-													<span className="font-semibold">
-														{
-															quizResult.scorePercent
-														}
-														%
-													</span>{" "}
-													{quizResult.passed ? (
-														<span className="font-semibold text-green-700">
-															Passed
-														</span>
-													) : (
-														<span className="font-semibold text-red-700">
-															Not passed
-														</span>
-													)}
-												</>
-											) : (
-												<span>
-													Submit your answers to score
-													this quiz.
-												</span>
-											)}
-										</div>
-										<button
-											className={[
-												"rounded-md px-3 py-2 text-sm font-semibold",
-												submittingQuiz
-													? "cursor-wait bg-slate-200 text-slate-500"
-													: "bg-blue-600 text-white hover:bg-blue-700",
-											].join(" ")}
-											disabled={submittingQuiz}
-											onClick={() =>
-												submitQuiz().catch(
-													() => undefined,
-												)
-											}
-										>
-											{submittingQuiz
-												? "Submitting…"
-												: "Submit Quiz"}
-										</button>
-									</div>
-								</>
-							)}
-						</div>
-					) : (
-					<>
-					<div className="flex items-center justify-between gap-2">
-						<div className="text-base font-semibold text-slate-900">
-							{activeStep?.stepTitle ?? "Step"}
-						</div>
-						<div className="flex items-center gap-2">
-							<button
-								className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
-								disabled={activeOrder <= 1 || stepNavigationBlocked}
-								onClick={async () => {
-									const next = clamp(
-										activeOrder - 1,
-										1,
-										maxStepOrder,
-									);
-									setActiveOrder(next);
-									await persistProgress(next);
-								}}
-							>
-								Prev
-							</button>
-							<button
-								className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
-								disabled={
-									stepNavigationBlocked ||
-									(activeOrder >= maxStepOrder && !hasQuiz)
-								}
-								onClick={async () => {
-									if (activeOrder >= maxStepOrder && hasQuiz) {
-										goToQuiz();
-										return;
-									}
-									const next = clamp(
-										activeOrder + 1,
-										1,
-										maxStepOrder,
-									);
-									setActiveOrder(next);
-									await persistProgress(next);
-								}}
-							>
-								{activeOrder >= maxStepOrder && hasQuiz
-									? "Go to Quiz"
-									: "Next"}
-							</button>
-						</div>
-					</div>
-
-					{activeStep?.bodyHtml ? (
-						<div
-							className="prose mt-3 max-w-none text-sm text-slate-800"
-							dangerouslySetInnerHTML={{
-								__html: activeStep.bodyHtml,
-							}}
+						<AssignmentFlowQuizPane
+							quiz={quiz}
+							answers={answers}
+							setAnswers={setAnswers}
+							quizResult={quizResult}
+							submittingQuiz={submittingQuiz}
+							submitQuiz={submitQuiz}
+							passingScore={passingScore}
+							onBackToSteps={() => setPane("step")}
 						/>
 					) : (
-						<div className="mt-3 text-sm text-slate-500 italic">
-							No content for this step.
-						</div>
-					)}
-
-					{activeStep?.embedUrls?.length ? (
-						<div className="mt-4 space-y-4">
-							{activeStep.embedUrls.map((u, idx) => (
-								<EmbedPlayer
-									key={idx}
-									url={u}
-									title={`Embed ${idx + 1}`}
-									requiredSeconds={
-										activeStep.requireEmbedCompletion &&
-										activeStep.estimatedMinutes
-											? Math.max(
-													0,
-													activeStep.estimatedMinutes,
-												) * 60
-											: undefined
-									}
-									debugKey={`step${activeOrder}-embed${idx + 1}`}
-									onCompleted={() => {
-										setEmbedDoneByStep((prev) => ({
-											...prev,
-											[activeOrder]: true,
-										}));
-										if (isFinalStep && requiresFinalEmbed)
-											persistFinalEmbedDone().catch(
-												() => undefined,
+						<>
+							<div className="flex items-center justify-between gap-2">
+								<div className="text-base font-semibold text-slate-900">
+									{activeStep?.stepTitle ?? "Step"}
+								</div>
+								<div className="flex items-center gap-2">
+									<button
+										className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+										disabled={
+											activeOrder <= 1 ||
+											stepNavigationBlocked
+										}
+										onClick={async () => {
+											const next = clamp(
+												activeOrder - 1,
+												1,
+												maxStepOrder,
 											);
+											setActiveOrder(next);
+											await persistProgress(next);
+										}}
+									>
+										Prev
+									</button>
+									<button
+										className="rounded-md border border-slate-200 px-2 py-1 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+										disabled={
+											stepNavigationBlocked ||
+											(activeOrder >= maxStepOrder &&
+												!hasQuiz)
+										}
+										onClick={async () => {
+											if (
+												activeOrder >= maxStepOrder &&
+												hasQuiz
+											) {
+												goToQuiz();
+												return;
+											}
+											const next = clamp(
+												activeOrder + 1,
+												1,
+												maxStepOrder,
+											);
+											setActiveOrder(next);
+											await persistProgress(next);
+										}}
+									>
+										{activeOrder >= maxStepOrder && hasQuiz
+											? "Go to Quiz"
+											: "Next"}
+									</button>
+								</div>
+							</div>
+
+							{activeStep?.bodyHtml ? (
+								<div
+									className="prose mt-3 max-w-none text-sm text-slate-800"
+									dangerouslySetInnerHTML={{
+										__html: activeStep.bodyHtml,
 									}}
 								/>
-							))}
-							{stepEmbedRequired && !stepEmbedDone ? (
-								<div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-									Watch at least{" "}
-									<span className="font-semibold">
-										{activeStep?.estimatedMinutes ?? 0} minutes
-									</span>{" "}
-									to continue.
+							) : (
+								<div className="mt-3 text-sm text-slate-500 italic">
+									No content for this step.
+								</div>
+							)}
+
+							{activeStep?.embedUrls?.length ? (
+								<div className="mt-4 space-y-4">
+									{activeStep.embedUrls.map((u, idx) => (
+										<EmbedPlayer
+											key={idx}
+											url={u}
+											title={`Embed ${idx + 1}`}
+											requiredSeconds={
+												activeStep.requireEmbedCompletion &&
+												activeStep.estimatedMinutes
+													? Math.max(
+															0,
+															activeStep.estimatedMinutes,
+														) * 60
+													: undefined
+											}
+											debugKey={`step${activeOrder}-embed${idx + 1}`}
+											onCompleted={() => {
+												setEmbedDoneByStep((prev) => ({
+													...prev,
+													[activeOrder]: true,
+												}));
+												if (
+													isFinalStep &&
+													requiresFinalEmbed
+												)
+													persistFinalEmbedDone().catch(
+														() => undefined,
+													);
+											}}
+										/>
+									))}
+									{stepEmbedRequired && !stepEmbedDone ? (
+										<div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+											Watch at least{" "}
+											<span className="font-semibold">
+												{activeStep?.estimatedMinutes ??
+													0}{" "}
+												minutes
+											</span>{" "}
+											to continue.
+										</div>
+									) : null}
 								</div>
 							) : null}
-						</div>
-					) : null}
-					</>
+						</>
 					)}
 
 					<div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-200 pt-3">

@@ -57,9 +57,8 @@ export function SubmissionsManager({
 		setLoadingQuiz(true);
 		try {
 			const web = pnpWrapper.web();
-			const listTitle = ENV.LIST_ASSIGNMENTQUIZATTEMPTS;
 			const base = web.lists
-				.getByTitle(listTitle)
+				.getByTitle(ENV.LIST_ASSIGNMENTQUIZATTEMPTS)
 				.items.select(
 					"Id",
 					"Title",

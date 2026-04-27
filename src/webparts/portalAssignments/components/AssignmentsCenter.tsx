@@ -102,8 +102,8 @@ export function AssignmentsCenter({
 }): JSX.Element {
 	const webRel = ctx.pageContext.web.serverRelativeUrl || "";
 	const listUrl = `${window.location.origin}${webRel}/Lists/${assignmentsListTitle}/AllItems.aspx`;
-	const catalogUrl = `${window.location.origin}${webRel}/Lists/${ENV.LIST_ASSIGNMENTCATALOG || "AssignmentCatalog"}/AllItems.aspx`;
-	const stepsUrl = `${window.location.origin}${webRel}/Lists/${ENV.LIST_ASSIGNMENTSTEPS || "AssignmentSteps"}/AllItems.aspx`;
+	const catalogUrl = `${window.location.origin}${webRel}/Lists/${ENV.LIST_ASSIGNMENTCATALOG}/AllItems.aspx`;
+	const stepsUrl = `${window.location.origin}${webRel}/Lists/${ENV.LIST_ASSIGNMENTSTEPS}/AllItems.aspx`;
 
 	const counts = React.useMemo(() => {
 		const c: Record<NormalizedStatus, number> = {

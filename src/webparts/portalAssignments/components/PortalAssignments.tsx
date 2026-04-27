@@ -179,7 +179,7 @@ function MyAssignmentsView({
 				error={err}
 				isAdmin={admin}
 				openHrefForId={openHrefForId}
-				assignmentsListTitle={ENV.LIST_ASSIGNMENTS || "Assignments"}
+				assignmentsListTitle={ENV.LIST_ASSIGNMENTS}
 			/>
 		);
 	}
@@ -208,7 +208,7 @@ function MyAssignmentsView({
 					{admin ? (
 						<a
 							className="rounded-md border border-slate-200 bg-white px-2 py-1 text-sm text-slate-700 hover:bg-slate-50"
-							href={`${window.location.origin}${pnpWrapper.ctx.pageContext.web.serverRelativeUrl}/Lists/${ENV.LIST_ASSIGNMENTS || "Assignments"}/AllItems.aspx`}
+							href={`${window.location.origin}${pnpWrapper.ctx.pageContext.web.serverRelativeUrl}/Lists/${ENV.LIST_ASSIGNMENTS}/AllItems.aspx`}
 							target="_blank"
 							rel="noreferrer"
 						>

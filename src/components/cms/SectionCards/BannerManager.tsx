@@ -31,17 +31,20 @@ export function BannerManager({
 	async function load(): Promise<void> {
 		setLoading(true);
 		try {
-			const listTitle = ENV.LIST_SITESETTINGS || "SiteSettings";
 			const rows = (await pnpWrapper
 				.web()
-				.lists.getByTitle(listTitle)
+				.lists.getByTitle(ENV.LIST_SITESETTINGS)
 				.items.select("Id", "BannerMessage", "ShowBanner")
 				.orderBy("Id", false)
 				.top(1)()) as Array<Record<string, unknown>>;
 			const r = rows?.[0];
 			setSettings({
-				id: typeof r?.Id === "number" ? r.Id : Number(r?.Id) || undefined,
-				message: typeof r?.BannerMessage === "string" ? r.BannerMessage : "",
+				id:
+					typeof r?.Id === "number"
+						? r.Id
+						: Number(r?.Id) || undefined,
+				message:
+					typeof r?.BannerMessage === "string" ? r.BannerMessage : "",
 				show:
 					typeof r?.ShowBanner === "boolean"
 						? r.ShowBanner
@@ -160,4 +163,3 @@ export function BannerManager({
 		</div>
 	);
 }
-

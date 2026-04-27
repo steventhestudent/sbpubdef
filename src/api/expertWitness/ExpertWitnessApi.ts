@@ -1,19 +1,14 @@
 import { SPHttpClient, SPHttpClientResponse } from "@microsoft/sp-http";
 import { IExpert, ExpertWitnessResult } from "@type/PDExpertWitness";
 
-/**
- * Thin wrapper around the "Expert Directory" list on PD-Intranet
- */
 export class ExpertWitnessApi {
 	public static async getExperts(
 		siteUrl: string,
 		spHttpClient: SPHttpClient,
 	): Promise<IExpert[]> {
-		const listTitle = "Expert Directory"; // must match your list title EXACTLY
-
 		const url =
 			`${siteUrl}` +
-			`/_api/web/lists/getByTitle('${listTitle}')/items` +
+			`/_api/web/lists/getByTitle('${ENV.LIST_EXPERTDIRECTORY}')/items` +
 			`?$select=Id,Title,Expertise,Phone,Email` +
 			`&$top=500`;
 

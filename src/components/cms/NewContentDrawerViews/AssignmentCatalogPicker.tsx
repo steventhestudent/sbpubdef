@@ -34,7 +34,7 @@ export function AssignmentCatalogPicker({
 		setLoading(true);
 		(async () => {
 			const q = norm(query).replace(/'/g, "''");
-			const listTitle = ENV.LIST_ASSIGNMENTCATALOG || "AssignmentCatalog";
+			const listTitle = ENV.LIST_ASSIGNMENTCATALOG;
 			const res = (await pnpWrapper
 				.web()
 				.lists.getByTitle(listTitle)

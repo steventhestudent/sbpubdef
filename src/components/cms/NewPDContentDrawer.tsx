@@ -205,10 +205,9 @@ export function NewPDContentDrawer({
 		if (contentType !== "banner") return;
 		(async () => {
 			try {
-				const listTitle = ENV.LIST_SITESETTINGS || "SiteSettings";
 				const rows = (await pnpWrapper
 					.web()
-					.lists.getByTitle(listTitle)
+					.lists.getByTitle(ENV.LIST_SITESETTINGS)
 					.items.select("Id", "BannerMessage", "ShowBanner")
 					.orderBy("Id", false)
 					.top(1)()) as Array<Record<string, unknown>>;
@@ -369,72 +368,6 @@ export function NewPDContentDrawer({
 			);
 
 		const web = pnpWrapper.web();
-
-		function normalizeTitle(input: string): string {
-			return input.replace(/\s+/g, "").trim().toLowerCase();
-		}
-		function candidateTitles(input: string): string[] {
-			const raw = input.trim();
-			const cands = new Set<string>();
-			if (raw) cands.add(raw);
-			const spacedDigits = raw.replace(/([a-zA-Z])(\d+)/g, "$1 $2");
-			if (spacedDigits !== raw) cands.add(spacedDigits);
-			const stripped = raw.replace(/\d+$/, "");
-			if (stripped && stripped !== raw) cands.add(stripped);
-			const strippedSpaced = stripped.replace(
-				/([a-zA-Z])(\d+)/g,
-				"$1 $2",
-			);
-			if (strippedSpaced && strippedSpaced !== stripped)
-				cands.add(strippedSpaced);
-			return Array.from(cands);
-		}
-		async function resolveListTitle(title: string): Promise<string> {
-			const key = title.trim();
-			try {
-				// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-				await web.lists.getByTitle(key).select("Id")();
-				return key;
-			} catch {
-				// fall through
-			}
-			const all: Array<{ Title: string }> =
-				await web.lists.select("Title")();
-			const candidates = candidateTitles(key);
-			const candidateNorms = candidates.map((c) => normalizeTitle(c));
-
-			for (const c of candidates) {
-				const exact = all.find(
-					(l) =>
-						String(l?.Title ?? "")
-							.trim()
-							.toLowerCase() === c.toLowerCase(),
-				);
-				if (exact?.Title) return exact.Title;
-			}
-			for (const wantedNorm of candidateNorms) {
-				const normMatch = all.find(
-					(l) =>
-						normalizeTitle(String(l?.Title ?? "")) === wantedNorm,
-				);
-				if (normMatch?.Title) return normMatch.Title;
-			}
-			const stripped = key.replace(/\d+$/, "");
-			const strippedNorm = stripped ? normalizeTitle(stripped) : "";
-			if (strippedNorm) {
-				const starts = all.find((l) =>
-					normalizeTitle(String(l?.Title ?? "")).startsWith(
-						strippedNorm,
-					),
-				);
-				if (starts?.Title) return starts.Title;
-			}
-			return key;
-		}
-
-		const listTitle = await resolveListTitle(
-			ENV.LIST_ASSIGNMENTS || "Assignments1",
-		);
 		const nowIso = new Date().toISOString();
 		const assignedIso = assignmentForm.assignedDate
 			? new Date(assignmentForm.assignedDate).toISOString()
@@ -464,18 +397,20 @@ export function NewPDContentDrawer({
 		const createForUser = async (
 			u: Extract<AudienceEntry, { kind: "user" }>,
 		): Promise<{ email: string; assignmentId?: number }> => {
-			const addRes = await web.lists.getByTitle(listTitle).items.add({
-				Title: title,
-				AssignmentCatalogIdId: catalogId,
-				EmployeeEmail: u.email,
-				Reason: assignmentForm.reason.trim() || undefined,
-				AssignedById: assignedById,
-				AssignedDate: assignedIso,
-				DueDate: dueIso,
-				Statuc: "Not Started",
-				CalendarEventCreated: assignmentForm.createCalendarEvent,
-				AssignmentEmailSent: assignmentForm.sendEmail,
-			});
+			const addRes = await web.lists
+				.getByTitle(ENV.LIST_ASSIGNMENTS)
+				.items.add({
+					Title: title,
+					AssignmentCatalogIdId: catalogId,
+					EmployeeEmail: u.email,
+					Reason: assignmentForm.reason.trim() || undefined,
+					AssignedById: assignedById,
+					AssignedDate: assignedIso,
+					DueDate: dueIso,
+					Statuc: "Not Started",
+					CalendarEventCreated: assignmentForm.createCalendarEvent,
+					AssignmentEmailSent: assignmentForm.sendEmail,
+				});
 			const assignmentId =
 				typeof (addRes as unknown as { Id?: number }).Id === "number"
 					? (addRes as unknown as { Id: number }).Id
@@ -490,7 +425,7 @@ export function NewPDContentDrawer({
 		const createForRole = async (
 			r: Extract<AudienceEntry, { kind: "role" }>,
 		): Promise<void> => {
-			await web.lists.getByTitle(listTitle).items.add({
+			await web.lists.getByTitle(ENV.LIST_ASSIGNMENTS).items.add({
 				Title: title,
 				AssignmentCatalogIdId: catalogId,
 				Reason: [
@@ -568,7 +503,7 @@ export function NewPDContentDrawer({
 						Number.isFinite(c.assignmentId),
 				)
 				.map((c) => {
-					const href = `${window.location.origin}${pnpWrapper.ctx.pageContext.web.serverRelativeUrl}/Lists/${encodeURIComponent(listTitle)}/DispForm.aspx?ID=${c.assignmentId}`;
+					const href = `${window.location.origin}${pnpWrapper.ctx.pageContext.web.serverRelativeUrl}/Lists/${encodeURIComponent(ENV.LIST_ASSIGNMENTS)}/DispForm.aspx?ID=${c.assignmentId}`;
 					return `<li><a href="${href}">Assignment item #${c.assignmentId}</a> (${c.email})</li>`;
 				})
 				.join("");
@@ -615,7 +550,6 @@ export function NewPDContentDrawer({
 	}
 
 	async function submitBanner(): Promise<void> {
-		const listTitle = ENV.LIST_SITESETTINGS || "SiteSettings";
 		const web = pnpWrapper.web();
 		const payload = {
 			Title: "SiteSettings",
@@ -624,12 +558,12 @@ export function NewPDContentDrawer({
 		};
 		if (bannerItemId) {
 			await web.lists
-				.getByTitle(listTitle)
+				.getByTitle(ENV.LIST_SITESETTINGS)
 				.items.getById(bannerItemId)
 				.update(payload);
 		} else {
 			const res = await web.lists
-				.getByTitle(listTitle)
+				.getByTitle(ENV.LIST_SITESETTINGS)
 				.items.add(payload);
 			const newId =
 				typeof (res as unknown as { Id?: number }).Id === "number"
@@ -937,8 +871,7 @@ export function NewPDContentDrawer({
 								onChange={setBannerForm}
 							/>
 							<div className="text-xs text-slate-500">
-								Saves to `
-								{ENV.LIST_SITESETTINGS || "SiteSettings"}`.
+								Saves to `{ENV.LIST_SITESETTINGS}`.
 							</div>
 						</>
 					)}

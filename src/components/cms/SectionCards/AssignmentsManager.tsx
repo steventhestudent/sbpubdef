@@ -30,8 +30,6 @@ export function AssignmentsManager({
 	const [items, setItems] = React.useState<AssignmentRow[]>([]);
 	const [loading, setLoading] = React.useState(false);
 	const [error, setError] = React.useState<string | undefined>(undefined);
-	const [resolvedListTitle, setResolvedListTitle] =
-		React.useState<string>("");
 	const [hasMore, setHasMore] = React.useState(true);
 	const pageSize = 25;
 
@@ -39,76 +37,32 @@ export function AssignmentsManager({
 	type ItemsIterator = AsyncIterator<ItemsBatch>;
 	const iteratorRef = React.useRef<ItemsIterator | null>(null);
 
-	function normalizeTitle(s: string): string {
-		return s.replace(/\s+/g, "").trim().toLowerCase();
-	}
-
-	async function resolveListTitle(title: string): Promise<string> {
-		const web = pnpWrapper.web();
-		const key = title.trim();
-		try {
-			// eslint-disable-next-line @typescript-eslint/no-unused-expressions
-			await web.lists.getByTitle(key).select("Id")();
-			return key;
-		} catch {
-			// fall through
-		}
-		const all: Array<{ Title: string }> = await web.lists.select("Title")();
-
-		// IMPORTANT: avoid falling back to the deprecated list "Assignments"
-		// when the intended list key is "Assignments1".
-		const primaryCandidates = [
-			key,
-			key.replace(/([a-zA-Z])(\d+)/g, "$1 $2"),
-		].filter(Boolean);
-		const strippedFallback = key.replace(/\d+$/, "");
-
-		for (const c of primaryCandidates) {
-			const exact = all.find(
-				(l) => String(l.Title).toLowerCase() === c.toLowerCase(),
+	const assignmentsListTitle = React.useMemo(() => {
+		const raw = ENV.LIST_ASSIGNMENTS?.trim();
+		if (!raw) {
+			throw new Error(
+				"AssignmentsManager: ENV.LIST_ASSIGNMENTS is not configured",
 			);
-			if (exact?.Title) return exact.Title;
 		}
-
-		for (const n of primaryCandidates.map(normalizeTitle)) {
-			const hit = all.find((l) => normalizeTitle(String(l.Title)) === n);
-			if (hit?.Title) return hit.Title;
-		}
-
-		// Only now allow stripped exact match (Assignments) as last resort.
-		if (strippedFallback) {
-			const exactStripped = all.find(
-				(l) =>
-					String(l.Title).toLowerCase() ===
-					strippedFallback.toLowerCase(),
-			);
-			if (exactStripped?.Title) return exactStripped.Title;
-			const strippedNorm = normalizeTitle(strippedFallback);
-			const starts = all.find((l) =>
-				normalizeTitle(String(l.Title)).startsWith(strippedNorm),
-			);
-			if (starts?.Title) return starts.Title;
-		}
-		return key;
-	}
+		return raw;
+	}, []);
 
 	async function load(reset = false): Promise<void> {
 		setLoading(true);
 		setError(undefined);
+
 		if (reset) {
 			setItems([]);
 			iteratorRef.current = null;
 			setHasMore(true);
 		}
+
 		try {
 			const web = pnpWrapper.web();
-			const listTitle = await resolveListTitle(
-				ENV.LIST_ASSIGNMENTS || "Assignments1",
-			);
-			setResolvedListTitle(listTitle);
 			const statusField = ENV.INTERNALCOLUMN_ASSIGNMENTSTATUS || "Status";
+
 			const base = web.lists
-				.getByTitle(listTitle)
+				.getByTitle(assignmentsListTitle)
 				.items.select(
 					"Id",
 					"Title",
@@ -130,7 +84,7 @@ export function AssignmentsManager({
 			const rows = (next.value || []) as Array<Record<string, unknown>>;
 			setHasMore(!Boolean(next.done));
 
-			const mapped: AssignmentRow[] = (rows || []).map((r) => ({
+			const mapped: AssignmentRow[] = rows.map((r) => ({
 				id: Number(r.Id),
 				title: String(r.Title || "(untitled)"),
 				employeeEmail:
@@ -139,11 +93,8 @@ export function AssignmentsManager({
 						: undefined,
 				dueDate: typeof r.DueDate === "string" ? r.DueDate : undefined,
 				status:
-					typeof (r as Record<string, unknown>)[statusField] ===
-					"string"
-						? ((r as Record<string, unknown>)[
-								statusField
-							] as string)
+					typeof r[statusField] === "string"
+						? (r[statusField] as string)
 						: undefined,
 				percentComplete:
 					typeof r.PercentComplete === "number"
@@ -161,7 +112,6 @@ export function AssignmentsManager({
 	}
 
 	React.useEffect(() => {
-		// run after mount to avoid any stale initial state
 		setTimeout(() => {
 			load(true).catch(() => {});
 		}, 0);
@@ -179,15 +129,18 @@ export function AssignmentsManager({
 		() => filtered.map((i) => String(i.id)),
 		[filtered],
 	);
+
 	const selectedVisibleCount = React.useMemo(() => {
 		if (!selectionMode) return 0;
 		const set = new Set(selectedIds);
 		return visibleIds.reduce((acc, id) => (set.has(id) ? acc + 1 : acc), 0);
 	}, [selectionMode, selectedIds, visibleIds]);
+
 	const allSelected =
 		selectionMode &&
 		visibleIds.length > 0 &&
 		selectedVisibleCount === visibleIds.length;
+
 	const someSelected =
 		selectionMode && selectedVisibleCount > 0 && !allSelected;
 
@@ -198,10 +151,12 @@ export function AssignmentsManager({
 					{error}
 				</div>
 			) : null}
+
 			<div className="text-xs text-slate-500">
-				List: {resolvedListTitle || "(resolving…)"} | Loaded:{" "}
-				{items.length} | Showing: {filtered.length}
+				List: {assignmentsListTitle} | Loaded: {items.length} | Showing:{" "}
+				{filtered.length}
 			</div>
+
 			<div className="overflow-x-auto">
 				<table className="min-w-full divide-y divide-slate-200">
 					<thead className="bg-slate-50">
@@ -242,6 +197,7 @@ export function AssignmentsManager({
 								due && !Number.isNaN(due.getTime())
 									? due.toLocaleDateString()
 									: "—";
+
 							return (
 								<tr key={it.id} className="hover:bg-slate-50">
 									{selectionMode && (
@@ -288,6 +244,7 @@ export function AssignmentsManager({
 								</tr>
 							);
 						})}
+
 						{!filtered.length && !loading ? (
 							<tr>
 								<td
