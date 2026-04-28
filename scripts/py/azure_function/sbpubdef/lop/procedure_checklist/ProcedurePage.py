@@ -20,7 +20,7 @@ class ProcedurePage:
 
     def iter_positioned_lines(self):
         """
-        Yield dicts: { "type": "line", "y0": float, "y1": float, "text": str, "is_bold": bool }
+        Yield dicts: { "type": "line", "y0": float, "y1": float, "x0": float, "x1": float, "text": str, "is_bold": bool }
         Requires `process_blocks()` to have been called (so blocks are ProcedurePageRootBlock objects).
         """
         for rb in self.blocks:
@@ -44,12 +44,20 @@ class ProcedurePage:
                 text = "".join(parts).strip()
                 if not text:
                     continue
-                y0, y1 = None, None
+                x0, y0, x1, y1 = None, None, None, None
                 bb = ln.get("bbox") or []
                 if len(bb) == 4:
-                    y0, y1 = float(bb[1]), float(bb[3])
+                    x0, y0, x1, y1 = float(bb[0]), float(bb[1]), float(bb[2]), float(bb[3])
                 is_bold = (total_chars > 0 and (bold_chars / total_chars) >= 0.6)
-                yield {"type": "line", "y0": y0 if y0 is not None else 0.0, "y1": y1 if y1 is not None else 0.0, "text": text, "is_bold": is_bold}
+                yield {
+                    "type": "line",
+                    "x0": x0 if x0 is not None else 0.0,
+                    "x1": x1 if x1 is not None else 0.0,
+                    "y0": y0 if y0 is not None else 0.0,
+                    "y1": y1 if y1 is not None else 0.0,
+                    "text": text,
+                    "is_bold": is_bold,
+                }
 
     def iter_images(self):
         """

@@ -160,7 +160,7 @@ class ProcedureChecklist:
 		step_re = re.compile(r"^\s*(\d+)\.\s+")
 
 		# 1) Collect step markers with coordinates.
-		markers = []  # {num, page_index, y0}
+		markers = []  # {num, page_index, y0, x0}
 		for el in elements:
 			if not _before_cutoff(el):
 				continue
@@ -183,8 +183,20 @@ class ProcedureChecklist:
 					"num": num,
 					"page_index": int(el.get("page_index", 0)),
 					"y0": float(el.get("y0", 0.0)),
+					"x0": float(el.get("x0", 0.0)),
 				}
 			)
+
+		if not markers:
+			self.steps = []
+			return
+
+		# Many SOPs contain nested numbered lists within a step (e.g. "7." then indented "1.", "2.").
+		# Detect the top-level step indent from the earliest markers and ignore indented markers.
+		# Use a tolerance since PDFs can vary slightly by font/layout.
+		base_x0 = min((mk.get("x0", 0.0) for mk in markers), default=0.0)
+		indent_tolerance = 28.0
+		markers = [mk for mk in markers if float(mk.get("x0", 0.0)) <= (base_x0 + indent_tolerance)]
 
 		if not markers:
 			self.steps = []
