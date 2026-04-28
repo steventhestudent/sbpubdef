@@ -1,4 +1,5 @@
 import os
+import pymupdf  # PyMuPDF (fitz)
 from .upload import *
 
 class ProcedurePageRootBlock:
@@ -11,9 +12,30 @@ class ProcedurePageRootBlock:
             self.extract_image_block(doc_filename, page_index, image_counter_ref["count"]) # base64 blob => url
 
     def extract_image_block(self, doc_filename, page_index, img_index):
-        ext = ("jpg" if self.obj["ext"] == "jpeg" else self.obj.get("ext", "png")).lower()
-        filename = f"{doc_filename}-p{page_index+1}-img{img_index}.{ext}"
-        local_path = os.path.join(self.out_dir + "/img", filename)
-        with open(local_path, "wb") as f: f.write(self.obj["image"]) # save locally
-        self.obj["image"] = upload_file(local_path) # upload_to_sharepoint(local_path) # upload block["image"] as <documentfilename>-<page#>-<img#>.<ext> to sharepoint document library & replace with item url
+        raw_ext = (self.obj.get("ext") or "png").lower()
+        ext = "jpg" if raw_ext in ("jpeg", "jpg") else raw_ext
+
+        # Some PDFs embed images using JPX/JP2 (JPEG 2000). Browsers won’t display `.jpx` reliably.
+        # Convert those to PNG so the SharePoint URL is renderable in the webpart.
+        if ext in ("jpx", "jp2", "j2k", "jpf"):
+            filename = f"{doc_filename}-p{page_index+1}-img{img_index}.png"
+            local_path = os.path.join(self.out_dir + "/img", filename)
+            try:
+                pix = pymupdf.Pixmap(self.obj["image"])
+                if pix.alpha:
+                    pix = pymupdf.Pixmap(pymupdf.csRGB, pix)
+                pix.save(local_path)
+            except Exception:
+                # Fallback: store raw bytes with .jpx if conversion fails
+                filename = f"{doc_filename}-p{page_index+1}-img{img_index}.{ext}"
+                local_path = os.path.join(self.out_dir + "/img", filename)
+                with open(local_path, "wb") as f:
+                    f.write(self.obj["image"])
+        else:
+            filename = f"{doc_filename}-p{page_index+1}-img{img_index}.{ext}"
+            local_path = os.path.join(self.out_dir + "/img", filename)
+            with open(local_path, "wb") as f:
+                f.write(self.obj["image"]) # save locally
+
+        self.obj["image"] = upload_file(local_path) # upload block["image"] as <documentfilename>-<page#>-<img#>.<ext> to sharepoint document library & replace with item url
         self.obj["mask"] = None # another base64, we don't need it
