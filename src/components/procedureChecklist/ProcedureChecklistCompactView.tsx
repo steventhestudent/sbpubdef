@@ -5,27 +5,25 @@ import { ProcedureChecklistOverlay } from "@components/procedureChecklist/Proced
 import { procedureIngestPhaseLabel } from "@components/procedureChecklist/ProcedureChecklistIngestProgressBar";
 import { ProcedureStepsApi } from "@api/ProcedureChecklist/ProcedureStepsApi";
 
-const normalizeFirstUrl = (raw: string | undefined): string => {
-	if (!raw) return "";
-	// since Images is multiline text, take first non-empty line
-	const first = raw
+const parseMultilineUrls = (raw: string | undefined): string[] => {
+	if (!raw) return [];
+	return raw
 		.split(/\r?\n/)
 		.map((s) => s.trim())
-		.find(Boolean);
-	return first || "";
+		.filter(Boolean);
 };
 
-const resolveImageUrlCarryForward = (
+const resolveImageUrlsCarryForward = (
 	steps: ProcedureStepItem[],
 	idx: number,
-): string => {
+): string[] => {
 	// If we’re on final slide (idx === steps.length), carry forward from last step
 	const start = Math.min(idx, steps.length - 1);
 	for (let i = start; i >= 0; i--) {
-		const url = normalizeFirstUrl(steps[i]?.images);
-		if (url) return url;
+		const urls = parseMultilineUrls(steps[i]?.images);
+		if (urls.length) return urls;
 	}
-	return "";
+	return [];
 };
 
 export type ProcedureChecklistCompactViewProps = {
@@ -66,21 +64,48 @@ export const ProcedureChecklistCompactView = ({
 		false,
 	);
 	const [hasUnsavedChanges, setHasUnsavedChangees] = React.useState(false);
+	const [imagePageIndex, setImagePageIndex] = React.useState(0);
 	const titleRef = React.useRef<HTMLDivElement>(null);
 	const textRef = React.useRef<HTMLDivElement>(null);
-	if (steps === undefined) return <div>loading...</div>;
-	const isFinal = stepIndex >= steps.length; // final black slide
+
+	const stepsLoading = steps === undefined;
+	const stepsOrEmpty = steps ?? [];
+
+	const isFinal = stepIndex >= stepsOrEmpty.length; // final black slide
 	const goNext = (): void => {
-		setStepIndex((prev) => (prev >= steps.length ? 0 : prev + 1));
+		if (stepsLoading) return;
+		setStepIndex((prev) =>
+			prev >= stepsOrEmpty.length ? 0 : prev + 1,
+		);
 		setHasUnsavedChangees(false);
 	};
 	const goPrev = (): void => {
-		setStepIndex((prev) => (prev <= 0 ? steps.length : prev - 1));
+		if (stepsLoading) return;
+		setStepIndex((prev) =>
+			prev <= 0 ? stepsOrEmpty.length : prev - 1,
+		);
 		setHasUnsavedChangees(false);
 	};
 
-	const current = !isFinal ? steps[stepIndex] : undefined;
-	const imageUrl = resolveImageUrlCarryForward(steps, stepIndex);
+	const current = !isFinal ? stepsOrEmpty[stepIndex] : undefined;
+	const imageUrls = resolveImageUrlsCarryForward(stepsOrEmpty, stepIndex);
+	const boundedImageIndex =
+		imageUrls.length === 0
+			? 0
+			: Math.min(Math.max(imagePageIndex, 0), imageUrls.length - 1);
+	const imageUrl = imageUrls[boundedImageIndex] || "";
+
+	React.useEffect(() => {
+		// whenever we navigate steps, start from the first image in that step
+		setImagePageIndex(0);
+	}, [stepIndex]);
+
+	React.useEffect(() => {
+		// if list shrinks, keep index in-bounds
+		if (imagePageIndex > 0 && boundedImageIndex !== imagePageIndex) {
+			setImagePageIndex(boundedImageIndex);
+		}
+	}, [imageUrls.length, boundedImageIndex, imagePageIndex]);
 
 	const checkForUnsavedChanged = (
 		e: React.FormEvent<HTMLDivElement>,
@@ -95,6 +120,7 @@ export const ProcedureChecklistCompactView = ({
 
 	return (
 		<div className="">
+			{stepsLoading ? <div>loading...</div> : null}
 			<p className="text-xs text-slate-500">
 				{editorMode ? (
 					<span className="float-right">
@@ -207,7 +233,7 @@ export const ProcedureChecklistCompactView = ({
 					<span className="font-mono text-xs font-medium text-slate-500">
 						{isFinal
 							? `⟳`
-							: `${current?.step ?? stepIndex + 1}/${steps.length}`}
+							: `${current?.step ?? stepIndex + 1}/${stepsOrEmpty.length}`}
 					</span>
 					<span
 						title="Download..."
@@ -271,6 +297,41 @@ export const ProcedureChecklistCompactView = ({
 								</div>
 							)}
 						</div>
+						{imageUrls.length > 1 ? (
+							<div className="mt-2 flex items-center justify-center gap-3 text-xs text-slate-600">
+								<button
+									className="rounded border border-slate-300 bg-white px-2 py-1 hover:bg-slate-50 disabled:opacity-40"
+									disabled={boundedImageIndex <= 0}
+									onClick={() =>
+										setImagePageIndex((i) =>
+											Math.max(0, i - 1),
+										)
+									}
+								>
+									← Prev image
+								</button>
+								<span className="font-mono">
+									{boundedImageIndex + 1}/{imageUrls.length}
+								</span>
+								<button
+									className="rounded border border-slate-300 bg-white px-2 py-1 hover:bg-slate-50 disabled:opacity-40"
+									disabled={
+										boundedImageIndex >=
+										imageUrls.length - 1
+									}
+									onClick={() =>
+										setImagePageIndex((i) =>
+											Math.min(
+												imageUrls.length - 1,
+												i + 1,
+											),
+										)
+									}
+								>
+									Next image →
+								</button>
+							</div>
+						) : null}
 						<div
 							ref={titleRef}
 							contentEditable={editorMode ?? false}
@@ -296,6 +357,7 @@ export const ProcedureChecklistCompactView = ({
 									className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:bg-blue-700 disabled:opacity-50"
 									onClick={() => {
 										if (!hasUnsavedChanges) return;
+										if (stepsLoading || isFinal || !current) return;
 										const newTitle =
 											titleRef.current!.innerText;
 										const newText =
@@ -303,14 +365,14 @@ export const ProcedureChecklistCompactView = ({
 										setTimeout(
 											async () =>
 												await procedureStepsApi.updateItem(
-													current!.id,
+													current.id,
 													{
 														Title: newTitle,
 														Text: newText,
 													} as ProcedureStepItem,
 												),
 										);
-										const s = [...steps];
+										const s = [...stepsOrEmpty];
 										s[stepIndex].title = newTitle;
 										s[stepIndex].text = newText;
 										setSteps(s);
