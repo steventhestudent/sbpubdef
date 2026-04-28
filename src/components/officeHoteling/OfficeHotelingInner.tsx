@@ -37,6 +37,31 @@ import "@pnp/sp/files";
 import "@pnp/sp/folders";
 import * as Utils from "@utils";
 
+const OUTLOOK_MARKER_PREFIX = "sbpubdef:source=officeHoteling;";
+
+type OutlookIndexedEvent = {
+	id: string;
+	webLink?: string;
+	bodyPreview?: string;
+	start?: { dateTime?: string };
+	end?: { dateTime?: string };
+	subject?: string;
+};
+
+function parseHotelingMarker(
+	bodyPreview: string | undefined,
+): { reservationSpId?: number } {
+	if (!bodyPreview) return {};
+	const t = bodyPreview.trim();
+	const idx = t.indexOf(OUTLOOK_MARKER_PREFIX);
+	if (idx < 0) return {};
+	const tail = t.slice(idx + OUTLOOK_MARKER_PREFIX.length);
+	const m = tail.match(/reservationSpId=(\d+)/i);
+	if (!m) return {};
+	const n = Number(m[1]);
+	return Number.isFinite(n) ? { reservationSpId: n } : {};
+}
+
 export function OfficeHotelingInner(
 	props: IOfficeHotelingProps & { userGroupNames: string[] },
 ): JSX.Element {
@@ -131,7 +156,69 @@ export function OfficeHotelingInner(
 						sharePointListItemId: it.Id,
 					} as unknown as Reservation;
 				});
-				setReservations(mapped);
+
+				const canUseOutlook =
+					!props.context.pageContext.user.isExternalGuestUser;
+
+				if (!canUseOutlook || mapped.length === 0) {
+					setReservations(mapped);
+					return;
+				}
+
+				// Recover Outlook event ids after refresh by indexing /me/events and
+				// matching our marker in bodyPreview.
+				let outlookLookup: Record<
+					number,
+					{ outlookEventId: string; webLink?: string }
+				> = {};
+				try {
+					const client: MSGraphClientV3 = await GraphClient(
+						props.context,
+					);
+					const now = new Date();
+					const windowEnd = new Date(
+						now.getTime() + 160 * 24 * 60 * 60 * 1000,
+					); // ~160 days
+
+					const response: { value: OutlookIndexedEvent[] } = await client
+						.api("/me/events")
+						.select("id,webLink,bodyPreview,subject,start,end")
+						.filter(
+							`start/dateTime ge '${now.toISOString()}' and start/dateTime lt '${windowEnd.toISOString()}'`,
+						)
+						.orderby("start/dateTime ASC")
+						.top(250)
+						.get();
+
+					for (const e of response.value || []) {
+						const marker = parseHotelingMarker(e.bodyPreview);
+						if (!marker.reservationSpId) continue;
+						outlookLookup[marker.reservationSpId] = {
+							outlookEventId: e.id,
+							webLink: e.webLink,
+						};
+					}
+				} catch (e) {
+					console.warn(
+						"Failed to index Outlook events for Office Hoteling.",
+						e,
+					);
+					outlookLookup = {};
+				}
+
+				const withOutlook = mapped.map((r) => {
+					const spId = r.sharePointListItemId;
+					if (!spId) return r;
+					const found = outlookLookup[spId];
+					if (!found?.outlookEventId) return r;
+					return {
+						...r,
+						outlookEventId: found.outlookEventId,
+						outlookEventWebLink: found.webLink,
+					};
+				});
+
+				setReservations(withOutlook);
 			} catch (e) {
 				console.warn("Failed to load reservations from SharePoint.", e);
 			}
@@ -536,6 +623,53 @@ export function OfficeHotelingInner(
 
 		const webLink = `${contextSiteUrl}/_layouts/15/Event.aspx?ListGuid=${listGuid}&ItemId=${added.Id}`;
 		return { itemId: added.Id, webLink };
+	};
+
+	const createOutlookEventForReservation = async (
+		reservation: Reservation,
+		opts: { reservationSpId: number; forceAllDayRange?: boolean },
+	): Promise<{ outlookEventId: string; webLink?: string }> => {
+		if (props.context.pageContext.user.isExternalGuestUser) {
+			throw new Error(
+				"Outlook calendar actions are not available for external/guest users.",
+			);
+		}
+
+		const allDayRange = (() => {
+			const [year, month, day] = reservation.date.split("-").map(Number);
+			return {
+				start: new Date(year, month - 1, day, 8, 0, 0, 0),
+				end: new Date(year, month - 1, day, 17, 0, 0, 0),
+			};
+		})();
+
+		const { start, end } = opts.forceAllDayRange
+			? allDayRange
+			: getReservationDateRange(reservation);
+
+		const marker = `${OUTLOOK_MARKER_PREFIX}reservationSpId=${opts.reservationSpId};date=${reservation.date};time=${reservation.time};location=${reservation.location};desk=${reservation.desk ?? ""};`;
+
+		const subjectBase = `Office Hoteling: ${reservation.location}${reservation.desk ? ` (${reservation.desk})` : ""}`;
+		const subject = opts.forceAllDayRange
+			? `${subjectBase} - All Day (8:00 AM - 5:00 PM)`
+			: subjectBase;
+
+		const client: MSGraphClientV3 = await GraphClient(props.context);
+		const created: { id: string; webLink?: string } = await client
+			.api("/me/events")
+			.post({
+				subject,
+				start: { dateTime: start.toISOString(), timeZone: "UTC" },
+				end: { dateTime: end.toISOString(), timeZone: "UTC" },
+				location: { displayName: reservation.location || "" },
+				body: {
+					contentType: "HTML",
+					// Marker first to ensure it surfaces in bodyPreview.
+					content: `<div>${marker}</div><p>Added from Office Hoteling.</p>`,
+				},
+			});
+
+		return { outlookEventId: created.id, webLink: created.webLink };
 	};
 
 	const deleteSharePointEventForReservation = async (
@@ -1121,6 +1255,18 @@ export function OfficeHotelingInner(
 				);
 
 				if (pairedReservation) {
+					if (pairedReservation.outlookEventId) {
+						try {
+							await deleteReservationEventFromCalendar(
+								pairedReservation,
+							);
+						} catch (error) {
+							extraFailures.push(
+								`Delete existing Outlook event failed: ${extractErrorMessage(error)}`,
+							);
+						}
+					}
+
 					if (
 						pairedReservation.sharePointEventId ||
 						pairedReservation.sharePointEventWebLink
@@ -1217,6 +1363,49 @@ export function OfficeHotelingInner(
 						);
 					}
 				}
+
+				// Create Outlook event after we have a stable reservationSpId for marker matching.
+				const reservationSpId =
+					reservationToSave.sharePointListItemId ?? undefined;
+				if (
+					reservationSpId &&
+					!props.context.pageContext.user.isExternalGuestUser
+				) {
+					try {
+						const createdOutlook =
+							await createOutlookEventForReservation(
+								reservationToSave,
+								{
+									reservationSpId,
+									forceAllDayRange: !!pairedReservation,
+								},
+							);
+						reservationToSave.outlookEventId =
+							createdOutlook.outlookEventId;
+						reservationToSave.outlookEventWebLink =
+							createdOutlook.webLink;
+
+						if (pairedReservation) {
+							updatedExistingReservations =
+								updatedExistingReservations.map((r) =>
+									r.id === pairedReservation.id
+										? {
+												...r,
+												outlookEventId:
+													createdOutlook.outlookEventId,
+												outlookEventWebLink:
+													createdOutlook.webLink,
+											}
+										: r,
+								);
+						}
+					} catch (error) {
+						extraFailures.push(
+							`Outlook event failed: ${extractErrorMessage(error)}`,
+						);
+					}
+				}
+
 				setReservations([
 					...updatedExistingReservations,
 					reservationToSave,
@@ -1294,6 +1483,18 @@ export function OfficeHotelingInner(
 				);
 
 				if (pairedReservation) {
+					if (pairedReservation.outlookEventId) {
+						try {
+							await deleteReservationEventFromCalendar(
+								pairedReservation,
+							);
+						} catch (error) {
+							extraFailures.push(
+								`Delete existing Outlook event failed: ${extractErrorMessage(error)}`,
+							);
+						}
+					}
+
 					if (
 						pairedReservation.sharePointEventId ||
 						pairedReservation.sharePointEventWebLink
@@ -1391,6 +1592,70 @@ export function OfficeHotelingInner(
 					}
 				}
 			}
+
+			// Create Outlook event(s) after SharePoint list ids exist (marker uses reservationSpId).
+			if (
+				savedReservations.length > 0 &&
+				!props.context.pageContext.user.isExternalGuestUser
+			) {
+				// Determine which reservations should be represented as "all day"
+				// (when an all-day SharePoint event was created for a pair).
+				const countBySpEventId = new Map<number, number>();
+				for (const r of workingReservations) {
+					if (typeof r.sharePointEventId === "number") {
+						countBySpEventId.set(
+							r.sharePointEventId,
+							(countBySpEventId.get(r.sharePointEventId) ?? 0) +
+								1,
+						);
+					}
+				}
+
+				const groupKeyForReservation = (r: Reservation): string => {
+					if (typeof r.sharePointEventId === "number")
+						return `spEvent:${r.sharePointEventId}`;
+					return `k:${r.date}|${r.location}|${r.desk ?? ""}`;
+				};
+
+				const createdOutlookByGroup = new Map<
+					string,
+					{ outlookEventId: string; webLink?: string }
+				>();
+
+				for (const r of savedReservations) {
+					const reservationSpId = r.sharePointListItemId;
+					if (!reservationSpId || r.outlookEventId) continue;
+
+					const groupKey = groupKeyForReservation(r);
+					const forceAllDayRange =
+						typeof r.sharePointEventId === "number" &&
+						(countBySpEventId.get(r.sharePointEventId) ?? 0) > 1;
+
+					let created = createdOutlookByGroup.get(groupKey);
+					if (!created) {
+						try {
+							created = await createOutlookEventForReservation(r, {
+								reservationSpId,
+								forceAllDayRange,
+							});
+							createdOutlookByGroup.set(groupKey, created);
+						} catch (error) {
+							extraFailures.push(
+								`Outlook event failed: ${extractErrorMessage(error)}`,
+							);
+							continue;
+						}
+					}
+
+					// Apply the created Outlook event to all reservations in the group.
+					for (const wr of workingReservations) {
+						if (groupKeyForReservation(wr) !== groupKey) continue;
+						wr.outlookEventId = created.outlookEventId;
+						wr.outlookEventWebLink = created.webLink;
+					}
+				}
+			}
+
 			setReservations(workingReservations);
 
 			const followUpFailures =

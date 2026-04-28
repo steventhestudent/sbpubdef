@@ -11,6 +11,30 @@ import * as Utils from "@utils";
 import { ENV_CANVIEW } from "@utils/rolebased/ENV";
 
 const PAGE_SIZE = 5;
+const OUTLOOK_MARKER_PREFIX = "sbpubdef:source=upcomingEvents;";
+
+type OutlookIndexedEvent = {
+	id: string;
+	subject?: string;
+	start?: { dateTime?: string };
+	end?: { dateTime?: string };
+	webLink?: string;
+	bodyPreview?: string;
+};
+
+function parseUpcomingEventsMarker(
+	bodyPreview: string | undefined,
+): { spEventId?: number } {
+	if (!bodyPreview) return {};
+	const t = bodyPreview.trim();
+	const idx = t.indexOf(OUTLOOK_MARKER_PREFIX);
+	if (idx < 0) return {};
+	const tail = t.slice(idx + OUTLOOK_MARKER_PREFIX.length);
+	const m = tail.match(/spEventId=(\d+)/i);
+	if (!m) return {};
+	const n = Number(m[1]);
+	return Number.isFinite(n) ? { spEventId: n } : {};
+}
 
 function AddToCalendarMailboxIcon({
 	className,
@@ -93,6 +117,19 @@ function PDIntranetView({
 		type: "success" | "error";
 		text: string;
 	} | null>(null);
+	const [outlookLookupBySpId, setOutlookLookupBySpId] = React.useState<
+		Record<number, { outlookEventId: string; webLink?: string }>
+	>({});
+	const [outlookItems, setOutlookItems] = React.useState<
+		Array<{
+			outlookEventId: string;
+			title: string;
+			dateTime?: string;
+			webLink?: string;
+			spEventId?: number;
+		}>
+	>([]);
+	const [outlookLoading, setOutlookLoading] = React.useState(false);
 
 	const defaultItems: PDEvent[] = [
 		{
@@ -130,6 +167,70 @@ function PDIntranetView({
 	React.useEffect(() => {
 		pnpWrapper.loadCachedThenFresh(load);
 	}, [load]);
+
+	const canUseOutlook =
+		!pnpWrapper?.ctx?.pageContext?.user?.isExternalGuestUser;
+
+	const refreshOutlookIndex = React.useCallback(async (): Promise<void> => {
+		if (!canUseOutlook) return;
+		setOutlookLoading(true);
+		try {
+			const client: MSGraphClientV3 = await GraphClient(pnpWrapper.ctx);
+
+			const now = new Date();
+			const windowEnd = new Date(now.getTime() + 120 * 24 * 60 * 60 * 1000); // ~120 days
+
+			const response: { value: OutlookIndexedEvent[] } = await client
+				.api("/me/events")
+				.select("id,subject,start,end,webLink,bodyPreview")
+				.filter(
+					`start/dateTime ge '${now.toISOString()}' and start/dateTime lt '${windowEnd.toISOString()}'`,
+				)
+				.orderby("start/dateTime ASC")
+				.top(250)
+				.get();
+
+			const nextLookup: Record<
+				number,
+				{ outlookEventId: string; webLink?: string }
+			> = {};
+			const nextMyItems: Array<{
+				outlookEventId: string;
+				title: string;
+				dateTime?: string;
+				webLink?: string;
+				spEventId?: number;
+			}> = [];
+
+			for (const e of response.value || []) {
+				const marker = parseUpcomingEventsMarker(e.bodyPreview);
+				if (!marker.spEventId) continue;
+				nextLookup[marker.spEventId] = {
+					outlookEventId: e.id,
+					webLink: e.webLink,
+				};
+				nextMyItems.push({
+					outlookEventId: e.id,
+					title: e.subject || "(untitled)",
+					dateTime: e.start?.dateTime,
+					webLink: e.webLink,
+					spEventId: marker.spEventId,
+				});
+			}
+
+			setOutlookLookupBySpId(nextLookup);
+			setOutlookItems(nextMyItems);
+		} catch (error) {
+			console.warn("Failed to index Outlook events for Upcoming Events.", error);
+		} finally {
+			setOutlookLoading(false);
+		}
+	}, [canUseOutlook, pnpWrapper.ctx]);
+
+	React.useEffect(() => {
+		// Index Outlook events on mount so Add/Remove is correct after refresh.
+		refreshOutlookIndex().catch(() => {});
+	}, [refreshOutlookIndex]);
 
 	const isUserIT = Utils.isIT(userGroupNames);
 	const items = React.useMemo(() => {
@@ -174,6 +275,13 @@ function PDIntranetView({
 		: `${pageStart + 1}–${Math.min(pageStart + pageItems.length, items.length)} of ${items.length}`;
 
 	const addToOutlookCalendar = async (event: PDEvent): Promise<void> => {
+		if (!canUseOutlook) {
+			setCalendarStatus({
+				type: "error",
+				text: "Outlook calendar actions are not available for external/guest users.",
+			});
+			return;
+		}
 		if (!event.date) {
 			setCalendarStatus({
 				type: "error",
@@ -196,6 +304,11 @@ function PDIntranetView({
 		setAddingEventId(event.id);
 		try {
 			const client: MSGraphClientV3 = await GraphClient(pnpWrapper.ctx);
+			const spEventId = typeof event.id === "number" ? event.id : Number(event.id);
+			const marker = Number.isFinite(spEventId)
+				? `${OUTLOOK_MARKER_PREFIX}spEventId=${spEventId};`
+				: `${OUTLOOK_MARKER_PREFIX}`;
+
 			await client.api("/me/events").post({
 				subject: event.title,
 				start: {
@@ -211,7 +324,12 @@ function PDIntranetView({
 				},
 				body: {
 					contentType: "HTML",
-					content: `<p>Added from Upcoming Events.</p>${event.detailsUrl ? `<p><a href="${event.detailsUrl}">View details</a></p>` : ""}`,
+					// Put marker first so it appears in bodyPreview for indexing.
+					content: `<div>${marker}</div><p>Added from Upcoming Events.</p>${
+						event.detailsUrl
+							? `<p><a href="${event.detailsUrl}">View details</a></p>`
+							: ""
+					}`,
 				},
 			});
 
@@ -219,12 +337,41 @@ function PDIntranetView({
 				type: "success",
 				text: `Added "${event.title}" to your Outlook calendar.`,
 			});
+			await refreshOutlookIndex();
 		} catch (error) {
 			const message =
 				error instanceof Error ? error.message : String(error);
 			setCalendarStatus({
 				type: "error",
 				text: `Failed to add "${event.title}" to Outlook: ${message}`,
+			});
+		} finally {
+			setAddingEventId(null);
+		}
+	};
+
+	const removeFromOutlookCalendar = async (event: PDEvent): Promise<void> => {
+		if (!canUseOutlook) return;
+		const spEventId = typeof event.id === "number" ? event.id : Number(event.id);
+		if (!Number.isFinite(spEventId)) return;
+		const existing = outlookLookupBySpId[spEventId];
+		if (!existing?.outlookEventId) return;
+
+		setAddingEventId(event.id);
+		try {
+			const client: MSGraphClientV3 = await GraphClient(pnpWrapper.ctx);
+			await client.api(`/me/events/${existing.outlookEventId}`).delete();
+			setCalendarStatus({
+				type: "success",
+				text: `Removed "${event.title}" from your Outlook calendar.`,
+			});
+			await refreshOutlookIndex();
+		} catch (error) {
+			const message =
+				error instanceof Error ? error.message : String(error);
+			setCalendarStatus({
+				type: "error",
+				text: `Failed to remove "${event.title}" from Outlook: ${message}`,
 			});
 		} finally {
 			setAddingEventId(null);
@@ -245,6 +392,54 @@ function PDIntranetView({
 				</div>
 			)}
 
+			{canUseOutlook && (
+				<div className="mx-3 mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+					<div className="flex items-center justify-between gap-2">
+						<div className="font-semibold">My Events</div>
+						<button
+							type="button"
+							onClick={() => refreshOutlookIndex().catch(() => {})}
+							className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+							disabled={outlookLoading}
+						>
+							{outlookLoading ? "Refreshing…" : "Refresh"}
+						</button>
+					</div>
+
+					{outlookItems.length === 0 ? (
+						<div className="mt-1 text-xs text-slate-500">
+							No Outlook events added from Upcoming Events yet.
+						</div>
+					) : (
+						<ul className="mt-2 space-y-1">
+							{outlookItems.slice(0, 5).map((e) => (
+								<li key={e.outlookEventId} className="text-xs">
+									{e.webLink ? (
+										<a
+											href={e.webLink}
+											target="_blank"
+											rel="noopener noreferrer"
+											className="font-medium text-slate-800 hover:text-blue-800 hover:underline"
+										>
+											{e.title}
+										</a>
+									) : (
+										<span className="font-medium text-slate-800">
+											{e.title}
+										</span>
+									)}
+									{e.dateTime ? (
+										<span className="ml-2 text-slate-500">
+											{new Date(e.dateTime).toLocaleString()}
+										</span>
+									) : null}
+								</li>
+							))}
+						</ul>
+					)}
+				</div>
+			)}
+
 			<div className="max-h-[28rem] overflow-y-auto">
 				{isPlaceholderEmpty ? (
 					<div className="px-6 py-12 text-center text-sm text-slate-500">
@@ -253,6 +448,15 @@ function PDIntranetView({
 				) : (
 					<ul className="divide-y divide-slate-100">
 						{pageItems.map((event) => {
+							const spEventId =
+								typeof event.id === "number"
+									? event.id
+									: Number(event.id);
+							const isInMyCalendar =
+								canUseOutlook &&
+								Number.isFinite(spEventId) &&
+								!!outlookLookupBySpId[spEventId];
+
 							const eventDateObj =
 								getEventLocalStart(event) ??
 								new Date(event.date || "");
@@ -359,12 +563,13 @@ function PDIntranetView({
 											<button
 												type="button"
 												onClick={() => {
-													addToOutlookCalendar(
-														event,
-													).catch((error) => {
+													const action = isInMyCalendar
+														? removeFromOutlookCalendar
+														: addToOutlookCalendar;
+													action(event).catch((error) => {
 														setCalendarStatus({
 															type: "error",
-															text: `Failed to add "${event.title}" to Outlook: ${
+															text: `Failed to update "${event.title}" in Outlook: ${
 																error instanceof
 																Error
 																	? error.message
@@ -378,9 +583,21 @@ function PDIntranetView({
 												disabled={
 													addingEventId === event.id
 												}
-												className="group rounded-xl border border-slate-200 bg-white p-2.5 text-slate-600 shadow-sm transition hover:border-blue-300 hover:bg-blue-50/60 hover:text-blue-800 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40"
-												aria-label="Add to my Outlook calendar"
-												title="Add to my calendar"
+												className={`group rounded-xl border bg-white p-2.5 shadow-sm transition focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 ${
+													isInMyCalendar
+														? "border-emerald-200 text-emerald-700 hover:border-emerald-300 hover:bg-emerald-50"
+														: "border-slate-200 text-slate-600 hover:border-blue-300 hover:bg-blue-50/60 hover:text-blue-800"
+												}`}
+												aria-label={
+													isInMyCalendar
+														? "Remove from my Outlook calendar"
+														: "Add to my Outlook calendar"
+												}
+												title={
+													isInMyCalendar
+														? "Remove from my calendar"
+														: "Add to my calendar"
+												}
 											>
 												{addingEventId === event.id ? (
 													<span

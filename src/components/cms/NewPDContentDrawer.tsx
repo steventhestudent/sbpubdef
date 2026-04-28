@@ -465,6 +465,58 @@ export function NewPDContentDrawer({
 			}
 		}
 
+		if (assignmentForm.createCalendarEvent) {
+			const base = (ENV.FUNCTION_BASE_URL || "").replace(/\/$/, "");
+			if (!base) throw new Error("ENV.FUNCTION_BASE_URL is not set.");
+			const appId = (ENV.FUNCTION_API_APP_ID || "").trim();
+			if (!appId) throw new Error("ENV.FUNCTION_API_APP_ID is not set.");
+
+			const events = createdForUsers
+				.filter(
+					(c) =>
+						typeof c.assignmentId === "number" &&
+						Number.isFinite(c.assignmentId) &&
+						!!c.email,
+				)
+				.map((c) => {
+					const href = `${window.location.origin}${pnpWrapper.ctx.pageContext.web.serverRelativeUrl}/Lists/${encodeURIComponent(
+						ENV.LIST_ASSIGNMENTS,
+					)}/DispForm.aspx?ID=${c.assignmentId}`;
+					return {
+						assigneeEmail: c.email,
+						assignmentItemId: c.assignmentId,
+						catalogId,
+						title,
+						dueDate: assignmentForm.dueDate,
+						assignmentUrl: href,
+					};
+				});
+
+			if (events.length === 0) {
+				alert(
+					"Create Calendar Event is enabled, but no individual people were selected (only departments). Calendar events were not created.",
+				);
+			} else {
+				const url = `${base}/api/CreateAssignmentCalendarEvent`;
+				const client: AadHttpClient =
+					await pnpWrapper.ctx.aadHttpClientFactory.getClient(appId);
+				const response = await client.post(
+					url,
+					AadHttpClient.configurations.v1,
+					{
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ events }),
+					},
+				);
+				if (!response.ok) {
+					const errText = await response.text().catch(() => "");
+					throw new Error(
+						`Failed to create calendar events via function (${response.status}) ${errText}`,
+					);
+				}
+			}
+		}
+
 		if (assignmentForm.sendEmail) {
 			const base = (ENV.FUNCTION_BASE_URL || "").replace(/\/$/, "");
 			if (!base) throw new Error("ENV.FUNCTION_BASE_URL is not set.");
