@@ -3,6 +3,7 @@ import { AadHttpClient } from "@microsoft/sp-http";
 import RoleFormField from "@utils/rolebased/RoleFormField";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { AnnouncementsApi } from "@api/announcements";
+import { ProcedureChecklistIngestApi } from "@api/ProcedureChecklist";
 import { offices } from "@webparts/officeInformation/components/Offices";
 import {
 	AssignmentView,
@@ -259,41 +260,6 @@ export function NewPDContentDrawer({
 		}
 	}
 
-	async function uploadToUserUploads(
-		file: File,
-		relativeFolder: string, // ex: "resource/LOP/ProcedureChecklist"
-	): Promise<{ absoluteUrl: string; serverRelativeUrl: string }> {
-		const web = pnpWrapper.web();
-		const webServerRel =
-			pnpWrapper.ctx.pageContext.web.serverRelativeUrl || "";
-		const normalizedWebServerRel = webServerRel.endsWith("/")
-			? webServerRel.slice(0, -1)
-			: webServerRel;
-		const fileName = file.name.replace(/[\\/]/g, "-");
-		const folderServerRel =
-			`${normalizedWebServerRel}/user_uploads/${relativeFolder}`.replace(
-				/\/+/g,
-				"/",
-			);
-
-		try {
-			await web.folders.addUsingPath(folderServerRel);
-		} catch {
-			// ignore
-		}
-
-		await web
-			.getFolderByServerRelativePath(folderServerRel)
-			.files.addUsingPath(fileName, file, { Overwrite: true });
-
-		const serverRelativeUrl = `${folderServerRel}/${encodeURIComponent(fileName)}`;
-		const absoluteUrl = new URL(
-			serverRelativeUrl,
-			window.location.origin,
-		).toString();
-		return { absoluteUrl, serverRelativeUrl };
-	}
-
 	async function submitAnnouncement(): Promise<void> {
 		const title = annTitle.trim();
 		const html = editorRef.current?.innerHTML || "";
@@ -309,22 +275,14 @@ export function NewPDContentDrawer({
 		if (!pcTitle.trim()) throw new Error("Please enter a title.");
 		if (!pcPdf) throw new Error("Please choose a PDF file.");
 
-		const { absoluteUrl } = await uploadToUserUploads(
-			pcPdf,
-			"resource/LOP/ProcedureChecklist",
-		);
-
-		await pnpWrapper
-			.web()
-			.lists.getByTitle(ENV.LIST_PROCEDURECHECKLIST)
-			.items.add({
-				Title: pcTitle.trim(),
-				Purpose: pcPurpose.trim(),
-				Category: pcCategory.trim(),
-				DocumentURL: absoluteUrl,
-				Filename: pcPdf.name,
-				EffectiveDate: pcEffectiveDate || undefined,
-			});
+		const ingest = new ProcedureChecklistIngestApi(pnpWrapper.ctx);
+		await ingest.ingestCreate({
+			file: pcPdf,
+			category: pcCategory.trim() || "Uncategorized",
+			title: pcTitle.trim(),
+			purpose: pcPurpose.trim(),
+			effectiveDate: pcEffectiveDate.trim() || undefined,
+		});
 	}
 
 	async function submitPdEvent(): Promise<void> {

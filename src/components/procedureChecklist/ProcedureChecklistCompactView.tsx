@@ -36,6 +36,8 @@ export const ProcedureChecklistCompactView = ({
 	setStepIndex,
 	procedureStepsApi,
 	editorMode = false,
+	reimportBusy = false,
+	onReimportPdf,
 }: {
 	selectedProcedure: ProcedureChecklistItem;
 	setSelectedProcedure: React.Dispatch<
@@ -49,6 +51,8 @@ export const ProcedureChecklistCompactView = ({
 	setStepIndex: React.Dispatch<React.SetStateAction<number>>;
 	procedureStepsApi: ProcedureStepsApi;
 	editorMode?: boolean;
+	reimportBusy?: boolean;
+	onReimportPdf?: (file: File) => Promise<void>;
 }): JSX.Element => {
 	const [maximizePurpose, setMaximizePurpose] = React.useState(false);
 	const [showOverlay, setShowOverlay] = React.useState<boolean | string>(
@@ -86,22 +90,28 @@ export const ProcedureChecklistCompactView = ({
 		<div className="">
 			<p className="text-xs text-slate-500">
 				{editorMode ? (
-					<span
-						className="float-right cursor-pointer hover:text-blue-500"
-						onClick={(e) =>
-							(
-								(e.target as HTMLSpanElement)
-									.children[0] as HTMLInputElement
-							).click()
-						}
-					>
+					<span className="float-right">
 						<input
 							className="hidden"
 							type="file"
-							onChange={() => console.log(`ok`)}
-							// ref={fileInputRef}
+							accept="application/pdf,.pdf"
+							disabled={reimportBusy || !onReimportPdf}
+							onChange={(e) => {
+								const input = e.target as HTMLInputElement;
+								const file = input.files?.[0];
+								input.value = "";
+								if (!file || !onReimportPdf) return;
+								void onReimportPdf(file);
+							}}
+							id={`lop-reimport-${selectedProcedure.id}`}
 						/>
-						re-import
+						<label
+							htmlFor={`lop-reimport-${selectedProcedure.id}`}
+							className={`cursor-pointer hover:text-blue-500 ${reimportBusy || !onReimportPdf ? "opacity-50" : ""}`}
+							title="Replace PDF, refresh list fields, and re-extract steps"
+						>
+							{reimportBusy ? "re-import…" : "re-import"}
+						</label>
 					</span>
 				) : (
 					<></>

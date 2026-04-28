@@ -1,6 +1,9 @@
 import * as React from "react";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
-import { ProcedureChecklistApi } from "@api/ProcedureChecklist";
+import {
+	ProcedureChecklistApi,
+	ProcedureChecklistIngestApi,
+} from "@api/ProcedureChecklist";
 import { ProcedureChecklistItem } from "@type/ProcedureChecklist";
 import { ProcedureFilters } from "@components/procedureChecklist/ProcedureFilters";
 import { ProcedureChecklistListItem } from "@components/procedureChecklist/ProcedureChecklistListItem";
@@ -28,15 +31,16 @@ export function ProcedureChecklist({
 		undefined,
 	);
 	const [stepIndex, setStepIndex] = React.useState<number>(0); // 0..steps.length (steps.length = final slide)
+	const [ingestBusy, setIngestBusy] = React.useState(false);
+	const newPdfInputRef = React.useRef<HTMLInputElement>(null);
 
 	const procedureChecklistApi = new ProcedureChecklistApi(pnpWrapper);
 	const procedureStepsApi = new ProcedureStepsApi(pnpWrapper);
 
-	const load: () => Promise<void> = async () => {
-		const canWrite = await procedureChecklistApi.currentUserCanWrite();
-		setEditorMode(canWrite);
-		const rows = await procedureChecklistApi.get(150);
-		const mapped = (rows || []).map((item: ProcedureChecklistItem) => ({
+	const mapFromApi = (
+		rows: ProcedureChecklistItem[] | undefined,
+	): ProcedureChecklistItem[] =>
+		(rows || []).map((item: ProcedureChecklistItem) => ({
 			id: item.id,
 			title: item.title,
 			purpose: item.purpose,
@@ -47,6 +51,19 @@ export function ProcedureChecklist({
 			json: item.json,
 			documentURL: item.documentURL,
 		}));
+
+	const refreshProcedures =
+		async (): Promise<ProcedureChecklistItem[]> => {
+			const rows = await procedureChecklistApi.get(150);
+			const mapped = mapFromApi(rows);
+			setProcedures(mapped.length ? mapped : []);
+			return mapped;
+		};
+
+	const load: () => Promise<void> = async () => {
+		const canWrite = await procedureChecklistApi.currentUserCanWrite();
+		setEditorMode(canWrite);
+		const mapped = mapFromApi(await procedureChecklistApi.get(150));
 		setProcedures(mapped.length ? mapped : []);
 		setIsLoading(false);
 	};
@@ -118,9 +135,63 @@ export function ProcedureChecklist({
 							setFilterCategory(category ? category : undefined);
 						}}
 					/>
-					<span className="float-right cursor-pointer hover:text-blue-500">
-						{editorMode ? "➕" : ""}
-					</span>
+					{editorMode ? (
+						<span className="float-right">
+							<input
+								ref={newPdfInputRef}
+								type="file"
+								accept="application/pdf,.pdf"
+								className="hidden"
+								disabled={ingestBusy}
+								onChange={(e) => {
+									const input = e.target as HTMLInputElement;
+									const file = input.files?.[0];
+									input.value = "";
+									if (!file) return;
+									setIngestBusy(true);
+									(async () => {
+										try {
+											const ingest =
+												new ProcedureChecklistIngestApi(
+													pnpWrapper.ctx,
+												);
+											const res =
+												await ingest.ingestCreate({
+													file,
+												});
+											const list =
+												await refreshProcedures();
+											const pid = res.procedureId;
+											const row = pid
+												? list.find((p) => p.id === pid)
+												: undefined;
+											if (row) await onProcedureSelected(row);
+										} catch (err: unknown) {
+											alert(
+												err instanceof Error
+													? err.message
+													: String(err),
+											);
+										} finally {
+											setIngestBusy(false);
+										}
+									})().catch(() => setIngestBusy(false));
+								}}
+							/>
+							<span
+								className={`cursor-pointer hover:text-blue-500 ${ingestBusy ? "opacity-50" : ""}`}
+								title="Import new procedure (PDF)"
+								onClick={() => {
+									if (!ingestBusy)
+										newPdfInputRef.current?.click();
+								}}
+							>
+								{ingestBusy ? "…" : "➕"}
+							</span>
+						</span>
+					) : (
+						<></>
+					)}
 				</p>
 			) : (
 				<></>
@@ -187,6 +258,40 @@ export function ProcedureChecklist({
 							setStepIndex={setStepIndex}
 							editorMode={editorMode}
 							procedureStepsApi={procedureStepsApi}
+							reimportBusy={ingestBusy}
+							onReimportPdf={async (file: File) => {
+								setIngestBusy(true);
+								try {
+									const ingest =
+										new ProcedureChecklistIngestApi(
+											pnpWrapper.ctx,
+										);
+									await ingest.ingestReimport({
+										file,
+										procedureId: selectedProcedure.id,
+										category: selectedProcedure.category,
+									});
+									const list = await refreshProcedures();
+									const row =
+										list.find(
+											(p) => p.id === selectedProcedure.id,
+										) || selectedProcedure;
+									setSelectedProcedure(row);
+									const s = await procedureStepsApi.get(999, {
+										procedureChecklistId: row.id,
+									});
+									setSteps(s || []);
+									setStepIndex(0);
+								} catch (err: unknown) {
+									alert(
+										err instanceof Error
+											? err.message
+											: String(err),
+									);
+								} finally {
+									setIngestBusy(false);
+								}
+							}}
 						/>
 					)}
 				</>

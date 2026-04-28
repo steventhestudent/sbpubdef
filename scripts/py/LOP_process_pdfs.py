@@ -23,5 +23,7 @@ for root, dirs, files in os.walk(SCRAPED_LOP_PAGE_RESOURCES):
         if not(filename.endswith('.pdf')):
             if not(filename.endswith('.DS_Store')): ignored.append(f'{category}/{filename}')
             continue
-        procedure_checklists.append(ProcedureChecklist(filepath, category, LOCAL_OUT_DIR))
+        pc = ProcedureChecklist(filepath, category, LOCAL_OUT_DIR)
+        pc.run()
+        procedure_checklists.append(pc)
     # if len(procedure_checklists) == 1: break # debug 1 pdf

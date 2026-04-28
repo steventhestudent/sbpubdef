@@ -52,13 +52,22 @@ def update_list_item(procedure: ProcedureChecklist, procedure_id): # must use in
     })
 
 def add_or_update_lists(procedure: ProcedureChecklist):
-    if UPDATE_MODE.value < UPDATE_MODES.ALL.value: return True
-    rows = get_list_items(site_id, procedures_list_id, fields_filter=f"fields/Filename eq '{odata_escape(procedure.filename)}'")
-    if (len(rows)) == 0:
+    if UPDATE_MODE.value < UPDATE_MODES.ALL.value:
+        return None
+    forced_id = getattr(procedure, "procedure_list_item_id", None)
+    force_new = bool(getattr(procedure, "force_new_list_item", False))
+    if forced_id is not None:
+        procedure_id = int(forced_id)
+        update_list_item(procedure, procedure_id)
+    elif force_new:
         procedure_id = add_list_item(procedure).get('id')
     else:
-        procedure_id = rows[0].get("id") if rows[0] else -1
-        update_list_item(procedure, procedure_id)
+        rows = get_list_items(site_id, procedures_list_id, fields_filter=f"fields/Filename eq '{odata_escape(procedure.filename)}'")
+        if (len(rows)) == 0:
+            procedure_id = add_list_item(procedure).get('id')
+        else:
+            procedure_id = rows[0].get("id") if rows[0] else -1
+            update_list_item(procedure, procedure_id)
 
     # add / update ProcedureSteps
     existing_steps_rows = get_list_items(site_id, steps_list_id, fields_filter=f"fields/ProcedureIdLookupId eq {procedure_id}", top=999)
@@ -104,4 +113,12 @@ def add_or_update_lists(procedure: ProcedureChecklist):
     stale = existing_step_nums - touched_step_nums
     if stale:
         print("Stale steps detected:", stale)
-        for item_id in stale: delete_list_item(site_id, steps_list_id, item_id)
+        for sn in stale:
+            row = existing_steps_map.get(sn)
+            if row and row.get("id") is not None:
+                delete_list_item(site_id, steps_list_id, row["id"])
+
+    try:
+        return int(procedure_id) if procedure_id is not None and int(procedure_id) > 0 else None
+    except (TypeError, ValueError):
+        return None

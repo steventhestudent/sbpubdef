@@ -7,7 +7,7 @@ from .ProcedurePage import ProcedurePage
 from .upload import *
 
 class ProcedureChecklist:
-	def __init__(self, pdf_path, category, out_dir):
+	def __init__(self, pdf_path, category, out_dir, *, procedure_list_item_id=None, force_new_list_item=False):
 		self.resource_path = pdf_path
 		self.filename = os.path.basename(self.resource_path)[:-4]
 		self.category = category
@@ -18,9 +18,25 @@ class ProcedureChecklist:
 		self.version_history = [] # find in process (Version History: table(version, date, edits, approved_by)) (unreliable extraction / don't care about in webpart)
 		self.pages = []           # ProcedurePage[]
 		self.steps = []          # a step is {Step: 1, Title: "", Text: "1. lorem ipsum... 2. lorem ipsum...", Image: "https://"}
-		self.document_URL = upload_file(self.resource_path)
+		self.document_URL = ""
 		self.json_URL = ""
-		self.process_resource()
+		self.procedure_list_item_id = procedure_list_item_id
+		self.force_new_list_item = bool(force_new_list_item)
+
+	def run(self, *, field_overrides: dict | None = None):
+		"""Upload source PDF, parse, upload JSON + images, upsert SharePoint list rows (same pipeline as LOP_process_pdfs)."""
+		self.document_URL = upload_file(self.resource_path)
+		self.process_resource(finalize=False)
+		if field_overrides:
+			if str(field_overrides.get("title") or "").strip():
+				self.title = str(field_overrides["title"]).strip()
+			if str(field_overrides.get("purpose") or "").strip():
+				self.purpose = str(field_overrides["purpose"]).strip()
+			if str(field_overrides.get("category") or "").strip():
+				self.category = str(field_overrides["category"]).strip()
+			if str(field_overrides.get("effectiveDate") or "").strip():
+				self.effective_date = str(field_overrides["effectiveDate"]).strip()
+		return self.write()
 
 	def _is_footer_or_header_line(self, text: str, y0: float, page_height: float):
 		t = (text or "").strip()
@@ -195,17 +211,17 @@ class ProcedureChecklist:
 		file_path = os.path.join(self.out_dir, self.filename + '.json')
 		with open(file_path, 'w') as file: json.dump(self.serialize(), file, indent=2)
 		self.json_URL = upload_file(file_path)
-		add_or_update_lists(self) # add / update LOPProcedureChecklist + ProcedureSteps
+		return add_or_update_lists(self) # add / update LOPProcedureChecklist + ProcedureSteps
 
 	def serialize(self):
 		d = self.__dict__.copy()
-		[d.pop(key, None) for key in ('resource_path', 'lists', 'pages', 'json_URL', 'version_history', 'out_dir')]
+		[d.pop(key, None) for key in ('resource_path', 'lists', 'pages', 'json_URL', 'version_history', 'out_dir', 'procedure_list_item_id', 'force_new_list_item')]
 		d["pageCount"] = len(self.pages)
 		d["title"] = ",".join(d["title"]) if type(d["title"]) == list else d["title"]
 		d["steps"] = [ { "Step": l["step"], "Title": l["title"], "Text": l["text"], "Image": l["image"] } for l in self.steps ] # old is too complex: [ { "list_page_range": l["list_page_range"], "list_txt": l["list_txt"], "associated_images": l["associated_images"] } for l in self.lists ]                —— (we just need reasonable chunking of the list portions (or main content (non-purpose/header-title)) of pdf such that ideally there is 1 step/chunk/item for every image))
 		return d
 
-	def process_resource(self):
+	def process_resource(self, *, finalize: bool = True):
 		for i, page in enumerate(pymupdf.open(self.resource_path)): # first we create ProcedurePage & process text
 			procedure_page = ProcedurePage(self.filename, i, page)
 			self.pages.append(procedure_page)
@@ -220,4 +236,5 @@ class ProcedureChecklist:
 		for page in self.pages:  # now we process blocks for images, etc.
 			page.process_blocks(self.out_dir)
 		self.build_steps()
-		self.write()
+		if finalize:
+			self.write()
