@@ -23,6 +23,7 @@ from .local_upload import (
     get_list_id,
     get_list_items,
     get_site_id,
+    odata_escape,
     update_list_item,
 )
 
@@ -53,18 +54,33 @@ def main(timer: func.TimerRequest) -> None:
             log.error("Could not resolve LIST_PROCEDURECHECKLIST id")
             return
 
-        # Fetch a small batch and filter in python (Graph filters on multiline can be flaky).
-        rows = get_list_items(
-            site_id,
-            procedures_list_id,
-            top=25,
-            fields_select=["Filename", "Category", "DocumentURL", "json", "Title", "Purpose", "EffectiveDate"],
-        )
+        fields_sel = ["Filename", "Category", "DocumentURL", "json", "Title", "Purpose", "EffectiveDate"]
+
+        # Prefer a server-side filter (json is a single-line text marker here).
         pending: list[dict[str, Any]] = []
-        for r in rows or []:
-            f = r.get("fields") or {}
-            if _safe_str(f.get("json")).upper() == "PENDING":
-                pending.append(r)
+        try:
+            pending = get_list_items(
+                site_id,
+                procedures_list_id,
+                fields_filter=f"fields/json eq '{odata_escape('PENDING')}'",
+                top=50,
+                fields_select=fields_sel,
+            )
+        except Exception:
+            pending = []
+
+        # Fallback: fetch a larger slice and filter in python.
+        if not pending:
+            rows = get_list_items(
+                site_id,
+                procedures_list_id,
+                top=200,
+                fields_select=fields_sel,
+            )
+            for r in rows or []:
+                f = r.get("fields") or {}
+                if _safe_str(f.get("json")).upper() == "PENDING":
+                    pending.append(r)
 
         if not pending:
             return
