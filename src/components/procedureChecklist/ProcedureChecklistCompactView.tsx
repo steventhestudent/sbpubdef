@@ -305,49 +305,44 @@ export const ProcedureChecklistCompactView = ({
 								</div>
 							)}
 						</div>
-						{imageUrls.length > 1 ? (
-							<div className="mt-2">
-								<div className="mx-auto flex max-w-[42rem] items-center gap-2 overflow-x-auto py-1">
-									{imageUrls.map((u, i) => {
-										const thumb = thumbnailUrlForMedia(u);
-										const isSelected =
-											i === boundedImageIndex;
-										const isYoutube =
-											u.split("youtube.com/embed/")
-												.length > 1;
-										return (
-											<button
-												key={`${u}-${i}`}
-												type="button"
-												className={`relative h-10 w-16 flex-none overflow-hidden rounded border ${isSelected ? "border-blue-600 ring-2 ring-blue-200" : "border-slate-300 hover:border-slate-400"} bg-white`}
-												title={u}
-												onClick={() =>
-													setImagePageIndex(i)
-												}
-											>
-												{thumb ? (
-													<img
-														src={thumb}
-														className="h-full w-full object-cover"
-													/>
-												) : (
-													<div className="flex h-full w-full items-center justify-center text-[10px] text-slate-500">
-														link
-													</div>
-												)}
-												{isYoutube ? (
-													<div className="absolute inset-0 flex items-center justify-center bg-black/10 text-white">
-														<span className="rounded bg-black/60 px-1.5 py-0.5 text-[10px]">
-															▶
-														</span>
-													</div>
-												) : null}
-											</button>
-										);
-									})}
-								</div>
+						<div className="mt-2">
+							<div className="mx-auto flex max-w-[42rem] items-center gap-2 overflow-x-auto py-1">
+								{imageUrls.map((u, i) => {
+									const thumb = thumbnailUrlForMedia(u);
+									const isSelected = i === boundedImageIndex;
+									const isYoutube =
+										u.split("youtube.com/embed/").length >
+										1;
+									return (
+										<button
+											key={`${u}-${i}`}
+											type="button"
+											className={`relative h-10 w-16 flex-none overflow-hidden rounded border ${isSelected ? "border-blue-600 ring-2 ring-blue-200" : "border-slate-300 hover:border-slate-400"} bg-white`}
+											title={u}
+											onClick={() => setImagePageIndex(i)}
+										>
+											{thumb ? (
+												<img
+													src={thumb}
+													className="h-full w-full object-cover"
+												/>
+											) : (
+												<div className="flex h-full w-full items-center justify-center text-[10px] text-slate-500">
+													link
+												</div>
+											)}
+											{isYoutube ? (
+												<div className="absolute inset-0 flex items-center justify-center bg-black/10 text-white">
+													<span className="rounded bg-black/60 px-1.5 py-0.5 text-[10px]">
+														▶
+													</span>
+												</div>
+											) : null}
+										</button>
+									);
+								})}
 							</div>
-						) : null}
+						</div>
 						<div
 							ref={titleRef}
 							contentEditable={editorMode ?? false}

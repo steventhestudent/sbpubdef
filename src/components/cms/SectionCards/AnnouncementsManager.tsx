@@ -9,6 +9,7 @@ type AnnRow = {
 	site: string;
 	when: string;
 	owner: string;
+	department: string;
 	status: string;
 	url: string;
 };
@@ -50,6 +51,7 @@ export function AnnouncementsManager({
 					site: el.siteUrl ?? "",
 					when,
 					owner: el.author || "—",
+					department: el.PDDepartment || "—",
 					status: el.published ? "Published" : "Draft",
 					url: el.url,
 				} satisfies AnnRow;
@@ -71,7 +73,9 @@ export function AnnouncementsManager({
 		const q = query.trim().toLowerCase();
 		if (!q) return items;
 		return items.filter((it) =>
-			`${it.title ?? ""} ${it.owner ?? ""}`.toLowerCase().includes(q),
+			`${it.title ?? ""} ${it.owner ?? ""} ${it.department ?? ""}`
+				.toLowerCase()
+				.includes(q),
 		);
 	}, [items, query]);
 
@@ -116,6 +120,7 @@ export function AnnouncementsManager({
 								"Title",
 								"When",
 								"Owner",
+								"Department",
 								"Site",
 								"Status",
 							].map((h) => (
@@ -164,6 +169,9 @@ export function AnnouncementsManager({
 								<td className="px-4 py-3 text-sm text-slate-700">
 									{it.owner}
 								</td>
+								<td className="px-4 py-3 text-sm text-slate-700">
+									{it.department}
+								</td>
 								<td className="px-4 py-3 text-xs text-slate-600">
 									{it.site || "—"}
 								</td>
@@ -175,7 +183,7 @@ export function AnnouncementsManager({
 						{!filtered.length && !loading ? (
 							<tr>
 								<td
-									colSpan={selectionMode ? 7 : 6}
+									colSpan={selectionMode ? 8 : 7}
 									className="px-4 py-6 text-sm text-slate-500"
 								>
 									No announcements found.
