@@ -11,8 +11,11 @@ class ProcedurePage:
         self.height = float(getattr(pymupdf_page, "rect", {}).height) if getattr(pymupdf_page, "rect", None) else 792.0
 
     def process_blocks(self, out_dir):
+        # Use a single counter for the whole page so extracted images get unique filenames.
+        image_counter_ref = {"count": 0}
         self.blocks = [
-            ProcedurePageRootBlock(self.doc_filename, self.page_index, {"count": 0}, block, out_dir) for block in self.blocks
+            ProcedurePageRootBlock(self.doc_filename, self.page_index, image_counter_ref, block, out_dir)
+            for block in self.blocks
         ]
 
     def iter_positioned_lines(self):
