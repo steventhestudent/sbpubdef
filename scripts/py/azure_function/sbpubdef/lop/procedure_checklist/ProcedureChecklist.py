@@ -238,7 +238,29 @@ class ProcedureChecklist:
 				so["lines"].append(txt)
 				break
 
-		# 4) Assign each image into the same coordinate range.
+		# 4) Assign each image to the nearest preceding step marker on that page,
+		# using the image's vertical midpoint (more robust than y0 alone).
+		by_page = {}
+		for idx, so in enumerate(step_objs):
+			pg = int(so["marker"]["page_index"])
+			by_page.setdefault(pg, []).append((float(so["marker"]["y0"]), idx))
+		for pg in by_page:
+			by_page[pg].sort(key=lambda t: t[0])
+
+		def _img_key(el: dict) -> tuple[int, float]:
+			pg = int(el.get("page_index", 0))
+			y0 = float(el.get("y0", 0.0))
+			y1 = float(el.get("y1", y0))
+			return (pg, (y0 + y1) / 2.0)
+
+		def _latest_step_before_page(pg: int) -> int | None:
+			# index into step_objs for the last step on a prior page
+			best = None
+			for i, so in enumerate(step_objs):
+				if int(so["marker"]["page_index"]) < pg:
+					best = i
+			return best
+
 		for el in elements:
 			if not _before_cutoff(el):
 				continue
@@ -247,33 +269,21 @@ class ProcedureChecklist:
 			img_url = el.get("url") or ""
 			if not img_url:
 				continue
-			# NOTE: intentionally not filtering non-content images; users can delete/edit later.
-			p = _pos(el)
-			assigned = False
-			for i, so in enumerate(step_objs):
-				start = (so["marker"]["page_index"], so["marker"]["y0"])
-				end = (
-					(step_objs[i + 1]["marker"]["page_index"], step_objs[i + 1]["marker"]["y0"])
-					if i + 1 < len(step_objs)
-					else None
-				)
-				if p < start:
-					continue
-				if end is not None and not (p < end):
-					continue
-				if img_url not in so["images"]:
-					so["images"].append(img_url)
-				assigned = True
-				break
+			pg, ymid = _img_key(el)
 
-			# Cross-page edge: if an image appears above the first step marker on a page
-			# (common when the parser orders blocks oddly), attach it to the previous step.
-			if not assigned and step_objs:
-				first = step_objs[0]["marker"]
-				if (int(el.get("page_index", 0)) > int(first["page_index"])):
-					last = step_objs[-1]
-					if img_url not in last["images"]:
-						last["images"].append(img_url)
+			chosen_idx = None
+			candidates = by_page.get(pg) or []
+			for y, idx in candidates:
+				if y <= ymid:
+					chosen_idx = idx
+				else:
+					break
+			if chosen_idx is None:
+				chosen_idx = _latest_step_before_page(pg)
+			if chosen_idx is None:
+				continue
+			if img_url not in step_objs[chosen_idx]["images"]:
+				step_objs[chosen_idx]["images"].append(img_url)
 
 		# 5) Finalize.
 		out = []
