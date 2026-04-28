@@ -26,6 +26,18 @@ const resolveImageUrlsCarryForward = (
 	return [];
 };
 
+const youtubeVideoIdFromEmbedUrl = (url: string): string | null => {
+	const m = url.match(/youtube\.com\/embed\/([^?&#/]+)/i);
+	return m?.[1] ?? null;
+};
+
+const thumbnailUrlForMedia = (url: string): string | null => {
+	const vid = youtubeVideoIdFromEmbedUrl(url);
+	if (vid) return `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`;
+	if (/^https?:\/\//i.test(url)) return url;
+	return null;
+};
+
 export type ProcedureChecklistCompactViewProps = {
 	selectedProcedure: ProcedureChecklistItem;
 	setSelectedProcedure: React.Dispatch<
@@ -74,16 +86,12 @@ export const ProcedureChecklistCompactView = ({
 	const isFinal = stepIndex >= stepsOrEmpty.length; // final black slide
 	const goNext = (): void => {
 		if (stepsLoading) return;
-		setStepIndex((prev) =>
-			prev >= stepsOrEmpty.length ? 0 : prev + 1,
-		);
+		setStepIndex((prev) => (prev >= stepsOrEmpty.length ? 0 : prev + 1));
 		setHasUnsavedChangees(false);
 	};
 	const goPrev = (): void => {
 		if (stepsLoading) return;
-		setStepIndex((prev) =>
-			prev <= 0 ? stepsOrEmpty.length : prev - 1,
-		);
+		setStepIndex((prev) => (prev <= 0 ? stepsOrEmpty.length : prev - 1));
 		setHasUnsavedChangees(false);
 	};
 
@@ -298,38 +306,46 @@ export const ProcedureChecklistCompactView = ({
 							)}
 						</div>
 						{imageUrls.length > 1 ? (
-							<div className="mt-2 flex items-center justify-center gap-3 text-xs text-slate-600">
-								<button
-									className="rounded border border-slate-300 bg-white px-2 py-1 hover:bg-slate-50 disabled:opacity-40"
-									disabled={boundedImageIndex <= 0}
-									onClick={() =>
-										setImagePageIndex((i) =>
-											Math.max(0, i - 1),
-										)
-									}
-								>
-									← Prev image
-								</button>
-								<span className="font-mono">
-									{boundedImageIndex + 1}/{imageUrls.length}
-								</span>
-								<button
-									className="rounded border border-slate-300 bg-white px-2 py-1 hover:bg-slate-50 disabled:opacity-40"
-									disabled={
-										boundedImageIndex >=
-										imageUrls.length - 1
-									}
-									onClick={() =>
-										setImagePageIndex((i) =>
-											Math.min(
-												imageUrls.length - 1,
-												i + 1,
-											),
-										)
-									}
-								>
-									Next image →
-								</button>
+							<div className="mt-2">
+								<div className="mx-auto flex max-w-[42rem] items-center gap-2 overflow-x-auto py-1">
+									{imageUrls.map((u, i) => {
+										const thumb = thumbnailUrlForMedia(u);
+										const isSelected =
+											i === boundedImageIndex;
+										const isYoutube =
+											u.split("youtube.com/embed/")
+												.length > 1;
+										return (
+											<button
+												key={`${u}-${i}`}
+												type="button"
+												className={`relative h-10 w-16 flex-none overflow-hidden rounded border ${isSelected ? "border-blue-600 ring-2 ring-blue-200" : "border-slate-300 hover:border-slate-400"} bg-white`}
+												title={u}
+												onClick={() =>
+													setImagePageIndex(i)
+												}
+											>
+												{thumb ? (
+													<img
+														src={thumb}
+														className="h-full w-full object-cover"
+													/>
+												) : (
+													<div className="flex h-full w-full items-center justify-center text-[10px] text-slate-500">
+														link
+													</div>
+												)}
+												{isYoutube ? (
+													<div className="absolute inset-0 flex items-center justify-center bg-black/10 text-white">
+														<span className="rounded bg-black/60 px-1.5 py-0.5 text-[10px]">
+															▶
+														</span>
+													</div>
+												) : null}
+											</button>
+										);
+									})}
+								</div>
 							</div>
 						) : null}
 						<div
@@ -357,7 +373,8 @@ export const ProcedureChecklistCompactView = ({
 									className="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:bg-blue-700 disabled:opacity-50"
 									onClick={() => {
 										if (!hasUnsavedChanges) return;
-										if (stepsLoading || isFinal || !current) return;
+										if (stepsLoading || isFinal || !current)
+											return;
 										const newTitle =
 											titleRef.current!.innerText;
 										const newText =
