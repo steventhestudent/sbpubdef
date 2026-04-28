@@ -32,7 +32,7 @@ import azure.functions as func
 import requests
 
 from .entra_jwt import caller_email_from_claims, decode_and_validate_access_token
-from .local_upload import authenticate, session_headers
+from . import local_upload
 
 
 def _json_response(body: dict[str, Any], *, status: int = 200) -> func.HttpResponse:
@@ -74,7 +74,7 @@ def _create_event_for_user(
     catalog_id: int | None,
     assignment_url: str | None,
 ) -> dict[str, Any]:
-    if not session_headers.get("Authorization"):
+    if not local_upload.session_headers.get("Authorization"):
         raise RuntimeError("Missing Graph Authorization header (authenticate() not called).")
 
     start_iso, end_iso = _parse_due_date(due_date)
@@ -101,7 +101,7 @@ def _create_event_for_user(
 
     resp = requests.post(
         url,
-        headers={**session_headers, "Content-Type": "application/json"},
+        headers={**local_upload.session_headers, "Content-Type": "application/json"},
         json=payload,
     )
     if resp.status_code >= 300:
@@ -144,7 +144,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         if not isinstance(rows, list) or len(rows) == 0:
             return _json_response({"error": "Missing events[]"}, status=400)
 
-        authenticate()
+        local_upload.authenticate()
 
         created: list[dict[str, Any]] = []
         for row in rows:
