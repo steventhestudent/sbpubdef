@@ -3,7 +3,9 @@ import RoleBasedViewProps from "@type/RoleBasedViewProps";
 import {
 	ProcedureChecklistApi,
 	ProcedureChecklistIngestApi,
+	type IngestProgressReport,
 } from "@api/ProcedureChecklist";
+import { ProcedureChecklistIngestProgressBar } from "@components/procedureChecklist/ProcedureChecklistIngestProgressBar";
 import { ProcedureChecklistItem } from "@type/ProcedureChecklist";
 import { ProcedureFilters } from "@components/procedureChecklist/ProcedureFilters";
 import { ProcedureChecklistListItem } from "@components/procedureChecklist/ProcedureChecklistListItem";
@@ -32,7 +34,28 @@ export function ProcedureChecklist({
 	);
 	const [stepIndex, setStepIndex] = React.useState<number>(0); // 0..steps.length (steps.length = final slide)
 	const [ingestBusy, setIngestBusy] = React.useState(false);
+	const [ingestUi, setIngestUi] = React.useState<{
+		active: boolean;
+		percent: number;
+		phase: IngestProgressReport["phase"];
+		error: string | null;
+	}>({
+		active: false,
+		percent: 0,
+		phase: "reading",
+		error: null,
+	});
 	const newPdfInputRef = React.useRef<HTMLInputElement>(null);
+
+	const onIngestProgress = React.useCallback((r: IngestProgressReport) => {
+		setIngestUi((prev) => ({
+			...prev,
+			active: r.phase !== "complete",
+			percent: r.percent,
+			phase: r.phase,
+			error: null,
+		}));
+	}, []);
 
 	const procedureChecklistApi = new ProcedureChecklistApi(pnpWrapper);
 	const procedureStepsApi = new ProcedureStepsApi(pnpWrapper);
@@ -109,6 +132,15 @@ export function ProcedureChecklist({
 
 	return (
 		<section className="p-4 text-sm">
+			<ProcedureChecklistIngestProgressBar
+				visible={ingestUi.active}
+				percent={ingestUi.percent}
+				phase={ingestUi.phase}
+				error={ingestUi.error}
+				onDismissError={() =>
+					setIngestUi((u) => ({ ...u, error: null }))
+				}
+			/>
 			{selectedProcedure ? (
 				<></>
 			) : (
@@ -149,6 +181,12 @@ export function ProcedureChecklist({
 									input.value = "";
 									if (!file) return;
 									setIngestBusy(true);
+									setIngestUi({
+										active: true,
+										percent: 0,
+										phase: "reading",
+										error: null,
+									});
 									(async () => {
 										try {
 											const ingest =
@@ -158,6 +196,7 @@ export function ProcedureChecklist({
 											const res =
 												await ingest.ingestCreate({
 													file,
+													onProgress: onIngestProgress,
 												});
 											const list =
 												await refreshProcedures();
@@ -167,15 +206,30 @@ export function ProcedureChecklist({
 												: undefined;
 											if (row) await onProcedureSelected(row);
 										} catch (err: unknown) {
-											alert(
+											const msg =
 												err instanceof Error
 													? err.message
-													: String(err),
-											);
+													: String(err);
+											setIngestUi((u) => ({
+												...u,
+												active: false,
+												error: msg,
+											}));
 										} finally {
 											setIngestBusy(false);
+											setIngestUi((u) => ({
+												...u,
+												active: false,
+											}));
 										}
-									})().catch(() => setIngestBusy(false));
+									})().catch(() => {
+										setIngestBusy(false);
+										setIngestUi((u) => ({
+											...u,
+											active: false,
+											error: "Import failed.",
+										}));
+									});
 								}}
 							/>
 							<span
@@ -259,8 +313,18 @@ export function ProcedureChecklist({
 							editorMode={editorMode}
 							procedureStepsApi={procedureStepsApi}
 							reimportBusy={ingestBusy}
+							ingestPercent={
+								ingestUi.active ? ingestUi.percent : null
+							}
+							ingestPhase={ingestUi.phase}
 							onReimportPdf={async (file: File) => {
 								setIngestBusy(true);
+								setIngestUi({
+									active: true,
+									percent: 0,
+									phase: "reading",
+									error: null,
+								});
 								try {
 									const ingest =
 										new ProcedureChecklistIngestApi(
@@ -270,6 +334,7 @@ export function ProcedureChecklist({
 										file,
 										procedureId: selectedProcedure.id,
 										category: selectedProcedure.category,
+										onProgress: onIngestProgress,
 									});
 									const list = await refreshProcedures();
 									const row =
@@ -283,13 +348,21 @@ export function ProcedureChecklist({
 									setSteps(s || []);
 									setStepIndex(0);
 								} catch (err: unknown) {
-									alert(
+									const msg =
 										err instanceof Error
 											? err.message
-											: String(err),
-									);
+											: String(err);
+									setIngestUi((u) => ({
+										...u,
+										active: false,
+										error: msg,
+									}));
 								} finally {
 									setIngestBusy(false);
+									setIngestUi((u) => ({
+										...u,
+										active: false,
+									}));
 								}
 							}}
 						/>

@@ -3,7 +3,11 @@ import { AadHttpClient } from "@microsoft/sp-http";
 import RoleFormField from "@utils/rolebased/RoleFormField";
 import { PNPWrapper } from "@utils/PNPWrapper";
 import { AnnouncementsApi } from "@api/announcements";
-import { ProcedureChecklistIngestApi } from "@api/ProcedureChecklist";
+import {
+	ProcedureChecklistIngestApi,
+	type IngestProgressReport,
+} from "@api/ProcedureChecklist";
+import { ProcedureChecklistIngestProgressBar } from "@components/procedureChecklist/ProcedureChecklistIngestProgressBar";
 import { offices } from "@webparts/officeInformation/components/Offices";
 import {
 	AssignmentView,
@@ -77,6 +81,17 @@ export function NewPDContentDrawer({
 	const [pcCategory, setPcCategory] = React.useState("");
 	const [pcEffectiveDate, setPcEffectiveDate] = React.useState("");
 	const [pcPdf, setPcPdf] = React.useState<File | undefined>(undefined);
+	const [pcIngest, setPcIngest] = React.useState<{
+		active: boolean;
+		percent: number;
+		phase: IngestProgressReport["phase"];
+		error: string | null;
+	}>({
+		active: false,
+		percent: 0,
+		phase: "reading",
+		error: null,
+	});
 
 	// PD Event
 	const [evTitle, setEvTitle] = React.useState("");
@@ -242,6 +257,15 @@ export function NewPDContentDrawer({
 		}
 	}, [contentType]);
 
+	React.useEffect(() => {
+		setPcIngest({
+			active: false,
+			percent: 0,
+			phase: "reading",
+			error: null,
+		});
+	}, [open, contentType]);
+
 	function stripToText(html: string, maxLen = 240): string {
 		const div = document.createElement("div");
 		div.innerHTML = html;
@@ -275,14 +299,41 @@ export function NewPDContentDrawer({
 		if (!pcTitle.trim()) throw new Error("Please enter a title.");
 		if (!pcPdf) throw new Error("Please choose a PDF file.");
 
-		const ingest = new ProcedureChecklistIngestApi(pnpWrapper.ctx);
-		await ingest.ingestCreate({
-			file: pcPdf,
-			category: pcCategory.trim() || "Uncategorized",
-			title: pcTitle.trim(),
-			purpose: pcPurpose.trim(),
-			effectiveDate: pcEffectiveDate.trim() || undefined,
+		setPcIngest({
+			active: true,
+			percent: 0,
+			phase: "reading",
+			error: null,
 		});
+		const ingest = new ProcedureChecklistIngestApi(pnpWrapper.ctx);
+		try {
+			await ingest.ingestCreate({
+				file: pcPdf,
+				category: pcCategory.trim() || "Uncategorized",
+				title: pcTitle.trim(),
+				purpose: pcPurpose.trim(),
+				effectiveDate: pcEffectiveDate.trim() || undefined,
+				onProgress: (r: IngestProgressReport) => {
+					setPcIngest((prev) => ({
+						...prev,
+						active: r.phase !== "complete",
+						percent: r.percent,
+						phase: r.phase,
+						error: null,
+					}));
+				},
+			});
+		} catch (err: unknown) {
+			const msg =
+				err instanceof Error ? err.message : String(err);
+			setPcIngest((u) => ({
+				...u,
+				active: false,
+				error: msg,
+			}));
+			throw err;
+		}
+		setPcIngest((u) => ({ ...u, active: false }));
 	}
 
 	async function submitPdEvent(): Promise<void> {
@@ -551,7 +602,9 @@ export function NewPDContentDrawer({
 			onClose();
 		})().catch((err: unknown) => {
 			const msg = err instanceof Error ? err.message : String(err);
-			alert(msg);
+			if (contentType !== "procedureChecklist") {
+				alert(msg);
+			}
 			setBusy(false);
 		});
 	}
@@ -802,6 +855,18 @@ export function NewPDContentDrawer({
 											Choose a PDF to upload.
 										</div>
 									)}
+									<ProcedureChecklistIngestProgressBar
+										visible={pcIngest.active}
+										percent={pcIngest.percent}
+										phase={pcIngest.phase}
+										error={pcIngest.error}
+										onDismissError={() =>
+											setPcIngest((u) => ({
+												...u,
+												error: null,
+											}))
+										}
+									/>
 								</div>
 							</div>
 						</>

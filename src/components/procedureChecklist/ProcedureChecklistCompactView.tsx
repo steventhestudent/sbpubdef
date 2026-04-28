@@ -2,6 +2,7 @@ import * as React from "react";
 import { ProcedureChecklistItem } from "@type/ProcedureChecklist";
 import { ProcedureStepItem } from "@type/ProcedureSteps";
 import { ProcedureChecklistOverlay } from "@components/procedureChecklist/ProcedureChecklistOverlay";
+import { procedureIngestPhaseLabel } from "@components/procedureChecklist/ProcedureChecklistIngestProgressBar";
 import { ProcedureStepsApi } from "@api/ProcedureChecklist/ProcedureStepsApi";
 
 const normalizeFirstUrl = (raw: string | undefined): string => {
@@ -27,18 +28,7 @@ const resolveImageUrlCarryForward = (
 	return "";
 };
 
-export const ProcedureChecklistCompactView = ({
-	selectedProcedure,
-	setSelectedProcedure,
-	steps,
-	setSteps,
-	stepIndex,
-	setStepIndex,
-	procedureStepsApi,
-	editorMode = false,
-	reimportBusy = false,
-	onReimportPdf,
-}: {
+export type ProcedureChecklistCompactViewProps = {
 	selectedProcedure: ProcedureChecklistItem;
 	setSelectedProcedure: React.Dispatch<
 		React.SetStateAction<ProcedureChecklistItem | undefined>
@@ -52,8 +42,25 @@ export const ProcedureChecklistCompactView = ({
 	procedureStepsApi: ProcedureStepsApi;
 	editorMode?: boolean;
 	reimportBusy?: boolean;
+	ingestPercent?: number | null;
+	ingestPhase?: string;
 	onReimportPdf?: (file: File) => Promise<void>;
-}): JSX.Element => {
+};
+
+export const ProcedureChecklistCompactView = ({
+	selectedProcedure,
+	setSelectedProcedure,
+	steps,
+	setSteps,
+	stepIndex,
+	setStepIndex,
+	procedureStepsApi,
+	editorMode = false,
+	reimportBusy = false,
+	ingestPercent = null,
+	ingestPhase,
+	onReimportPdf,
+}: ProcedureChecklistCompactViewProps): JSX.Element => {
 	const [maximizePurpose, setMaximizePurpose] = React.useState(false);
 	const [showOverlay, setShowOverlay] = React.useState<boolean | string>(
 		false,
@@ -110,7 +117,18 @@ export const ProcedureChecklistCompactView = ({
 							className={`cursor-pointer hover:text-blue-500 ${reimportBusy || !onReimportPdf ? "opacity-50" : ""}`}
 							title="Replace PDF, refresh list fields, and re-extract steps"
 						>
-							{reimportBusy ? "re-import…" : "re-import"}
+							{reimportBusy
+								? typeof ingestPercent === "number"
+									? `${Math.round(ingestPercent)}%`
+									: "re-import…"
+								: "re-import"}
+							{reimportBusy &&
+							ingestPhase &&
+							typeof ingestPercent === "number" ? (
+								<span className="ml-1 text-slate-400">
+									({procedureIngestPhaseLabel(ingestPhase)})
+								</span>
+							) : null}
 						</label>
 					</span>
 				) : (
