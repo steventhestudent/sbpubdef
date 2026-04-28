@@ -126,7 +126,8 @@ class ProcedureChecklist:
 		Build `self.steps` by:
 		- ignoring header/footer and anything after 'Version History'
 		- starting from first numbered instruction (e.g. '1.')
-		- chunking text up to the next (non-footer) image, ideally 1 image per step
+		- using numbered instructions (1., 2., 3., …) as step boundaries
+		- associating each screenshot image to the nearest preceding numbered step
 		"""
 		elements = []
 		for p in self.pages:
@@ -169,61 +170,72 @@ class ProcedureChecklist:
 				# If we haven't hit Version History yet, keep images.
 				content.append(el)
 
-		# Chunk into steps: accumulate text until next image.
+		# Chunk into steps using numbered lines as boundaries.
 		steps = []
+		cur_step_num = None  # actual number from the PDF (1,2,3,...)
 		cur_lines = []
-		cur_first_line_bold = False
 		cur_image = ""
-		pending_image = ""
+		pending_images = []  # images encountered before the first step line
 
-		def flush():
-			nonlocal cur_lines, cur_image, cur_first_line_bold
-			body_lines = [l for l in cur_lines if l.strip()]
-			if not body_lines and not cur_image:
+		def _flush_current():
+			nonlocal cur_step_num, cur_lines, cur_image
+			if cur_step_num is None:
 				cur_lines = []
-				cur_first_line_bold = False
+				cur_image = ""
 				return
-			title = ""
-			text = "\n".join(body_lines).strip()
-			if body_lines:
-				first = body_lines[0].strip()
-				if self._looks_like_step_heading(first, cur_first_line_bold):
-					title = first[:-1].strip() if first.endswith(":") else first
-					# Remove the heading line from the body text (keeps it as title).
-					text = "\n".join(body_lines[1:]).strip()
-			steps.append({
-				"step": len(steps) + 1,
-				"title": title,
-				"text": text,
-				"image": cur_image or ""
-			})
+			body = "\n".join([l for l in cur_lines if (l or "").strip()]).strip()
+			# Keep title empty (UI uses "Step N" anyway); body retains "N. ..." numbering for clarity.
+			steps.append(
+				{
+					"step": int(cur_step_num),
+					"title": "",
+					"text": body,
+					"image": cur_image or "",
+				}
+			)
 			cur_lines = []
-			cur_first_line_bold = False
 			cur_image = ""
+
+		step_re = re.compile(r"^\s*(\d+)\.\s+")
 
 		for el in content:
 			if el["type"] == "line":
-				if pending_image and not cur_image and not cur_lines:
-					cur_image = pending_image
-					pending_image = ""
-				if not cur_lines:
-					cur_first_line_bold = bool(el.get("is_bold"))
-				cur_lines.append(el.get("text") or "")
+				txt = (el.get("text") or "").rstrip()
+				m = step_re.match(txt)
+				if m:
+					# New step boundary
+					new_num = int(m.group(1))
+					if cur_step_num is not None:
+						_flush_current()
+					cur_step_num = new_num
+					# If images appeared before the first step line, attach the first one to step 1.
+					if pending_images and not cur_image:
+						cur_image = pending_images.pop(0)
+					cur_lines.append(txt)
+				else:
+					# Continuation of current step (or ignored pre-step content)
+					if cur_step_num is not None:
+						cur_lines.append(txt)
 			else:
-				# Attach this image to the accumulated text chunk.
+				# Image: attach to nearest preceding step.
 				img_url = el.get("url") or ""
-				if not cur_lines:
-					# Don't create an empty step; attach to the next text chunk instead.
-					pending_image = img_url
+				if not img_url:
 					continue
-				cur_image = img_url
-				flush()
+				if cur_step_num is None:
+					# Image before we’ve encountered step 1; hold it.
+					pending_images.append(img_url)
+					continue
+				# Assign first image for the step; ignore extras (keeps 1 URL per row).
+				if not cur_image:
+					cur_image = img_url
 
-		# Final trailing text-only chunk (for docs with no images or leftover text after last image).
-		flush()
+		# Final step
+		_flush_current()
 
-		# If we ended up with many tiny steps (e.g. one line per step), keep as-is; caller can re-chunk later.
-		self.steps = steps
+		# Ensure sequential "step" values (1..N) even if numbering skipped.
+		self.steps = [
+			{**s, "step": i} for i, s in enumerate(steps, start=1)
+		]
 
 	def write(self):
 		file_path = os.path.join(self.out_dir, self.filename + '.json')
