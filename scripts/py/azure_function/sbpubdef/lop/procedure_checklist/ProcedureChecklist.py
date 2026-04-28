@@ -142,102 +142,146 @@ class ProcedureChecklist:
 		# Sort across pages.
 		elements.sort(key=lambda e: (e.get("page_index", 0), e.get("y0", 0.0), 0 if e["type"] == "line" else 1))
 
-		# Filter to the procedure content region.
-		started = False
-		content = []
+		# Stop once we hit "Version History" (by positioned order).
+		cutoff = None  # tuple(page_index, y0)
 		for el in elements:
-			if el["type"] == "line":
-				txt = el.get("text") or ""
-				if "Version History" in txt:
-					break
-				if self._is_footer_or_header_line(txt, el.get("y0"), el.get("page_height")):
-					continue
-				if not started:
-					# Start at first numbered step.
-					if re.match(r"^\s*1\.\s+", txt):
-						started = True
-						content.append(el)
-					continue
-				# Once started, skip stray PURPOSE line repeats (some PDFs echo it in reading order).
-				if txt.startswith("PURPOSE"):
-					continue
-				content.append(el)
-			else:
-				# Image
-				if not started:
-					continue
-				if self._is_non_content_image(el):
-					continue
-				# If we haven't hit Version History yet, keep images.
-				content.append(el)
+			if el["type"] != "line":
+				continue
+			txt = el.get("text") or ""
+			if "Version History" in txt:
+				cutoff = (int(el.get("page_index", 0)), float(el.get("y0", 0.0)))
+				break
 
-		# Chunk into steps using numbered lines as boundaries.
-		steps = []
-		cur_step_num = None  # actual number from the PDF (1,2,3,...)
-		cur_lines = []
-		cur_images: list[str] = []
-		pending_images: list[str] = []  # images encountered before the first step line
-
-		def _flush_current():
-			nonlocal cur_step_num, cur_lines, cur_images
-			if cur_step_num is None:
-				cur_lines = []
-				cur_images = []
-				return
-			body = "\n".join([l for l in cur_lines if (l or "").strip()]).strip()
-			# Keep title empty (UI uses "Step N" anyway); body retains "N. ..." numbering for clarity.
-			steps.append(
-				{
-					"step": int(cur_step_num),
-					"title": "",
-					"text": body,
-					"image": "\n".join([u for u in cur_images if str(u or "").strip()]).strip(),
-				}
-			)
-			cur_lines = []
-			cur_images = []
+		def _before_cutoff(el: dict) -> bool:
+			if cutoff is None:
+				return True
+			return (int(el.get("page_index", 0)), float(el.get("y0", 0.0))) < cutoff
 
 		step_re = re.compile(r"^\s*(\d+)\.\s+")
 
-		for el in content:
-			if el["type"] == "line":
-				txt = (el.get("text") or "").rstrip()
-				m = step_re.match(txt)
-				if m:
-					# New step boundary
-					new_num = int(m.group(1))
-					if cur_step_num is not None:
-						_flush_current()
-					cur_step_num = new_num
-					# If images appeared before the first step line, attach the first one to step 1.
-					if pending_images and not cur_images:
-						cur_images.append(pending_images.pop(0))
-					cur_lines.append(txt)
-				else:
-					# Continuation of current step (or ignored pre-step content)
-					if cur_step_num is not None:
-						cur_lines.append(txt)
-			else:
-				# Image: attach to nearest preceding step.
-				img_url = el.get("url") or ""
-				if not img_url:
-					continue
-				if cur_step_num is None:
-					# Image before we’ve encountered step 1; hold it.
-					pending_images.append(img_url)
-					continue
-				# Keep all images for the step (newline-separated) — UI will show first,
-				# but we preserve all for auditing / future UI improvements.
-				if img_url not in cur_images:
-					cur_images.append(img_url)
+		# 1) Collect step markers with coordinates.
+		markers = []  # {num, page_index, y0}
+		for el in elements:
+			if not _before_cutoff(el):
+				continue
+			if el["type"] != "line":
+				continue
+			txt = (el.get("text") or "").rstrip()
+			if self._is_footer_or_header_line(txt, el.get("y0"), el.get("page_height")):
+				continue
+			if txt.startswith("PURPOSE"):
+				continue
+			m = step_re.match(txt)
+			if not m:
+				continue
+			try:
+				num = int(m.group(1))
+			except Exception:
+				continue
+			markers.append(
+				{
+					"num": num,
+					"page_index": int(el.get("page_index", 0)),
+					"y0": float(el.get("y0", 0.0)),
+				}
+			)
 
-		# Final step
-		_flush_current()
+		if not markers:
+			self.steps = []
+			return
 
-		# Ensure sequential "step" values (1..N) even if numbering skipped.
-		self.steps = [
-			{**s, "step": i} for i, s in enumerate(steps, start=1)
+		# Start at the first step "1." if present.
+		start_idx = 0
+		for i, mk in enumerate(markers):
+			if mk["num"] == 1:
+				start_idx = i
+				break
+		markers = markers[start_idx:]
+
+		# 2) Prepare containers for each step.
+		step_objs = [
+			{
+				"step": i + 1,
+				"marker": mk,
+				"lines": [],
+				"images": [],
+			}
+			for i, mk in enumerate(markers)
 		]
+
+		def _pos(el: dict) -> tuple[int, float]:
+			return (int(el.get("page_index", 0)), float(el.get("y0", 0.0)))
+
+		# 3) Assign each content line into its step by coordinate range [marker_i, marker_{i+1})
+		for el in elements:
+			if not _before_cutoff(el):
+				continue
+			if el["type"] != "line":
+				continue
+			txt = (el.get("text") or "").rstrip()
+			if self._is_footer_or_header_line(txt, el.get("y0"), el.get("page_height")):
+				continue
+			if txt.startswith("PURPOSE"):
+				continue
+			p = _pos(el)
+			for i, so in enumerate(step_objs):
+				start = (so["marker"]["page_index"], so["marker"]["y0"])
+				end = (
+					(step_objs[i + 1]["marker"]["page_index"], step_objs[i + 1]["marker"]["y0"])
+					if i + 1 < len(step_objs)
+					else None
+				)
+				if p < start:
+					continue
+				if end is not None and not (p < end):
+					continue
+				so["lines"].append(txt)
+				break
+
+		# 4) Assign each image into the same coordinate range.
+		for el in elements:
+			if not _before_cutoff(el):
+				continue
+			if el["type"] != "image":
+				continue
+			img_url = el.get("url") or ""
+			if not img_url:
+				continue
+			# NOTE: intentionally not filtering non-content images; users can delete/edit later.
+			p = _pos(el)
+			assigned = False
+			for i, so in enumerate(step_objs):
+				start = (so["marker"]["page_index"], so["marker"]["y0"])
+				end = (
+					(step_objs[i + 1]["marker"]["page_index"], step_objs[i + 1]["marker"]["y0"])
+					if i + 1 < len(step_objs)
+					else None
+				)
+				if p < start:
+					continue
+				if end is not None and not (p < end):
+					continue
+				if img_url not in so["images"]:
+					so["images"].append(img_url)
+				assigned = True
+				break
+
+			# Cross-page edge: if an image appears above the first step marker on a page
+			# (common when the parser orders blocks oddly), attach it to the previous step.
+			if not assigned and step_objs:
+				first = step_objs[0]["marker"]
+				if (int(el.get("page_index", 0)) > int(first["page_index"])):
+					last = step_objs[-1]
+					if img_url not in last["images"]:
+						last["images"].append(img_url)
+
+		# 5) Finalize.
+		out = []
+		for i, so in enumerate(step_objs, start=1):
+			body = "\n".join([l for l in (so["lines"] or []) if (l or "").strip()]).strip()
+			images = "\n".join([u for u in (so["images"] or []) if (u or "").strip()]).strip()
+			out.append({"step": i, "title": "", "text": body, "image": images})
+		self.steps = out
 
 	def write(self):
 		file_path = os.path.join(self.out_dir, self.filename + '.json')
