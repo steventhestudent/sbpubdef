@@ -291,6 +291,12 @@ function PDIntranetView({
 								</span>
 							);
 
+							const departmentBadge = event.PDDepartment ? (
+								<span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-700">
+									{Utils.ENV_ROLE_DISPLAY(event.PDDepartment)}
+								</span>
+							) : null;
+
 							return (
 								<li key={event.id}>
 									<div className="flex gap-3 px-3 py-3 sm:gap-4 sm:px-4">
@@ -317,8 +323,11 @@ function PDIntranetView({
 											<p className="text-xs leading-snug text-slate-500">
 												{metaWhen}
 											</p>
-											<div className="mt-1.5 text-base leading-snug sm:text-[15px]">
-												{titleNode}
+											<div className="mt-1.5 flex flex-wrap items-center gap-2 text-base leading-snug sm:text-[15px]">
+												<span className="min-w-0">
+													{titleNode}
+												</span>
+												{departmentBadge}
 											</div>
 											<div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-slate-600">
 												<span className="inline-flex items-center gap-1">
