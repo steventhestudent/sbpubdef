@@ -113,7 +113,7 @@ export function useCalendarData(
 
 	const load: CalCallback = React.useCallback(
 		async (opts?: { includeOutlook?: boolean }) => {
-			const includeOutlookValue = !!opts?.includeOutlook;
+			const includeOutlookValue = !!opts?.includeOutlook && !ctx.pageContext.user.isExternalGuestUser;
 			setIncludeOutlook(includeOutlookValue);
 			setLoading(true);
 			try {
