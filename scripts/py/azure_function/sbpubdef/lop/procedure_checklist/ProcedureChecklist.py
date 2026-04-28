@@ -99,7 +99,8 @@ class ProcedureChecklist:
 			w = float(x1) - float(x0)
 			h = float(y1) - float(y0)
 			area = max(w, 0.0) * max(h, 0.0)
-			if h < 95.0 and area < 25000.0:
+			# Be conservative: some SOP screenshots can be small.
+			if h < 70.0 and area < 12000.0:
 				return True
 		return False
 
@@ -174,14 +175,14 @@ class ProcedureChecklist:
 		steps = []
 		cur_step_num = None  # actual number from the PDF (1,2,3,...)
 		cur_lines = []
-		cur_image = ""
-		pending_images = []  # images encountered before the first step line
+		cur_images: list[str] = []
+		pending_images: list[str] = []  # images encountered before the first step line
 
 		def _flush_current():
-			nonlocal cur_step_num, cur_lines, cur_image
+			nonlocal cur_step_num, cur_lines, cur_images
 			if cur_step_num is None:
 				cur_lines = []
-				cur_image = ""
+				cur_images = []
 				return
 			body = "\n".join([l for l in cur_lines if (l or "").strip()]).strip()
 			# Keep title empty (UI uses "Step N" anyway); body retains "N. ..." numbering for clarity.
@@ -190,11 +191,11 @@ class ProcedureChecklist:
 					"step": int(cur_step_num),
 					"title": "",
 					"text": body,
-					"image": cur_image or "",
+					"image": "\n".join([u for u in cur_images if str(u or "").strip()]).strip(),
 				}
 			)
 			cur_lines = []
-			cur_image = ""
+			cur_images = []
 
 		step_re = re.compile(r"^\s*(\d+)\.\s+")
 
@@ -209,8 +210,8 @@ class ProcedureChecklist:
 						_flush_current()
 					cur_step_num = new_num
 					# If images appeared before the first step line, attach the first one to step 1.
-					if pending_images and not cur_image:
-						cur_image = pending_images.pop(0)
+					if pending_images and not cur_images:
+						cur_images.append(pending_images.pop(0))
 					cur_lines.append(txt)
 				else:
 					# Continuation of current step (or ignored pre-step content)
@@ -225,9 +226,10 @@ class ProcedureChecklist:
 					# Image before we’ve encountered step 1; hold it.
 					pending_images.append(img_url)
 					continue
-				# Assign first image for the step; ignore extras (keeps 1 URL per row).
-				if not cur_image:
-					cur_image = img_url
+				# Keep all images for the step (newline-separated) — UI will show first,
+				# but we preserve all for auditing / future UI improvements.
+				if img_url not in cur_images:
+					cur_images.append(img_url)
 
 		# Final step
 		_flush_current()
