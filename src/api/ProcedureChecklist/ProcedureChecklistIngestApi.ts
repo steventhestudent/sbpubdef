@@ -15,6 +15,8 @@ export type IngestProgressPhase =
 	| "reading"
 	| "encoding"
 	| "uploading"
+	/** Request body has been sent; waiting for Azure Function (PDF parse + Graph). */
+	| "server"
 	| "processing"
 	| "complete";
 
@@ -67,9 +69,16 @@ function xhrPostJson(
 	token: string,
 	body: string,
 	onUploadProgress?: (loaded: number, total: number) => void,
+	onUploadFinished?: () => void,
 ): Promise<{ ok: boolean; status: number; text: string }> {
 	return new Promise((resolve, reject) => {
 		const xhr = new XMLHttpRequest();
+		let finishedFired = false;
+		const fireFinished = (): void => {
+			if (finishedFired) return;
+			finishedFired = true;
+			onUploadFinished?.();
+		};
 		xhr.open("POST", url);
 		xhr.setRequestHeader("Authorization", `Bearer ${token}`);
 		xhr.setRequestHeader("Accept", "application/json");
@@ -78,9 +87,21 @@ function xhrPostJson(
 			if (!onUploadProgress) return;
 			if (ev.lengthComputable && ev.total > 0) {
 				onUploadProgress(ev.loaded, ev.total);
+				if (ev.loaded >= ev.total) fireFinished();
 			} else if (ev.loaded > 0) {
 				onUploadProgress(ev.loaded, ev.loaded + 1);
 			}
+		};
+		xhr.upload.onload = () => {
+			fireFinished();
+		};
+		xhr.upload.onloadend = () => {
+			fireFinished();
+		};
+		xhr.onreadystatechange = () => {
+			// As soon as we get headers back, we know the server is processing/responding.
+			// This also acts as a fallback when upload events are flaky.
+			if (xhr.readyState >= 2) fireFinished();
 		};
 		xhr.onload = () => {
 			resolve({
@@ -119,7 +140,10 @@ export class ProcedureChecklistIngestApi {
 		const base = (ENV.FUNCTION_BASE_URL || "").replace(/\/$/, "");
 		if (!base) throw new Error("ENV.FUNCTION_BASE_URL is not set.");
 
-		const url = `${base}/api/LopProcedureChecklistImport`;
+		const url =
+			payload && payload["_fastStart"] === true
+				? `${base}/api/LopProcedureChecklistImportStart`
+				: `${base}/api/LopProcedureChecklistImport`;
 		const body = JSON.stringify(payload);
 
 		const parseResult = (text: string, status: number): ProcedureIngestResult => {
@@ -143,6 +167,7 @@ export class ProcedureChecklistIngestApi {
 				token = await acquireFunctionApiToken(this.context, appId);
 			} catch {
 				this.emit(onProgress, 40, "uploading");
+				this.emit(onProgress, 86, "server");
 				const client: AadHttpClient =
 					await this.context.aadHttpClientFactory.getClient(appId);
 				const res = await client.post(
@@ -157,20 +182,32 @@ export class ProcedureChecklistIngestApi {
 					},
 				);
 				const text = await res.text();
-				this.emit(onProgress, 96, "processing");
+				this.emit(onProgress, 97, "processing");
 				const out = parseResult(text, res.status);
 				this.emit(onProgress, 100, "complete");
 				return out;
 			}
 
 			const uploadLo = 33;
-			const uploadHi = 94;
-			const res = await xhrPostJson(url, token, body, (loaded, total) => {
-				const t = Math.max(1, total);
-				const u = Math.min(1, loaded / t);
-				this.emit(onProgress, uploadLo + u * (uploadHi - uploadLo), "uploading");
-			});
-			this.emit(onProgress, 96, "processing");
+			const uploadHi = 85;
+			const res = await xhrPostJson(
+				url,
+				token,
+				body,
+				(loaded, total) => {
+					const t = Math.max(1, total);
+					const u = Math.min(1, loaded / t);
+					this.emit(
+						onProgress,
+						uploadLo + u * (uploadHi - uploadLo),
+						"uploading",
+					);
+				},
+				() => {
+					this.emit(onProgress, 86, "server");
+				},
+			);
+			this.emit(onProgress, 97, "processing");
 			const out = parseResult(res.text, res.status);
 			this.emit(onProgress, 100, "complete");
 			return out;
@@ -251,6 +288,7 @@ export class ProcedureChecklistIngestApi {
 		title?: string;
 		purpose?: string;
 		effectiveDate?: string;
+		fastStart?: boolean;
 		onProgress?: IngestProgressCallback;
 	}): Promise<ProcedureIngestResult> {
 		const payload = await this.buildPayload(
@@ -264,6 +302,7 @@ export class ProcedureChecklistIngestApi {
 			},
 			args.onProgress,
 		);
+		if (args.fastStart) (payload as Record<string, unknown>)["_fastStart"] = true;
 		return this.postPayload(payload, args.onProgress);
 	}
 
@@ -271,6 +310,7 @@ export class ProcedureChecklistIngestApi {
 		file: File;
 		procedureId: number;
 		category?: string;
+		fastStart?: boolean;
 		onProgress?: IngestProgressCallback;
 	}): Promise<ProcedureIngestResult> {
 		const payload = await this.buildPayload(
@@ -282,6 +322,7 @@ export class ProcedureChecklistIngestApi {
 			},
 			args.onProgress,
 		);
+		if (args.fastStart) (payload as Record<string, unknown>)["_fastStart"] = true;
 		return this.postPayload(payload, args.onProgress);
 	}
 }

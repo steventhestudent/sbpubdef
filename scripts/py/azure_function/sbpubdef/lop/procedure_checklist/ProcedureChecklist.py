@@ -7,7 +7,17 @@ from .ProcedurePage import ProcedurePage
 from .upload import *
 
 class ProcedureChecklist:
-	def __init__(self, pdf_path, category, out_dir, *, procedure_list_item_id=None, force_new_list_item=False):
+	def __init__(
+		self,
+		pdf_path,
+		category,
+		out_dir,
+		*,
+		procedure_list_item_id=None,
+		force_new_list_item=False,
+		skip_pdf_upload: bool = False,
+		document_url_override: str | None = None,
+	):
 		self.resource_path = pdf_path
 		self.filename = os.path.basename(self.resource_path)[:-4]
 		self.category = category
@@ -22,10 +32,18 @@ class ProcedureChecklist:
 		self.json_URL = ""
 		self.procedure_list_item_id = procedure_list_item_id
 		self.force_new_list_item = bool(force_new_list_item)
+		self.skip_pdf_upload = bool(skip_pdf_upload)
+		self.document_url_override = str(document_url_override or "").strip() or None
 
 	def run(self, *, field_overrides: dict | None = None):
 		"""Upload source PDF, parse, upload JSON + images, upsert SharePoint list rows (same pipeline as LOP_process_pdfs)."""
-		self.document_URL = upload_file(self.resource_path)
+		if self.document_url_override:
+			self.document_URL = self.document_url_override
+		elif self.skip_pdf_upload:
+			# Worker mode: PDF already uploaded; keep existing URL if caller didn't pass one.
+			self.document_URL = self.document_URL or ""
+		else:
+			self.document_URL = upload_file(self.resource_path)
 		self.process_resource(finalize=False)
 		if field_overrides:
 			if str(field_overrides.get("title") or "").strip():
@@ -215,7 +233,7 @@ class ProcedureChecklist:
 
 	def serialize(self):
 		d = self.__dict__.copy()
-		[d.pop(key, None) for key in ('resource_path', 'lists', 'pages', 'json_URL', 'version_history', 'out_dir', 'procedure_list_item_id', 'force_new_list_item')]
+		[d.pop(key, None) for key in ('resource_path', 'lists', 'pages', 'json_URL', 'version_history', 'out_dir', 'procedure_list_item_id', 'force_new_list_item', 'skip_pdf_upload', 'document_url_override')]
 		d["pageCount"] = len(self.pages)
 		d["title"] = ",".join(d["title"]) if type(d["title"]) == list else d["title"]
 		d["steps"] = [ { "Step": l["step"], "Title": l["title"], "Text": l["text"], "Image": l["image"] } for l in self.steps ] # old is too complex: [ { "list_page_range": l["list_page_range"], "list_txt": l["list_txt"], "associated_images": l["associated_images"] } for l in self.lists ]                —— (we just need reasonable chunking of the list portions (or main content (non-purpose/header-title)) of pdf such that ideally there is 1 step/chunk/item for every image))

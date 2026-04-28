@@ -10,10 +10,12 @@ export function procedureIngestPhaseLabel(
 			return "Preparing PDF…";
 		case "uploading":
 			return "Uploading…";
+		case "server":
+			return "Processing on server (PDF extract & SharePoint)…";
 		case "processing":
-			return "Saving to SharePoint…";
+			return "Finishing…";
 		case "complete":
-			return "Done";
+			return "Import finished";
 		default:
 			return "Working…";
 	}
@@ -34,6 +36,10 @@ export function ProcedureChecklistIngestProgressBar({
 	onDismissError?: () => void;
 }): JSX.Element | null {
 	if (!visible && !error) return null;
+
+	const isServer = phase === "server";
+	const isComplete = phase === "complete";
+
 	return (
 		<div
 			className="mb-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs shadow-sm"
@@ -57,20 +63,33 @@ export function ProcedureChecklistIngestProgressBar({
 			{visible ? (
 				<div className={error ? "mt-2" : ""}>
 					<div className="mb-1 flex justify-between gap-2 text-slate-600">
-						<span className="min-w-0 truncate">
+						<span className="min-w-0 leading-snug">
 							{procedureIngestPhaseLabel(phase)}
 						</span>
 						<span className="shrink-0 tabular-nums text-slate-800">
-							{Math.round(Math.max(0, Math.min(100, percent)))}%
+							{isServer ? (
+								<span className="text-slate-500">…</span>
+							) : (
+								`${Math.round(Math.max(0, Math.min(100, percent)))}%`
+							)}
 						</span>
 					</div>
 					<div className="h-2 overflow-hidden rounded-full bg-slate-200">
-						<div
-							className="h-full rounded-full bg-blue-600 transition-[width] duration-200 ease-out"
-							style={{
-								width: `${Math.max(0, Math.min(100, percent))}%`,
-							}}
-						/>
+						{isServer ? (
+							<div
+								className="h-full w-full rounded-full bg-blue-500/70 animate-pulse"
+								aria-hidden="true"
+							/>
+						) : (
+							<div
+								className={`h-full rounded-full transition-[width] duration-200 ease-out ${
+									isComplete ? "bg-emerald-600" : "bg-blue-600"
+								}`}
+								style={{
+									width: `${Math.max(0, Math.min(100, percent))}%`,
+								}}
+							/>
+						)}
 					</div>
 				</div>
 			) : null}

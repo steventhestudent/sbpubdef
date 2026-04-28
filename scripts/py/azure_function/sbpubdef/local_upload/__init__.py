@@ -88,6 +88,18 @@ def upload_file(site_id, drive_id, file_path, subfolder):
         upload_data = upload_resp.json()
         return upload_data.get("webUrl") # sharepoint url
 
+def download_drive_file_bytes(site_id: str, drive_id: str, *, path: str) -> bytes:
+    """
+    Download drive file content via Graph:
+      GET /sites/{site_id}/drives/{drive_id}/root:/{path}:/content
+    """
+    p = (path or "").lstrip("/")
+    url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/drives/{drive_id}/root:/{p}:/content"
+    resp = requests.get(url, headers=session_headers)
+    if resp.status_code >= 300:
+        raise Exception(f"Graph download failed: {resp.status_code} {resp.text} (path={path})")
+    return resp.content
+
 # Create SharePoint List Item
 def add_list_item(site_id, list_id, field_data: dict):
     url = f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items"

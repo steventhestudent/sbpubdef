@@ -50,11 +50,17 @@ export function ProcedureChecklist({
 	const onIngestProgress = React.useCallback((r: IngestProgressReport) => {
 		setIngestUi((prev) => ({
 			...prev,
-			active: r.phase !== "complete",
+			active: true,
 			percent: r.percent,
 			phase: r.phase,
 			error: null,
 		}));
+	}, []);
+
+	const hideIngestBarSoon = React.useCallback(() => {
+		window.setTimeout(() => {
+			setIngestUi((u) => ({ ...u, active: false }));
+		}, 2000);
 	}, []);
 
 	const procedureChecklistApi = new ProcedureChecklistApi(pnpWrapper);
@@ -188,6 +194,7 @@ export function ProcedureChecklist({
 										error: null,
 									});
 									(async () => {
+										let succeeded = false;
 										try {
 											const ingest =
 												new ProcedureChecklistIngestApi(
@@ -197,6 +204,7 @@ export function ProcedureChecklist({
 												await ingest.ingestCreate({
 													file,
 													onProgress: onIngestProgress,
+													fastStart: true,
 												});
 											const list =
 												await refreshProcedures();
@@ -205,6 +213,7 @@ export function ProcedureChecklist({
 												? list.find((p) => p.id === pid)
 												: undefined;
 											if (row) await onProcedureSelected(row);
+											succeeded = true;
 										} catch (err: unknown) {
 											const msg =
 												err instanceof Error
@@ -217,11 +226,8 @@ export function ProcedureChecklist({
 											}));
 										} finally {
 											setIngestBusy(false);
-											setIngestUi((u) => ({
-												...u,
-												active: false,
-											}));
 										}
+										if (succeeded) hideIngestBarSoon();
 									})().catch(() => {
 										setIngestBusy(false);
 										setIngestUi((u) => ({
@@ -325,6 +331,7 @@ export function ProcedureChecklist({
 									phase: "reading",
 									error: null,
 								});
+								let succeeded = false;
 								try {
 									const ingest =
 										new ProcedureChecklistIngestApi(
@@ -335,6 +342,7 @@ export function ProcedureChecklist({
 										procedureId: selectedProcedure.id,
 										category: selectedProcedure.category,
 										onProgress: onIngestProgress,
+										fastStart: true,
 									});
 									const list = await refreshProcedures();
 									const row =
@@ -347,6 +355,7 @@ export function ProcedureChecklist({
 									});
 									setSteps(s || []);
 									setStepIndex(0);
+									succeeded = true;
 								} catch (err: unknown) {
 									const msg =
 										err instanceof Error
@@ -359,11 +368,8 @@ export function ProcedureChecklist({
 									}));
 								} finally {
 									setIngestBusy(false);
-									setIngestUi((u) => ({
-										...u,
-										active: false,
-									}));
 								}
+								if (succeeded) hideIngestBarSoon();
 							}}
 						/>
 					)}

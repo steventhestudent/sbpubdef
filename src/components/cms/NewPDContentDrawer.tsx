@@ -313,10 +313,11 @@ export function NewPDContentDrawer({
 				title: pcTitle.trim(),
 				purpose: pcPurpose.trim(),
 				effectiveDate: pcEffectiveDate.trim() || undefined,
+				fastStart: true,
 				onProgress: (r: IngestProgressReport) => {
 					setPcIngest((prev) => ({
 						...prev,
-						active: r.phase !== "complete",
+						active: true,
 						percent: r.percent,
 						phase: r.phase,
 						error: null,
@@ -324,8 +325,7 @@ export function NewPDContentDrawer({
 				},
 			});
 		} catch (err: unknown) {
-			const msg =
-				err instanceof Error ? err.message : String(err);
+			const msg = err instanceof Error ? err.message : String(err);
 			setPcIngest((u) => ({
 				...u,
 				active: false,
@@ -333,7 +333,6 @@ export function NewPDContentDrawer({
 			}));
 			throw err;
 		}
-		setPcIngest((u) => ({ ...u, active: false }));
 	}
 
 	async function submitPdEvent(): Promise<void> {
@@ -590,9 +589,11 @@ export function NewPDContentDrawer({
 		setBusy(true);
 		(async () => {
 			if (contentType === "announcement") await submitAnnouncement();
-			else if (contentType === "procedureChecklist")
+			else if (contentType === "procedureChecklist") {
 				await submitProcedureChecklist();
-			else if (contentType === "pdEvent") await submitPdEvent();
+				await new Promise((resolve) => setTimeout(resolve, 2000));
+				setPcIngest((u) => ({ ...u, active: false }));
+			} else if (contentType === "pdEvent") await submitPdEvent();
 			else if (contentType === "assignment") await submitAssignment();
 			else if (contentType === "banner") await submitBanner();
 			else if (contentType === "assignmentCatalog")

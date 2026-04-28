@@ -118,14 +118,14 @@ export const ProcedureChecklistCompactView = ({
 							title="Replace PDF, refresh list fields, and re-extract steps"
 						>
 							{reimportBusy
-								? typeof ingestPercent === "number"
-									? `${Math.round(ingestPercent)}%`
-									: "re-import…"
+								? ingestPhase === "server"
+									? "server…"
+									: typeof ingestPercent === "number"
+										? `${Math.round(ingestPercent)}%`
+										: "re-import…"
 								: "re-import"}
-							{reimportBusy &&
-							ingestPhase &&
-							typeof ingestPercent === "number" ? (
-								<span className="ml-1 text-slate-400">
+							{reimportBusy && ingestPhase ? (
+								<span className="ml-1 max-w-[14rem] truncate text-slate-400">
 									({procedureIngestPhaseLabel(ingestPhase)})
 								</span>
 							) : null}
