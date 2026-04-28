@@ -7,11 +7,69 @@ class ProcedurePage:
         self.blocks = pymupdf_page.get_text("dict")["blocks"]
         self.doc_filename = doc_filename
         self.page_index = page_index
+        self.width = float(getattr(pymupdf_page, "rect", {}).width) if getattr(pymupdf_page, "rect", None) else 612.0
+        self.height = float(getattr(pymupdf_page, "rect", {}).height) if getattr(pymupdf_page, "rect", None) else 792.0
 
     def process_blocks(self, out_dir):
         self.blocks = [
             ProcedurePageRootBlock(self.doc_filename, self.page_index, {"count": 0}, block, out_dir) for block in self.blocks
         ]
+
+    def iter_positioned_lines(self):
+        """
+        Yield dicts: { "type": "line", "y0": float, "y1": float, "text": str, "is_bold": bool }
+        Requires `process_blocks()` to have been called (so blocks are ProcedurePageRootBlock objects).
+        """
+        for rb in self.blocks:
+            b = rb.obj
+            if b.get("type") != 0:
+                continue
+            for ln in b.get("lines", []) or []:
+                spans = ln.get("spans", []) or []
+                parts = []
+                bold_chars = 0
+                total_chars = 0
+                for sp in spans:
+                    t = sp.get("text") or ""
+                    if not t:
+                        continue
+                    parts.append(t)
+                    total_chars += len(t)
+                    # PyMuPDF: span["flags"] bit 16 typically indicates bold in practice for these docs.
+                    if (sp.get("flags", 0) & 16) != 0:
+                        bold_chars += len(t)
+                text = "".join(parts).strip()
+                if not text:
+                    continue
+                y0, y1 = None, None
+                bb = ln.get("bbox") or []
+                if len(bb) == 4:
+                    y0, y1 = float(bb[1]), float(bb[3])
+                is_bold = (total_chars > 0 and (bold_chars / total_chars) >= 0.6)
+                yield {"type": "line", "y0": y0 if y0 is not None else 0.0, "y1": y1 if y1 is not None else 0.0, "text": text, "is_bold": is_bold}
+
+    def iter_images(self):
+        """
+        Yield dicts: { "type": "image", "y0": float, "y1": float, "x0": float, "x1": float, "url": str }
+        Requires `process_blocks()` to have been called (so blocks are ProcedurePageRootBlock objects).
+        """
+        for rb in self.blocks:
+            b = rb.obj
+            if b.get("type") != 1:
+                continue
+            bb = b.get("bbox") or []
+            if len(bb) != 4:
+                continue
+            url = b.get("image") or ""
+            yield {"type": "image", "x0": float(bb[0]), "y0": float(bb[1]), "x1": float(bb[2]), "y1": float(bb[3]), "url": url}
+
+    def iter_content_elements(self):
+        """
+        Merge positioned lines + images in top-to-bottom order for this page.
+        """
+        els = list(self.iter_positioned_lines()) + list(self.iter_images())
+        els.sort(key=lambda e: (e.get("y0", 0.0), 0 if e["type"] == "line" else 1))
+        return els
 
     def best_effort_title(self): # todo: all documents have a title, only ~56% extracted w/ this (some are not prefixed by Procedure: (also, most that dont follow pattern come before Effective Date: (on same line)))
         m = re.search(r'Procedure:\s*(.+)', self.txt)

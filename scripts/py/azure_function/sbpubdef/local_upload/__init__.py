@@ -324,3 +324,6 @@ def get_sharepoint_user_lookup_id(site_id: str, email: str) -> int:
 """
 CRUD: Delete
 """
+def delete_list_item(site_id: str, list_id: str, item_id: str):
+    response = requests.delete(f"https://graph.microsoft.com/v1.0/sites/{site_id}/lists/{list_id}/items/{item_id}", headers=session_headers)
+    print("Item deleted successfully." if response.status_code == 204 else f"Failed to delete item: {response.status_code} - {response.text}")

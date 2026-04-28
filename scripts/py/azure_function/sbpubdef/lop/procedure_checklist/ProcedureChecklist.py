@@ -1,6 +1,7 @@
 import os
 import json
 import pymupdf # import fitz
+import re
 
 from .ProcedurePage import ProcedurePage
 from .upload import *
@@ -20,6 +21,175 @@ class ProcedureChecklist:
 		self.document_URL = upload_file(self.resource_path)
 		self.json_URL = ""
 		self.process_resource()
+
+	def _is_footer_or_header_line(self, text: str, y0: float, page_height: float):
+		t = (text or "").strip()
+		if not t:
+			return True
+		# Standalone page numbers sometimes appear as their own line.
+		if re.match(r"^\d+$", t):
+			return True
+		# Common header lines in these SOPs.
+		if t in ("County of Santa Barbara", "Office of the Public Defender"):
+			return True
+		if t.startswith("Procedure:") or t.startswith("Procedure :"):
+			return True
+		if t.startswith("Effective Date"):
+			return True
+		# Page counter footer line from many PDFs.
+		if re.match(r"^--\s*\d+\s+of\s+\d+\s*--$", t):
+			return True
+		# Heuristic positional trimming.
+		if y0 is not None and (y0 < 125.0 or y0 > (page_height - 55.0)):
+			# Keep PURPOSE and steps even if high-ish; but headers are typically in the very top band.
+			if t.startswith("PURPOSE") or re.match(r"^\s*\d+\.\s*", t):
+				return False
+			return True
+		return False
+
+	def _is_non_content_image(self, el: dict):
+		# Ignore header logos, footer stamps, and tiny decorative/stamp images.
+		y0 = el.get("y0")
+		y1 = el.get("y1")
+		x0 = el.get("x0")
+		x1 = el.get("x1")
+		ph = el.get("page_height") or 792.0
+		if y0 is None or y1 is None:
+			return False
+		if y0 < 140.0:
+			return True
+		if y0 > (ph - 120.0):
+			return True
+		# Size-based filter (stamps/logos are often small compared to screenshots).
+		if x0 is not None and x1 is not None:
+			w = float(x1) - float(x0)
+			h = float(y1) - float(y0)
+			area = max(w, 0.0) * max(h, 0.0)
+			if h < 95.0 and area < 25000.0:
+				return True
+		return False
+
+	def _looks_like_step_heading(self, first_line: str, first_is_bold: bool):
+		t = (first_line or "").strip()
+		if not t:
+			return False
+		# Not a numbered list item.
+		if re.match(r"^\s*(\d+\.|[a-zA-Z]\.|[ivxlcdmIVXLCDM]+\.)\s+", t):
+			return False
+		# Typical headings are short and either bold or end with ':'.
+		if t.endswith(":"):
+			return True
+		if first_is_bold and len(t) <= 80:
+			return True
+		# ALL CAPS headings (common in some SOPs).
+		alpha = re.sub(r"[^A-Za-z]+", "", t)
+		if alpha and alpha.isupper() and len(t) <= 80:
+			return True
+		return False
+
+	def build_steps(self):
+		"""
+		Build `self.steps` by:
+		- ignoring header/footer and anything after 'Version History'
+		- starting from first numbered instruction (e.g. '1.')
+		- chunking text up to the next (non-footer) image, ideally 1 image per step
+		"""
+		elements = []
+		for p in self.pages:
+			ph = getattr(p, "height", 792.0) or 792.0
+			for el in p.iter_content_elements():
+				el = dict(el)
+				el["page_index"] = p.page_index
+				el["page_height"] = ph
+				elements.append(el)
+
+		# Sort across pages.
+		elements.sort(key=lambda e: (e.get("page_index", 0), e.get("y0", 0.0), 0 if e["type"] == "line" else 1))
+
+		# Filter to the procedure content region.
+		started = False
+		content = []
+		for el in elements:
+			if el["type"] == "line":
+				txt = el.get("text") or ""
+				if "Version History" in txt:
+					break
+				if self._is_footer_or_header_line(txt, el.get("y0"), el.get("page_height")):
+					continue
+				if not started:
+					# Start at first numbered step.
+					if re.match(r"^\s*1\.\s+", txt):
+						started = True
+						content.append(el)
+					continue
+				# Once started, skip stray PURPOSE line repeats (some PDFs echo it in reading order).
+				if txt.startswith("PURPOSE"):
+					continue
+				content.append(el)
+			else:
+				# Image
+				if not started:
+					continue
+				if self._is_non_content_image(el):
+					continue
+				# If we haven't hit Version History yet, keep images.
+				content.append(el)
+
+		# Chunk into steps: accumulate text until next image.
+		steps = []
+		cur_lines = []
+		cur_first_line_bold = False
+		cur_image = ""
+		pending_image = ""
+
+		def flush():
+			nonlocal cur_lines, cur_image, cur_first_line_bold
+			body_lines = [l for l in cur_lines if l.strip()]
+			if not body_lines and not cur_image:
+				cur_lines = []
+				cur_first_line_bold = False
+				return
+			title = ""
+			text = "\n".join(body_lines).strip()
+			if body_lines:
+				first = body_lines[0].strip()
+				if self._looks_like_step_heading(first, cur_first_line_bold):
+					title = first[:-1].strip() if first.endswith(":") else first
+					# Remove the heading line from the body text (keeps it as title).
+					text = "\n".join(body_lines[1:]).strip()
+			steps.append({
+				"step": len(steps) + 1,
+				"title": title,
+				"text": text,
+				"image": cur_image or ""
+			})
+			cur_lines = []
+			cur_first_line_bold = False
+			cur_image = ""
+
+		for el in content:
+			if el["type"] == "line":
+				if pending_image and not cur_image and not cur_lines:
+					cur_image = pending_image
+					pending_image = ""
+				if not cur_lines:
+					cur_first_line_bold = bool(el.get("is_bold"))
+				cur_lines.append(el.get("text") or "")
+			else:
+				# Attach this image to the accumulated text chunk.
+				img_url = el.get("url") or ""
+				if not cur_lines:
+					# Don't create an empty step; attach to the next text chunk instead.
+					pending_image = img_url
+					continue
+				cur_image = img_url
+				flush()
+
+		# Final trailing text-only chunk (for docs with no images or leftover text after last image).
+		flush()
+
+		# If we ended up with many tiny steps (e.g. one line per step), keep as-is; caller can re-chunk later.
+		self.steps = steps
 
 	def write(self):
 		file_path = os.path.join(self.out_dir, self.filename + '.json')
@@ -49,4 +219,5 @@ class ProcedureChecklist:
 			# break # debug 1 page
 		for page in self.pages:  # now we process blocks for images, etc.
 			page.process_blocks(self.out_dir)
+		self.build_steps()
 		self.write()
