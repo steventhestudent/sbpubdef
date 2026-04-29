@@ -17,6 +17,8 @@ export type PDEvent = {
 	detailsUrl?: string;
 	endDate?: string;
 	allDay?: boolean;
+	siteUrl?: string;
+	PDDepartment?: string;
 };
 
 export type CalendarItem = {
@@ -27,6 +29,7 @@ export type CalendarItem = {
 	timeLabel: string;
 	location?: string;
 	href?: string;
+	source?: string;
 	meta?: string;
 };
 

@@ -51,6 +51,7 @@ export default function PortalCalendar(
 		title: string;
 		timeLabel?: string;
 		location?: string;
+		source?: string;
 		meta?: string;
 	} | null>(null);
 
@@ -78,6 +79,7 @@ export default function PortalCalendar(
 			title: item.title,
 			timeLabel: item.timeLabel,
 			location: item.location,
+			source: item.source,
 			meta: item.meta,
 		});
 	};
@@ -266,6 +268,11 @@ export default function PortalCalendar(
 						{tooltip.location && (
 							<p className="text-xs text-slate-600">
 								Location: {tooltip.location}
+							</p>
+						)}
+						{tooltip.source && (
+							<p className="text-xs text-slate-600">
+								Source: {tooltip.source}
 							</p>
 						)}
 						{tooltip.meta && (

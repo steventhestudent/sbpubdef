@@ -21,6 +21,33 @@ function currentUserEmail(ctx: WebPartContext): string | undefined {
 	return ctx.pageContext.user.email?.toLowerCase();
 }
 
+function getEventSourceLabel(event: PDEvent): string {
+	const siteUrl = (event as PDEvent & { siteUrl?: string }).siteUrl || "";
+	if (siteUrl === "outlook://me") return "Outlook (My Calendar)";
+	if (siteUrl.includes("outlook.office.com/group")) return "Outlook Group";
+
+	if (!siteUrl) return "SharePoint";
+	const normalized = siteUrl.startsWith("http")
+		? siteUrl
+		: new URL(siteUrl, window.location.origin).toString();
+	const parts = new URL(normalized).pathname.split("/").filter(Boolean);
+	const sitesIndex = parts.findIndex((part) => part.toLowerCase() === "sites");
+	const siteName = sitesIndex >= 0 ? parts[sitesIndex + 1] : undefined;
+	return siteName ? `SharePoint (${siteName})` : "SharePoint";
+}
+
+function isOutlookEvent(event: PDEvent): boolean {
+	const siteUrl = (event as PDEvent & { siteUrl?: string }).siteUrl || "";
+	return siteUrl === "outlook://me" || siteUrl.includes("outlook.office.com/group");
+}
+
+function shouldHideEvent(event: PDEvent): boolean {
+	const isHoteling = /(office\s*)?hoteling|hotelling/i.test(event.title || "");
+	// Hide hoteling entries coming from shared SharePoint calendars,
+	// but keep Outlook hoteling entries (personal/group) visible.
+	return isHoteling && !isOutlookEvent(event);
+}
+
 function mapAssignmentsToCal(
 	assigns: PDAssignment[],
 	me?: string,
@@ -39,6 +66,7 @@ function mapAssignmentsToCal(
 				timeLabel: formatTime(when),
 				location: undefined,
 				href: a.link,
+				source: "Assignments",
 				meta: mine ? "My case" : a.status,
 			} as CalendarItem;
 		})
@@ -47,7 +75,7 @@ function mapAssignmentsToCal(
 
 function mapEventsToCal(events: PDEvent[]): CalendarItem[] {
 	return events
-		.filter((e) => !/(office\s*)?hoteling|hotelling/i.test(e.title || ""))
+		.filter((e) => !shouldHideEvent(e))
 		.map((e) => {
 			const when = getEventLocalStart(e);
 			if (!when) return undefined;
@@ -59,6 +87,7 @@ function mapEventsToCal(events: PDEvent[]): CalendarItem[] {
 				timeLabel: e.allDay ? "All day" : formatTime(when),
 				location: e.location,
 				href: e.detailsUrl,
+				source: getEventSourceLabel(e),
 				meta: undefined,
 			} as CalendarItem;
 		})
@@ -89,6 +118,7 @@ function mapHotelingToCal(): CalendarItem[] {
 					reservation.sharePointEventWebLink ||
 					reservation.outlookEventWebLink ||
 					hotelingFallbackLink,
+				source: "Hoteling",
 				meta: "Reservation",
 			} as CalendarItem;
 		})
