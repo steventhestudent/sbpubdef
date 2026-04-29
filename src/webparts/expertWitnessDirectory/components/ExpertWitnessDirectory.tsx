@@ -70,7 +70,12 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 		return () => {
 			active = false;
 		};
-	}, [props.fetchOnMount, hasRequestedLoad, props.siteUrl, props.spHttpClient]);
+	}, [
+		props.fetchOnMount,
+		hasRequestedLoad,
+		props.siteUrl,
+		props.spHttpClient,
+	]);
 
 	const filtered = React.useMemo(() => {
 		const term = search.trim().toLowerCase();
@@ -96,7 +101,7 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 			instanceId={props.instanceId}
 			title="Expert Witness Directory"
 		>
-			<div className="p-4 text-sm">
+			<div className="px-4 pt-2 pb-4 text-sm">
 				{/* search */}
 				<label
 					className="block text-xs font-medium text-slate-700"
@@ -113,7 +118,11 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 							)
 						}
 						onFocus={() => {
-							if ((props.fetchOnMount ?? true) || hasRequestedLoad) return;
+							if (
+								(props.fetchOnMount ?? true) ||
+								hasRequestedLoad
+							)
+								return;
 							setHasRequestedLoad(true);
 						}}
 					/>
@@ -136,86 +145,91 @@ export const ExpertWitnessDirectory: React.FC<IExpertWitnessDirectoryProps> = (
 						Focus the search box to load the directory.
 					</div>
 				) : (
-					!isLoading && !error && (
-					<>
-						{filtered.length === 0 ? (
-							<div className="mt-3 rounded-md border border-slate-400 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-								No experts match this search.
-							</div>
-						) : (
-							<ul className="mt-3 divide-y divide-slate-400 rounded-md border border-slate-400 bg-white text-slate-900">
-								{visible.map((e) => (
-									<li key={e.id} className="px-3 py-2">
-										<div className="flex items-center justify-between gap-4">
-											<div>
-												<p className="text-slate-750 text-sm font-semibold">
-													{e.name}
-												</p>
-												{e.expertise && (
-													<p className="mt-0.5 text-xs text-slate-600">
-														{e.expertise}
+					!isLoading &&
+					!error && (
+						<>
+							{filtered.length === 0 ? (
+								<div className="mt-3 rounded-md border border-slate-400 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+									No experts match this search.
+								</div>
+							) : (
+								<ul className="mt-3 divide-y divide-slate-400 rounded-md border border-slate-400 bg-white text-slate-900">
+									{visible.map((e) => (
+										<li key={e.id} className="px-3 py-2">
+											<div className="flex items-center justify-between gap-4">
+												<div>
+													<p className="text-slate-750 text-sm font-semibold">
+														{e.name}
 													</p>
-												)}
-												{(e.email || e.phone) && (
-													<p className="mt-1 text-xs text-slate-500">
-														{e.email && (
-															<span>
-																{e.email}
-															</span>
-														)}
-														{e.email &&
-															e.phone &&
-															" • "}
-														{e.phone && (
-															<span>
-																{e.phone}
-															</span>
-														)}
-													</p>
-												)}
+													{e.expertise && (
+														<p className="mt-0.5 text-xs text-slate-600">
+															{e.expertise}
+														</p>
+													)}
+													{(e.email || e.phone) && (
+														<p className="mt-1 text-xs text-slate-500">
+															{e.email && (
+																<span>
+																	{e.email}
+																</span>
+															)}
+															{e.email &&
+																e.phone &&
+																" • "}
+															{e.phone && (
+																<span>
+																	{e.phone}
+																</span>
+															)}
+														</p>
+													)}
+												</div>
+												<span className="rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+													Available
+												</span>
 											</div>
-											<span className="rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
-												Available
+										</li>
+									))}
+								</ul>
+							)}
+
+							<div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+								<span>
+									{experts.length > MAX_VISIBLE && (
+										<div className="mt-3 text-right">
+											<span className="text-xs text-slate-500">
+												Show{" "}
+												<select value={MAX_VISIBLE}>
+													{(function () {
+														const els = [];
+														for (
+															let i = 0;
+															i < 10;
+															i++
+														)
+															els.push(
+																<option>
+																	{i}
+																</option>,
+															);
+														return els;
+													})()}
+												</select>
+												results.
 											</span>
 										</div>
-									</li>
-								))}
-							</ul>
-						)}
-
-						<div className="mt-3 flex items-center justify-between text-xs text-slate-500">
-							<span>
-								{experts.length > MAX_VISIBLE && (
-									<div className="mt-3 text-right">
-										<span className="text-xs text-slate-500">
-											Show{" "}
-											<select value={MAX_VISIBLE}>
-												{(function () {
-													const els = [];
-													for (let i = 0; i < 10; i++)
-														els.push(
-															<option>
-																{i}
-															</option>,
-														);
-													return els;
-												})()}
-											</select>
-											results.
-										</span>
-									</div>
-								)}
-							</span>
-							<a
-								href={directoryUrl}
-								target="_blank"
-								rel="noreferrer"
-								className="text-blue-700 hover:underline"
-							>
-								View full directory
-							</a>
-						</div>
-					</>
+									)}
+								</span>
+								<a
+									href={directoryUrl}
+									target="_blank"
+									rel="noreferrer"
+									className="text-blue-700 hover:underline"
+								>
+									View full directory
+								</a>
+							</div>
+						</>
 					)
 				)}
 			</div>

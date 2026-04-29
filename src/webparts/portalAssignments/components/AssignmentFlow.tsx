@@ -126,7 +126,6 @@ export function AssignmentFlow({
 				if (cancelled) return;
 				setCatalog(c);
 				setSteps(s);
-				setQuiz([]);
 				setAnswers({});
 				setQuizResult(undefined);
 				setEmbedDoneByStep({});

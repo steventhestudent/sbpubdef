@@ -328,7 +328,7 @@ export class AssignmentsSpService {
 			}
 		}
 
-		return (rows || [])
+		const mapped = (rows || [])
 			.map((r) => {
 				const order =
 					safeNumber(getProp<unknown>(r, "QuestionOrder")) ?? 0;
@@ -348,6 +348,7 @@ export class AssignmentsSpService {
 				} satisfies AssignmentQuizQuestion;
 			})
 			.filter((q) => q.questionOrder > 0 && q.questionText.trim() !== "");
+		return mapped;
 	}
 
 	public async getStepsForCatalog(

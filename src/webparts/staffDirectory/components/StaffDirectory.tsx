@@ -25,7 +25,11 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 	const pnpWrapper = React.useMemo(
 		() =>
 			new PNPWrapper(props.context, {
-				siteUrls: ["/sites/PD-Intranet", "/sites/Tech-Team", "/sites/HR"],
+				siteUrls: [
+					"/sites/PD-Intranet",
+					"/sites/Tech-Team",
+					"/sites/HR",
+				],
 				cache: "true",
 			}),
 		[props.context],
@@ -97,21 +101,20 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 			instanceId={props.context.instanceId}
 			title="Staff Directory"
 		>
-			<div className="p-2">
-				{/* Search Input */}
-				<form role="search" className="mx-auto max-w-lg">
-					<label
-						className="block text-sm font-medium text-slate-700"
-						htmlFor="staff-search"
-					>
-						Search staff
-					</label>
+			<div className="px-4 pt-2 pb-4 text-sm">
+				<label
+					className="block text-xs font-medium text-slate-700"
+					htmlFor="staff-search"
+				>
+					Search staff
+				</label>
+				<div className="mt-1 flex gap-2">
 					<ClearableInput
 						placeholder="Search any field..."
 						onChange={handleSearchChange}
 						onFocus={handleSearchFocus}
 					/>
-				</form>
+				</div>
 
 				{/* status text */}
 				{!isDeferredInitialLoad && (
@@ -170,7 +173,8 @@ export const StaffDirectory: React.FC<IStaffDirectoryProps> = (props) => {
 													</p>
 													<p className="text-xs text-slate-600">
 														Cell:{" "}
-														{member.personalCell || "—"}
+														{member.personalCell ||
+															"—"}
 													</p>
 												</div>
 											</div>
