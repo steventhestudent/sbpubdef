@@ -15,6 +15,50 @@ import { AssignmentFlow } from "./AssignmentFlow";
 import { AssignmentsCenter } from "./AssignmentsCenter";
 import * as Utils from "@utils";
 
+function isMidnightUtcIso(iso: string): boolean {
+	return /T00:00:00(?:\.000)?Z$/.test(iso);
+}
+
+function dateKeyForCompare(iso: string): number | undefined {
+	const d = new Date(iso);
+	if (Number.isNaN(d.getTime())) return undefined;
+	if (isMidnightUtcIso(iso)) {
+		return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+	}
+	return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
+function asDateLabel(iso?: string): string {
+	if (!iso) return "—";
+	const d = new Date(iso);
+	if (Number.isNaN(d.getTime())) return "—";
+	if (isMidnightUtcIso(iso)) {
+		return new Intl.DateTimeFormat(undefined, {
+			year: "numeric",
+			month: "numeric",
+			day: "numeric",
+			timeZone: "UTC",
+		}).format(d);
+	}
+	return d.toLocaleDateString();
+}
+
+function isOverdueAssignment(item: UserAssignmentItem): boolean {
+	const statusLower = String(item.status || "").trim().toLowerCase();
+	if (statusLower === "completed") return false;
+	if (statusLower === "overdue") return true;
+	if (!item.dueDate) return false;
+	const dueKey = dateKeyForCompare(item.dueDate);
+	if (dueKey === undefined) return false;
+	const now = new Date();
+	const todayLocalKey = new Date(
+		now.getFullYear(),
+		now.getMonth(),
+		now.getDate(),
+	).getTime();
+	return dueKey < todayLocalKey;
+}
+
 function getAssignmentIdFromLocation(): number | undefined {
 	// Supported:
 	// - ?assignmentId=123
@@ -247,14 +291,9 @@ function MyAssignmentsView({
 						</thead>
 						<tbody className="divide-y divide-slate-200">
 							{compactItems.map((a) => {
-								const due = a.dueDate
-									? new Date(a.dueDate)
-									: undefined;
-								const dueLabel =
-									due && !Number.isNaN(due.getTime())
-										? due.toLocaleDateString()
-										: "—";
+								const dueLabel = asDateLabel(a.dueDate);
 								const openHref = openHrefForId(Number(a.id));
+								const overdue = isOverdueAssignment(a);
 								return (
 									<tr
 										key={a.id}
@@ -268,10 +307,15 @@ function MyAssignmentsView({
 										</td>
 										<td className="px-3 py-3 text-right">
 											<a
-												className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+												className={[
+													"rounded-md px-3 py-2 text-sm font-semibold text-white",
+													overdue
+														? "bg-red-600 hover:bg-red-700"
+														: "bg-blue-600 hover:bg-blue-700",
+												].join(" ")}
 												href={openHref}
 											>
-												Open
+												{overdue ? "Overdue" : "Open"}
 											</a>
 										</td>
 									</tr>

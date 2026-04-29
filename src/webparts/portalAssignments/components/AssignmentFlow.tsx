@@ -18,10 +18,22 @@ function clamp(n: number, min: number, max: number): number {
 	return Math.max(min, Math.min(max, n));
 }
 
+function isMidnightUtcIso(iso: string): boolean {
+	return /T00:00:00(?:\.000)?Z$/.test(iso);
+}
+
 function asDateLabel(iso?: string): string {
 	if (!iso) return "—";
 	const d = new Date(iso);
 	if (Number.isNaN(d.getTime())) return "—";
+	if (isMidnightUtcIso(iso)) {
+		return new Intl.DateTimeFormat(undefined, {
+			year: "numeric",
+			month: "numeric",
+			day: "numeric",
+			timeZone: "UTC",
+		}).format(d);
+	}
 	return d.toLocaleDateString();
 }
 

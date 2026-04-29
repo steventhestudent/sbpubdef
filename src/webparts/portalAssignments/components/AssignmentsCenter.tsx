@@ -2,10 +2,35 @@ import * as React from "react";
 import type { IPortalAssignmentsProps } from "./IPortalAssignmentsProps";
 import type { UserAssignmentItem } from "../types/AssignmentTypes";
 
+function isMidnightUtcIso(iso: string): boolean {
+	return /T00:00:00(?:\.000)?Z$/.test(iso);
+}
+
+function dateKeyForCompare(iso: string): number | undefined {
+	// If SharePoint stored a date-only value as midnight UTC, comparing in local
+	// time can shift the day. Treat it as a date-only UTC day for comparisons.
+	const d = new Date(iso);
+	if (Number.isNaN(d.getTime())) return undefined;
+	if (isMidnightUtcIso(iso)) {
+		return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+	}
+	return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+}
+
 function asDateLabel(iso?: string): string {
 	if (!iso) return "—";
 	const d = new Date(iso);
 	if (Number.isNaN(d.getTime())) return "—";
+
+	// Render midnight-UTC stored date-only values without timezone shifting.
+	if (isMidnightUtcIso(iso)) {
+		return new Intl.DateTimeFormat(undefined, {
+			year: "numeric",
+			month: "numeric",
+			day: "numeric",
+			timeZone: "UTC",
+		}).format(d);
+	}
 	return d.toLocaleDateString();
 }
 
@@ -17,11 +42,15 @@ function rawStatusLower(item: UserAssignmentItem): string {
 
 function isPastDue(item: UserAssignmentItem): boolean {
 	if (!item.dueDate) return false;
-	const d = new Date(item.dueDate);
-	if (Number.isNaN(d.getTime())) return false;
-	const today = new Date();
-	today.setHours(0, 0, 0, 0);
-	return d.getTime() < today.getTime();
+	const dueKey = dateKeyForCompare(item.dueDate);
+	if (dueKey === undefined) return false;
+	const now = new Date();
+	const todayLocalKey = new Date(
+		now.getFullYear(),
+		now.getMonth(),
+		now.getDate(),
+	).getTime();
+	return dueKey < todayLocalKey;
 }
 
 type NormalizedStatus = "Not Started" | "In Progress" | "Completed" | "Overdue";
