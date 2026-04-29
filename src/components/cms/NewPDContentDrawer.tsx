@@ -85,12 +85,12 @@ export function NewPDContentDrawer({
 		active: boolean;
 		percent: number;
 		phase: IngestProgressReport["phase"];
-		error: string | null;
+		error: string | undefined;
 	}>({
 		active: false,
 		percent: 0,
 		phase: "reading",
-		error: null,
+		error: undefined,
 	});
 
 	// PD Event
@@ -262,7 +262,7 @@ export function NewPDContentDrawer({
 			active: false,
 			percent: 0,
 			phase: "reading",
-			error: null,
+			error: undefined,
 		});
 	}, [open, contentType]);
 
@@ -303,7 +303,7 @@ export function NewPDContentDrawer({
 			active: true,
 			percent: 0,
 			phase: "reading",
-			error: null,
+			error: undefined,
 		});
 		const ingest = new ProcedureChecklistIngestApi(pnpWrapper.ctx);
 		try {
@@ -320,7 +320,7 @@ export function NewPDContentDrawer({
 						active: true,
 						percent: r.percent,
 						phase: r.phase,
-						error: null,
+						error: undefined,
 					}));
 				},
 			});
@@ -916,7 +916,7 @@ export function NewPDContentDrawer({
 										onDismissError={() =>
 											setPcIngest((u) => ({
 												...u,
-												error: null,
+												error: undefined,
 											}))
 										}
 									/>

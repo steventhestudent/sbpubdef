@@ -26,16 +26,16 @@ const resolveImageUrlsCarryForward = (
 	return [];
 };
 
-const youtubeVideoIdFromEmbedUrl = (url: string): string | null => {
+const youtubeVideoIdFromEmbedUrl = (url: string): string | undefined => {
 	const m = url.match(/youtube\.com\/embed\/([^?&#/]+)/i);
-	return m?.[1] ?? null;
+	return m?.[1] ?? undefined;
 };
 
-const thumbnailUrlForMedia = (url: string): string | null => {
+const thumbnailUrlForMedia = (url: string): string | undefined => {
 	const vid = youtubeVideoIdFromEmbedUrl(url);
 	if (vid) return `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`;
 	if (/^https?:\/\//i.test(url)) return url;
-	return null;
+	return undefined;
 };
 
 export type ProcedureChecklistCompactViewProps = {
@@ -52,7 +52,7 @@ export type ProcedureChecklistCompactViewProps = {
 	procedureStepsApi: ProcedureStepsApi;
 	editorMode?: boolean;
 	reimportBusy?: boolean;
-	ingestPercent?: number | null;
+	ingestPercent?: number | undefined;
 	ingestPhase?: string;
 	onReimportPdf?: (file: File) => Promise<void>;
 };
@@ -67,7 +67,7 @@ export const ProcedureChecklistCompactView = ({
 	procedureStepsApi,
 	editorMode = false,
 	reimportBusy = false,
-	ingestPercent = null,
+	ingestPercent = undefined,
 	ingestPhase,
 	onReimportPdf,
 }: ProcedureChecklistCompactViewProps): JSX.Element => {
@@ -142,7 +142,9 @@ export const ProcedureChecklistCompactView = ({
 								const file = input.files?.[0];
 								input.value = "";
 								if (!file || !onReimportPdf) return;
-								void onReimportPdf(file);
+								onReimportPdf(file).catch(() => {
+									// upstream handles surfacing errors; avoid unhandled rejection
+								});
 							}}
 							id={`lop-reimport-${selectedProcedure.id}`}
 						/>

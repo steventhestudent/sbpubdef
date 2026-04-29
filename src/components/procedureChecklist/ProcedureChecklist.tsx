@@ -38,12 +38,12 @@ export function ProcedureChecklist({
 		active: boolean;
 		percent: number;
 		phase: IngestProgressReport["phase"];
-		error: string | null;
+		error: string | undefined;
 	}>({
 		active: false,
 		percent: 0,
 		phase: "reading",
-		error: null,
+		error: undefined,
 	});
 	const newPdfInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -53,7 +53,7 @@ export function ProcedureChecklist({
 			active: true,
 			percent: r.percent,
 			phase: r.phase,
-			error: null,
+			error: undefined,
 		}));
 	}, []);
 
@@ -144,7 +144,7 @@ export function ProcedureChecklist({
 				phase={ingestUi.phase}
 				error={ingestUi.error}
 				onDismissError={() =>
-					setIngestUi((u) => ({ ...u, error: null }))
+					setIngestUi((u) => ({ ...u, error: undefined }))
 				}
 			/>
 			{selectedProcedure ? (
@@ -191,7 +191,7 @@ export function ProcedureChecklist({
 										active: true,
 										percent: 0,
 										phase: "reading",
-										error: null,
+										error: undefined,
 									});
 									(async () => {
 										let succeeded = false;
@@ -320,7 +320,7 @@ export function ProcedureChecklist({
 							procedureStepsApi={procedureStepsApi}
 							reimportBusy={ingestBusy}
 							ingestPercent={
-								ingestUi.active ? ingestUi.percent : null
+								ingestUi.active ? ingestUi.percent : undefined
 							}
 							ingestPhase={ingestUi.phase}
 							onReimportPdf={async (file: File) => {
@@ -329,7 +329,7 @@ export function ProcedureChecklist({
 									active: true,
 									percent: 0,
 									phase: "reading",
-									error: null,
+									error: undefined,
 								});
 								let succeeded = false;
 								try {

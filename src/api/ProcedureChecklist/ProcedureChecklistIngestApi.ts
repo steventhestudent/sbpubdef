@@ -2,7 +2,7 @@ import { AadHttpClient } from "@microsoft/sp-http";
 import type { WebPartContext } from "@microsoft/sp-webpart-base";
 
 export type ProcedureIngestResult = {
-	procedureId: number | null;
+	procedureId: number | undefined;
 	documentURL: string;
 	jsonURL: string;
 	pageCount: number;
@@ -38,7 +38,7 @@ function encodeBytesToBase64Progress(
 		const end = Math.min(i + chunkSize, len);
 		const sub = bytes.subarray(i, end);
 		binary += String.fromCharCode.apply(
-			null,
+			undefined,
 			Array.from(sub) as number[],
 		);
 		onChunk(len ? end / len : 1);
@@ -272,7 +272,7 @@ export class ProcedureChecklistIngestApi {
 			pdfBase64,
 			filename: args.file.name,
 		};
-		if (args.mode === "reimport" && args.procedureId != null) {
+		if (args.mode === "reimport" && args.procedureId !== undefined) {
 			base.procedureId = args.procedureId;
 		}
 		if (args.category) base.category = args.category;

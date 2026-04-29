@@ -32,10 +32,10 @@ export function ProcedureChecklistIngestProgressBar({
 	visible: boolean;
 	percent: number;
 	phase?: string;
-	error: string | null;
+	error: string | undefined;
 	onDismissError?: () => void;
-}): JSX.Element | null {
-	if (!visible && !error) return null;
+}): JSX.Element {
+	if (!visible && !error) return <></>;
 
 	const isServer = phase === "server";
 	const isComplete = phase === "complete";
@@ -57,9 +57,9 @@ export function ProcedureChecklistIngestProgressBar({
 						>
 							Dismiss
 						</button>
-					) : null}
+					) : undefined}
 				</div>
-			) : null}
+			) : undefined}
 			{visible ? (
 				<div className={error ? "mt-2" : ""}>
 					<div className="mb-1 flex justify-between gap-2 text-slate-600">
@@ -92,7 +92,7 @@ export function ProcedureChecklistIngestProgressBar({
 						)}
 					</div>
 				</div>
-			) : null}
+			) : undefined}
 		</div>
 	);
 }
