@@ -102,23 +102,70 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 			const applySitePageNavOverride = (): void => {
 				const selectedHash = getForcedHash() ?? currentHash();
 				for (const container of allContainers()) {
+					// Keep SharePoint header styling by reusing the first (non-self) link's className if present.
 					const firstA = container.querySelector(
-						"a",
+						'a:not([data-sbpubdef-header-self-link="1"])',
 					) as HTMLAnchorElement | null;
-					const a = document.createElement("a");
-					a.href = location.href;
-					a.textContent = sitePageNameFromLocation(location);
-					a.dataset.sbpubdefHeaderSelfLink = "1";
 
-					// Keep SharePoint header styling by reusing the first link's className if present.
-					if (firstA?.className) a.className = firstA.className;
-
-					if (selectedHash) {
-						a.dataset.roleHash = selectedHash;
-						a.classList.add("is-selected");
+					let selfLink = container.querySelector(
+						'a[data-sbpubdef-header-self-link="1"]',
+					) as HTMLAnchorElement | null;
+					if (!selfLink) {
+						selfLink = document.createElement("a");
+						selfLink.dataset.sbpubdefHeaderSelfLink = "1";
+						container.prepend(selfLink);
 					}
 
-					container.replaceChildren(a);
+					selfLink.href = location.href;
+					selfLink.textContent = sitePageNameFromLocation(location);
+					if (firstA?.className) selfLink.className = firstA.className;
+
+					if (selectedHash) {
+						selfLink.dataset.roleHash = selectedHash;
+						selfLink.classList.add("is-selected");
+					} else {
+						selfLink.classList.remove("is-selected");
+						delete selfLink.dataset.roleHash;
+					}
+
+					// Hide existing nav items rather than replacing them, so we can restore on root.
+					for (const a of Array.from(
+						container.querySelectorAll(
+							'a:not([data-sbpubdef-header-self-link="1"])',
+						),
+					) as HTMLAnchorElement[]) {
+						const candidate =
+							(a.closest("li") as HTMLElement | null) ??
+							(a as unknown as HTMLElement);
+						if (!candidate) continue;
+						if (candidate.dataset.sbpubdefHiddenBySitePageOverride === "1")
+							continue;
+						candidate.dataset.sbpubdefHiddenBySitePageOverride = "1";
+						candidate.dataset.sbpubdefPrevDisplay = candidate.style.display;
+						candidate.style.display = "none";
+					}
+				}
+			};
+
+			const restoreSitePageNavOverride = (): void => {
+				for (const container of allContainers()) {
+					for (const a of Array.from(
+						container.querySelectorAll(
+							'a[data-sbpubdef-header-self-link="1"]',
+						),
+					) as HTMLAnchorElement[]) {
+						a.remove();
+					}
+
+					for (const el of Array.from(
+						container.querySelectorAll(
+							"[data-sbpubdef-hidden-by-site-page-override='1']",
+						),
+					) as HTMLElement[]) {
+						el.style.display = el.dataset.sbpubdefPrevDisplay ?? "";
+						delete el.dataset.sbpubdefPrevDisplay;
+						delete el.dataset.sbpubdefHiddenBySitePageOverride;
+					}
 				}
 			};
 
@@ -166,6 +213,7 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 				for (const a of Array.from(
 					container.querySelectorAll("a"),
 				) as HTMLAnchorElement[]) {
+					if (a.dataset.sbpubdefHeaderSelfLink === "1") continue;
 					const hash = (a.href || "").split("#")[1];
 					if (!hash) continue;
 					a.dataset.roleHash = hash;
@@ -187,24 +235,8 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 			// (This avoids role links in headers while still showing the current page name.)
 			if (isSitePageNotSiteCollectionRoot()) {
 				applySitePageNavOverride();
-
-				// When SP swaps header variants on scroll, re-apply the override.
-				const moKey = "__sbpubdefSitePageHeaderLinkMO";
-				if (!win[moKey]) {
-					let raf: number | null = null;
-					const mo = new MutationObserver(() => {
-						if (raf) cancelAnimationFrame(raf);
-						raf = requestAnimationFrame(() =>
-							applySitePageNavOverride(),
-						);
-					});
-					win[moKey] = mo;
-					mo.observe(document.body, {
-						childList: true,
-						subtree: true,
-					});
-				}
-				return;
+			} else {
+				restoreSitePageNavOverride();
 			}
 
 			for (const c of allContainers()) decorateContainer(c);
@@ -265,6 +297,11 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 				const mo = new MutationObserver(() => {
 					if (raf) cancelAnimationFrame(raf);
 					raf = requestAnimationFrame(() => {
+						if (isSitePageNotSiteCollectionRoot()) {
+							applySitePageNavOverride();
+							return;
+						}
+						restoreSitePageNavOverride();
 						for (const c of allContainers()) decorateContainer(c);
 						const sel = getForcedHash() ?? currentHash();
 						if (sel)
