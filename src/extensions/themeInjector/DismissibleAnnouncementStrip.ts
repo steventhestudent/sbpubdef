@@ -68,9 +68,14 @@ export async function DismissibleAnnouncementStrip(
 			)
 		) {
 			strip.style.height = "5px";
+			strip.className = "collapsed";
 		}
 
 		strip.addEventListener("click", (event: MouseEvent) => {
+			const target = event.target as HTMLElement | null;
+			// Avoid collapsing the strip when clicking the compact mode toggle button.
+			if (target?.closest?.("#CompactModeBtn")) return;
+
 			if (strip.style.height) {
 				localStorage.removeItem(
 					"ThemeInjector.DismissibleAnnouncementStripCollapsed",
