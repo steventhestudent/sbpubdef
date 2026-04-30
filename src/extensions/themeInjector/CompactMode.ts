@@ -4,7 +4,7 @@ function addCompactModeStylesheet(): void {
 	stylesheet.appendChild(
 		document.createTextNode(`
 					.CanvasSection .ControlZone {margin: 0 !important;}
-					#DismissibleAnnouncementStrip.collapsed {margin-top: 4px; margin-bottom: 4px;}
+					#DismissibleAnnouncementStrip.collapsed {margin-bottom: 4px;}
 					footer {margin-top: 5px !important;}
 					/* hide sidebar */
 					#sp-appBar {display: none !important;}
@@ -21,7 +21,7 @@ function addHalfCompactModeStylesheet(): void {
 	stylesheet.appendChild(
 		document.createTextNode(`
 					.CanvasSection .ControlZone {margin: 8px !important;}
-					#DismissibleAnnouncementStrip.collapsed {margin-top: 4px; margin-bottom: 4px;}
+					#DismissibleAnnouncementStrip.collapsed {margin-bottom: 4px;}
 					/* hide sidebar */
 					#sp-appBar {display: none !important;}
 					/* mobile view bottom-bar */
@@ -114,6 +114,11 @@ export function CompactMode(): void {
 	const toolbarInsertion: () => void = () => {
 		document.querySelector("#CompactModeBtn")?.remove();
 		getInsertContainer()?.appendChild(CompactModeBtn());
+		const spCommandBar = document.querySelector("#spCommandBar");
+		if (spCommandBar)
+			document
+				.querySelector("#DismissibleAnnouncementStrip")!
+				.prepend(spCommandBar);
 	};
 	(function pollInsert() {
 		if (!getInsertContainer()) setTimeout(pollInsert, 333);
