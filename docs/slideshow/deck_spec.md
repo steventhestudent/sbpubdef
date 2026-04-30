@@ -4,11 +4,11 @@
 
 ## Slide 01
 
-* title: Role-Based SharePoint Resource Center
+* title: SBPD Intranet — Role-Based SharePoint Platform
 
 * purpose: introduce project, sponsor, and context
 
-* key_message: we built a role-based internal platform for SBPD
+* key_message: one SharePoint hub delivers tailored tools and content by role for the Santa Barbara County Public Defender
 
 * time: 0:30
 
@@ -17,17 +17,17 @@
 * on_slide_text:
 
     * Santa Barbara County Public Defender’s Office
-    * Role-Based Internal Platform for Targeted Content Delivery
+    * Role-based intranet on Microsoft 365 / SharePoint Online
     * CS 4961/4962 · Cal State LA · May 1, 2026
     * Advisor: Dr. Chengyu Sun · Client: Luis Ramirez
 
 * visuals:
 
-    * clean academic title slide, dark blue gradient
+    * Simple title treatment: department name and course line as hero text; optional faint background suggesting SharePoint hub navigation (no live data)
 
 * issues:
 
-    * title could be shorter / more impactful
+    * Confirm final event title/date with course staff
 
 ---
 
@@ -37,7 +37,7 @@
 
 * purpose: establish credibility and contributors
 
-* key_message: this was built by a full 10-person engineering team
+* key_message: a defined engineering team, faculty advisor, and client sponsor delivered the solution
 
 * time: 1:00
 
@@ -45,25 +45,27 @@
 
 * on_slide_text:
 
-    * (team list)
+    * (team roster — names and roles)
+    * Advisor: Dr. Chengyu Sun
+    * Client: Luis Ramirez (SBPD)
 
 * visuals:
 
-    * grid of team member cards
+    * Grid of headshots or name cards; advisor and client called out in a distinct row or badge so they are impossible to miss
 
 * issues:
 
-    * ensure advisor + client included
+    * Replace placeholder when final roster is fixed
 
 ---
 
 ## Slide 03
 
-* title: The Problem: Scattered Resources, No Role Control
+* title: The Problem — Fragmentation and Static Access
 
-* purpose: establish need for system
+* purpose: establish need for the system
 
-* key_message: current system is fragmented and unscalable
+* key_message: intranet content and workflows were hard to navigate, and the same pages could not safely serve every role
 
 * time: 2:00
 
@@ -71,27 +73,27 @@
 
 * on_slide_text:
 
-    * fragmented information
-    * no role-based access
-    * manual permissions
+    * Policies, forms, and procedures scattered across libraries and pages
+    * Little structure for “who should see what” beyond broad site access
+    * High friction for staff looking for role-specific paths (e.g., specialized units)
 
 * visuals:
 
-    * messy SharePoint screenshot vs structured layout
+    * Before: conceptual collage — many document icons / library tiles with no clear entry path (no sensitive data). After hint: single hub motif used again on the next slide for continuity
 
 * issues:
 
-    * could sharpen phrasing
+    * Avoid real case or PII in any “before” screenshot
 
 ---
 
 ## Slide 04
 
-* title: Before vs After: From Scattered to Structured
+* title: Before vs After — One Hub, Role-Tailored Experiences
 
 * purpose: show transformation at a high level
 
-* key_message: we replaced fragmentation with a unified, role-aware system
+* key_message: we moved from scattered, one-size-fits-all pages to a single hub where components and content respond to the user’s role
 
 * time: 1:30
 
@@ -99,26 +101,26 @@
 
 * on_slide_text:
 
-    * before: scattered, manual, inconsistent
-    * after: centralized, automated, role-based
+    * Before: manual hunting; same views for disparate jobs; weak alignment between Entra identity and day-to-day tasks
+    * After: centralized hub; SPFx components; visibility and tools keyed to Entra security groups
 
 * visuals:
 
-    * side-by-side comparison
+    * Split layout: left “generic intranet page” vs right “same hub with role-specific panels expanded” (mock or sanitized screenshot)
 
 * issues:
 
-    * ensure contrast is visually strong
+    * Transition line to next section: “That shift drove a concrete platform choice.”
 
 ---
 
 ## Slide 05
 
-* title: Tech Stack Decision: Why SPFx
+* title: Tech Stack — SharePoint First, Then SPFx
 
-* purpose: justify technical approach
+* purpose: justify technical approach (requirement, alternatives, decision)
 
-* key_message: SPFx provides required flexibility over low-code options
+* key_message: SharePoint Online is the mandated intranet surface; SPFx beat low-code alone for the control and UX the roles required
 
 * time: 2:00
 
@@ -126,28 +128,28 @@
 
 * on_slide_text:
 
-    * SharePoint is required (SBPD intranet)
-    * low-code: limited control
-    * SPFx: full customization
-    * decision: SPFx
+    * Requirement: solution must live in the county’s Microsoft 365 / SharePoint environment
+    * Low-code / out-of-box: fast for simple pages; limits custom workflows, dense role logic, and integrated UX across many scenarios
+    * SPFx: first-class SharePoint integration, TypeScript/React, packaged solution, room for Azure-backed APIs and Power BI embeds
+    * Decision: SPFx as the primary delivery path for the experience layer
 
 * visuals:
 
-    * comparison diagram (low-code vs SPFx)
+    * Two-column decision graphic: “SharePoint-native / low-code” vs “SPFx + services,” with a short bullet list under each and a clear checkmark on the SPFx side
 
 * issues:
 
-    * emphasize fall semester experimentation
+    * Keep claims tied to evaluation criteria (role complexity, maintainability), not generic marketing
 
 ---
 
 ## Slide 06
 
-* title: System Architecture
+* title: System Architecture — Identity, Hub, and Apps
 
-* purpose: show how system components connect
+* purpose: show how major pieces connect
 
-* key_message: system integrates AD, Entra, SharePoint, SPFx, and PowerBI
+* key_message: Entra ID and SharePoint anchor the hub; SPFx web parts render the UI; Azure Functions and Power BI extend selected workflows
 
 * time: 2:00
 
@@ -155,25 +157,27 @@
 
 * on_slide_text:
 
-    * On-Prem AD → Entra → SharePoint → SPFx → UI
+    * Users authenticate via Microsoft 365 (Entra ID)
+    * SharePoint hub hosts pages and lists (directories, assignments, hoteling, procedures, etc.)
+    * SPFx delivers web parts and extensions; optional Azure Functions for privileged operations; Power BI embedded where analytics are required
 
 * visuals:
 
-    * pipeline architecture diagram
+    * Left-to-right diagram: User → Entra ID → SharePoint (site + lists) → SPFx UI layer; arrows downward to “Azure Functions (API)” and “Power BI reports” only where those integrations apply
 
 * issues:
 
-    * ensure diagram is readable at distance
+    * Font size and arrow labels must read from the back row
 
 ---
 
 ## Slide 07
 
-* title: Role-Based Access: One Site, Nine Experiences
+* title: Role-Based Access — Same Site, Different Experience
 
-* purpose: explain core system concept
+* purpose: explain core system concept for a mixed audience
 
-* key_message: one system dynamically adapts based on user role
+* key_message: Entra security groups map to roles; the UI shows the panels and web parts relevant to that role—without maintaining separate sites per job function
 
 * time: 2:00
 
@@ -181,31 +185,31 @@
 
 * on_slide_text:
 
-    * same site, different experience
-    * 9 roles, zero manual permissions
-    * AD group determines access
+    * One hub; experiences differ by role membership
+    * Roles include: Guest, PD-Intranet baseline, Attorney, CDD, LOP, Trial Supervisor, HR, Compliance Officer, IT (and related admin groups)
+    * CDD: Capital Defense resources; LOP: Legal Office procedural checklists; Trial Supervisor: workload-oriented views
 
 * visuals:
 
-    * role cards + IT vs guest contrast
+    * Single site chrome with three side-by-side mock panes (sanitized): e.g., Attorney vs LOP vs Trial Supervisor, each showing different primary panel open
 
 * notes:
 
-    * define CDD, LOP, Trial Supervisor
+    * Speak slowly through acronyms: CDD = Capital Defense Division; LOP = legal office procedures workflow, not “lop” generically
 
 * issues:
 
-    * avoid screenshots, keep conceptual
+    * If the audience is non-legal, add one plain sentence per role in speech, not on the slide
 
 ---
 
 ## Slide 08
 
-* title: Component Overview: 15+ Web Parts
+* title: Component Overview — From Extensions to Specialized Panels
 
-* purpose: show system scope
+* purpose: zoom in from architecture to what ships in the solution
 
-* key_message: system consists of modular role-based components
+* key_message: the package bundles many SPFx web parts plus small extensions; role-specific behavior often lives inside shared containers (e.g., portal resources)
 
 * time: 1:30
 
@@ -213,28 +217,29 @@
 
 * on_slide_text:
 
-    * common components
-    * attorney tools
-    * CDD tools
-    * supervisor / IT tools
+    * Communication & discovery: announcements, events, welcome, staff directory, expert witness directory, portal calendar, blog-style updates
+    * Role panels: CDD resource guides, LOP procedure checklist, Trial Supervisor workload (within Portal Resources and related web parts)
+    * Operations & assignments: office hoteling, office information, attorney-facing assignments, CMS-driven assignment catalog, portal assignment flow
+    * Analytics: urgency portal (Power BI embeds)
+    * Platform: theme injector and landing behavior extensions
 
 * visuals:
 
-    * categorized component grid
+    * Layered diagram: outer ring “extensions + hub pages,” inner clusters matching the four bullet groups above; label “17 web parts + 2 extensions” only if you will verify at presentation time
 
 * issues:
 
-    * ensure categories are clear
+    * This slide sets vocabulary; feature slides should not repeat the full list—pick one depth story per feature
 
 ---
 
 ## Slide 09
 
-* title: Office Hoteling
+* title: Office Hoteling — Desks with Calendar Backing
 
-* purpose: demonstrate real-world feature
+* purpose: demonstrate an operational, day-to-day feature
 
-* key_message: enables real-time desk reservation
+* key_message: staff reserve workspace through the intranet, with reservation data stored in SharePoint and calendar-oriented follow-through
 
 * time: 2:00
 
@@ -242,27 +247,27 @@
 
 * on_slide_text:
 
-    * real-time booking
-    * calendar integration
-    * conflict detection
+    * Book a desk for a date range from the Office Hoteling web part
+    * Reservations persist to a SharePoint list (`HotelingReservations` pattern)
+    * Integration path supports calendar confirmation and notification flows (per deployment configuration)
 
 * visuals:
 
-    * (needs UI screenshot)
+    * Annotated screenshot or mock: weekly grid with a selected desk, reservation confirmation state, and a small callout pointing to “list item created” (no personal email content)
 
 * issues:
 
-    * currently too conceptual
+    * State clearly if demo tenant vs production behavior differs
 
 ---
 
 ## Slide 10
 
-* title: Attorney Workload Tracker
+* title: Attorney Workload — From Location to Attorney
 
-* purpose: show complex feature
+* purpose: show structured operational visibility for supervisors
 
-* key_message: enables hierarchical case tracking
+* key_message: Trial Supervisors drill from office location to case type to attorney, with filterable views backed by SharePoint data
 
 * time: 2:00
 
@@ -270,27 +275,27 @@
 
 * on_slide_text:
 
-    * location → case type → attorney
-    * searchable, filterable
-    * live case counts
+    * Hierarchy: location → case type → attorney
+    * Search and filters to narrow large rosters
+    * Surfaced in the workload experience (including the dedicated Attorney Workload web part where deployed)
 
 * visuals:
 
-    * dashboard UI
+    * Sanitized mock of the workload table: columns for location, case type, attorney name, counts; one filter chip active (e.g., office = “Main”)
 
 * issues:
 
-    * strong slide
+    * Align narrative with whether workload is only in Portal Resources, only standalone web part, or both
 
 ---
 
 ## Slide 11
 
-* title: LOP Procedure Checklist
+* title: LOP Checklist — Procedures as Structured Steps
 
-* purpose: show workflow automation
+* purpose: show workflow support for Legal Office Procedures
 
-* key_message: centralizes procedures into searchable workflows
+* key_message: LOP staff work through checklist items stored in SharePoint, with rich step content (documents, links, media) in a single focused panel
 
 * time: 2:00
 
@@ -298,56 +303,27 @@
 
 * on_slide_text:
 
-    * workflow management
-    * PDF + video integration
-    * searchable procedures
+    * Procedures modeled as checklist + ordered steps (`LOPProcedureChecklist`, `ProcedureSteps`)
+    * In-app viewing of procedure documents and embeds (PDF / linked content / video-style URLs where configured)
+    * Search and filters to find a procedure quickly within the LOP role panel
 
 * visuals:
 
-    * (missing)
+    * Two-panel mock: left = checklist titles and categories; right = step detail with a document preview strip and a “mark progress” affordance (generic labels)
 
 * issues:
 
-    * missing image
-    * needs stronger visual explanation
+    * Clarify in speech that this is distinct from generic “site pages” authoring
 
 ---
 
 ## Slide 12
 
-* title: Assignments System
+* title: CDD Resource Guides — Capital Defense in One Place
 
-* purpose: show extended functionality
+* purpose: show specialized resources for Capital Defense Division staff
 
-* key_message: supports training, acknowledgement, and tasks
-
-* time: 1:30
-
-* presenter: -
-
-* on_slide_text:
-
-    * training assignments
-    * acknowledgement tracking
-    * Azure function validation
-
-* visuals:
-
-    * (unclear)
-
-* issues:
-
-    * may be too detailed / niche
-
----
-
-## Slide 13
-
-* title: CDD Resource Guides
-
-* purpose: show specialized role feature
-
-* key_message: supports capital defense workflows
+* key_message: CDD sees curated guides, referral-style materials, and document paths scoped to capital work—not mixed into generic attorney lists
 
 * time: 1:30
 
@@ -355,27 +331,27 @@
 
 * on_slide_text:
 
-    * categorized resources
-    * referral forms
-    * role-filtered content
+    * CDD role opens a dedicated guides experience inside Portal Resources
+    * Content organized from controlled libraries (e.g., intranet form database paths)
+    * Reduces time spent hunting across folders unrelated to capital cases
 
 * visuals:
 
-    * (missing)
+    * Mock of CDD panel: section headers (guides, forms, referrals) with generic titles; optional folder-path callout blurred except for “CDD” segment
 
 * issues:
 
-    * lacks visual support
+    * Do not show real defendant or case identifiers
 
 ---
 
-## Slide 14
+## Slide 13
 
-* title: Urgency Portal (PowerBI)
+* title: Urgency Portal — Embedded Power BI for Supervisors
 
-* purpose: show analytics capability
+* purpose: show analytics embedded in SharePoint
 
-* key_message: enables supervisor decision-making
+* key_message: leadership views urgency metrics via Power BI reports or visuals embedded in a dedicated SPFx web part, with access still governed by M365
 
 * time: 1:30
 
@@ -383,27 +359,27 @@
 
 * on_slide_text:
 
-    * real-time metrics
-    * embedded dashboard
-    * restricted access
+    * Configurable Power BI report and visual URLs
+    * Embedded experience titled for operational review (e.g., urgency tracking)
+    * Same Entra/SharePoint guardrails as the rest of the hub
 
 * visuals:
 
-    * (missing PowerBI screenshot)
+    * Placeholder frame labeled “Power BI embed”: show a generic chart (bar or line) with axis labels like “Queue depth” / “Week” — no real county numbers unless approved
 
 * issues:
 
-    * missing key visual
+    * Confirm which reports are approved for public academic demo
 
 ---
 
-## Slide 15
+## Slide 14
 
-* title: Communication Hub
+* title: Communication Hub — What Everyone Sees First
 
-* purpose: show internal communication system
+* purpose: cover cross-cutting communication without re-explaining role panels
 
-* key_message: centralizes announcements, directory, and calendar
+* key_message: announcements, directory, and calendar web parts give a shared front door; specialized work happens in the role panels you already saw
 
 * time: 1:30
 
@@ -411,43 +387,72 @@
 
 * on_slide_text:
 
-    * announcements
-    * staff directory
-    * calendar
+    * Announcements and upcoming events for office-wide messaging
+    * Staff directory (and expert witness directory where used) for “who to call”
+    * Portal calendar and optional blog-style updates for timelines and narratives
+    * Intentionally separate from LOP/CDD deep work—this slide is the shared layer
 
 * visuals:
 
-    * (missing)
+    * Composite mock: top strip = announcement banner; middle = simplified directory cards; bottom = month calendar with one highlighted team event
 
 * issues:
 
-    * overlaps with other features
+    * Avoid duplicating hoteling or assignment screenshots here
 
 ---
 
-## Slide 16
+## Slide 15
 
-* title: Impact & Lessons Learned
+* title: Assignments — Catalog, Steps, Quiz, and Server-Side Progress
 
-* purpose: conclude presentation
+* purpose: show training and compliance-style flows with backend integrity
 
-* key_message: system is impactful and required significant engineering effort
+* key_message: admins publish structured assignments from CMS; staff complete steps, acknowledgements, embeds, and quizzes; sensitive mutations can route through Azure Functions
 
-* time: 1:00
+* time: 1:30
 
 * presenter: -
 
 * on_slide_text:
 
-    * 9 roles
-    * 0 manual steps
-    * 15+ components
-    * lessons learned
+    * Assignment catalog and per-user instances in SharePoint lists
+    * Step types include content, embed completion tracking, and quiz gates
+    * Optional: Azure Function API for mutations and related Graph operations (e.g., calendar scenarios per deployment guide)
 
 * visuals:
 
-    * metrics + reflection split
+    * Split: left = CMS or catalog list (generic titles); right = assignment player with sidebar steps and a quiz pane stub—no real scores
 
 * issues:
 
-    * could be more concise
+    * If Azure Functions are not deployed in a given environment, say so when demoing
+
+---
+
+## Slide 16
+
+* title: Conclusion — By the Numbers and Lessons Learned
+
+* purpose: close with impact and reflection
+
+* key_message: the solution is measurable in breadth of roles and components; delivery taught lessons about identity, governance, and scope control
+
+* time: 1:30
+
+* presenter: -
+
+* on_slide_text:
+
+    * By the numbers: nine primary role keys in the selector (Guest through IT), seventeen SPFx web parts, two application customizers, many named SharePoint lists for hoteling, procedures, assignments, and directories
+    * Lessons: align early on Entra group naming; prototype UX before committing lists; keep Power BI and Function configuration documented per environment; test role switching and “view as” carefully before stakeholder demos
+
+* visuals:
+
+    * Left column: three bold metrics with icons (roles / web parts / integrations); right column: two short lesson bullets with icons (identity, operations)
+
+* issues:
+
+    * Drop or adjust any metric you cannot verify live on demo day
+
+---
