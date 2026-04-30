@@ -28,6 +28,7 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 
 	private onNavigate(): void {
 		console.log("🔵 ThemeInjector onNavigate() called");
+		// const pageContext = this.context.pageContext;
 		DismissibleAnnouncementStrip(this.context).catch((error) => {
 			console.error("Failed to load banner:", error);
 		});
@@ -69,6 +70,25 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 			const allContainers = (): Element[] =>
 				Array.from(document.querySelectorAll(".ms-HorizontalNavItems"));
 
+			const isSitePageNotSiteCollectionRoot = (): boolean =>
+				location.href.includes("/SitePages");
+
+			const sitePageNameFromLocation = (loc: Location): string => {
+				const parts = (loc.pathname || "").split("/").filter(Boolean);
+				const last = parts[parts.length - 1] || "";
+				const rawName = last.replace(/\.aspx$/i, "");
+				const decoded = (() => {
+					try {
+						return decodeURIComponent(rawName);
+					} catch {
+						return rawName;
+					}
+				})();
+				const spaced = decoded.replace(/[-_]+/g, " ").trim();
+				if (!spaced) return "This page";
+				return spaced.replace(/\b\w/g, (c) => c.toUpperCase());
+			};
+
 			const currentHash = (): string | null => {
 				const raw = (location.hash || "").replace(/^#/, "");
 				if (!raw) return null;
@@ -76,6 +96,29 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 					return decodeURIComponent(raw);
 				} catch {
 					return raw;
+				}
+			};
+
+			const applySitePageNavOverride = (): void => {
+				const selectedHash = getForcedHash() ?? currentHash();
+				for (const container of allContainers()) {
+					const firstA = container.querySelector(
+						"a",
+					) as HTMLAnchorElement | null;
+					const a = document.createElement("a");
+					a.href = location.href;
+					a.textContent = sitePageNameFromLocation(location);
+					a.dataset.sbpubdefHeaderSelfLink = "1";
+
+					// Keep SharePoint header styling by reusing the first link's className if present.
+					if (firstA?.className) a.className = firstA.className;
+
+					if (selectedHash) {
+						a.dataset.roleHash = selectedHash;
+						a.classList.add("is-selected");
+					}
+
+					container.replaceChildren(a);
 				}
 			};
 
@@ -140,6 +183,30 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 					setSelectedInContainer(container, selectedHash);
 			};
 
+			// On a site page within a subsite, collapse header links into a single self-link.
+			// (This avoids role links in headers while still showing the current page name.)
+			if (isSitePageNotSiteCollectionRoot()) {
+				applySitePageNavOverride();
+
+				// When SP swaps header variants on scroll, re-apply the override.
+				const moKey = "__sbpubdefSitePageHeaderLinkMO";
+				if (!win[moKey]) {
+					let raf: number | null = null;
+					const mo = new MutationObserver(() => {
+						if (raf) cancelAnimationFrame(raf);
+						raf = requestAnimationFrame(() =>
+							applySitePageNavOverride(),
+						);
+					});
+					win[moKey] = mo;
+					mo.observe(document.body, {
+						childList: true,
+						subtree: true,
+					});
+				}
+				return;
+			}
+
 			for (const c of allContainers()) decorateContainer(c);
 			// If SP clears the URL hash during header swaps, keep the user's last forced role.
 			const forced = getForcedHash();
@@ -156,6 +223,7 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 						".ms-HorizontalNavItems a",
 					) as HTMLAnchorElement | null;
 					if (!a) return;
+					if (a.dataset.sbpubdefHeaderSelfLink === "1") return;
 
 					const hash = (a.href || "").split("#")[1];
 					if (!hash) return;
