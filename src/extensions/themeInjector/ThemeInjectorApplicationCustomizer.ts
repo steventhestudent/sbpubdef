@@ -106,6 +106,8 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 					const firstA = container.querySelector(
 						'a:not([data-sbpubdef-header-self-link="1"])',
 					) as HTMLAnchorElement | null;
+					const firstSpan = (firstA?.querySelector("span") ??
+						null) as HTMLSpanElement | null;
 
 					let selfLink = container.querySelector(
 						'a[data-sbpubdef-header-self-link="1"]',
@@ -117,14 +119,27 @@ export default class ThemeInjectorApplicationCustomizer extends BaseApplicationC
 					}
 
 					selfLink.href = location.href;
-					selfLink.textContent = sitePageNameFromLocation(location);
 					if (firstA?.className) selfLink.className = firstA.className;
+
+					// Ensure link text is wrapped in a span so `.ms-HorizontalNavItem-linkText.is-selected`
+					// style rules apply (SharePoint uses the span for text styling).
+					let selfSpan = selfLink.querySelector(
+						"span",
+					) as HTMLSpanElement | null;
+					if (!selfSpan) {
+						selfSpan = document.createElement("span");
+						selfLink.replaceChildren(selfSpan);
+					}
+					if (firstSpan?.className) selfSpan.className = firstSpan.className;
+					selfSpan.textContent = sitePageNameFromLocation(location);
 
 					if (selectedHash) {
 						selfLink.dataset.roleHash = selectedHash;
 						selfLink.classList.add("is-selected");
+						selfSpan.classList.add("is-selected");
 					} else {
 						selfLink.classList.remove("is-selected");
+						selfSpan.classList.remove("is-selected");
 						delete selfLink.dataset.roleHash;
 					}
 
