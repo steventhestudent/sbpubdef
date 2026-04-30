@@ -8,6 +8,8 @@ function addCompactModeStylesheet(): void {
 					footer {margin-top: 5px !important;}
 					/* hide sidebar */
 					#sp-appBar {display: none !important;}
+					/* hide topbar */
+					#SuiteNavWrapper {display: none !important;}
 					/* mobile view bottom-bar */
 					.spAppAndPropertyPanelContainer {padding-bottom: 0px !important;}
 				`),
@@ -24,6 +26,8 @@ function addHalfCompactModeStylesheet(): void {
 					#DismissibleAnnouncementStrip.collapsed {margin-bottom: 4px;}
 					/* hide sidebar */
 					#sp-appBar {display: none !important;}
+					/* hide topbar */
+					#SuiteNavWrapper {display: none !important;}
 					/* mobile view bottom-bar */
 					.spAppAndPropertyPanelContainer {padding-bottom: 0px !important;}
 				`),
