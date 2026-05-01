@@ -6,6 +6,7 @@ import {
 	ILocationData,
 } from "@webparts/attorneyWorkload/components/IAttorneyWorkloadProps";
 import RoleBasedViewProps from "@type/RoleBasedViewProps";
+import ClearableInput from "@components/ClearableInput";
 
 interface ICaseRaw {
 	CaseID: string;
@@ -277,11 +278,8 @@ export function AttorneyWorkload({
 	return (
 		<>
 			<div className={styles.searchContainer}>
-				<input
-					className={styles.searchInput}
-					type="text"
+				<ClearableInput
 					placeholder="Search by location, case type, attorney, case number, or status..."
-					value={searchText}
 					onChange={handleSearchChange}
 				/>
 			</div>

@@ -30,7 +30,7 @@ export default function ClearableInput({
 			{value ? (
 				<button
 					type="button"
-					className="absolute right-[0.1em] mt-[0.666em] rounded-md border-slate-300 px-3 text-sm font-bold text-white opacity-60 hover:opacity-100"
+					className="absolute right-[0.1em] mt-[0.666em] rounded-md border-slate-300 px-3 text-sm font-bold text-black opacity-60 hover:opacity-100"
 					aria-label="Clear search"
 					onClick={(e) => {
 						setValue("");
