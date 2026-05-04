@@ -4,9 +4,9 @@
 
 -   [making the project - pnpm spfx macos.md](docs/making%20the%20project%20-%20pnpm%20spfx%20macos.md)
 -   [laptop notes.md](docs/laptop%20notes.md)
--   [new webpart.md](docs/transfer%20of%20work/transfer%20of%20work.md)
+-   [transfer of work.md](docs/transfer%20of%20work/transfer%20of%20work.md)
 -   [new webpart.md](docs/new%20webpart.md)
--   [new webpart.md](docs/new%20role.md)
+-   [new role.md](docs/new%20role.md)
 -   [new azure function.md](docs/azure%20functions/new%20azure%20function.md)
 -   [make and upload solution.md](docs/make%20and%20upload%20solution.md)
     &nbsp;
