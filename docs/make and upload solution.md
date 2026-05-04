@@ -1,8 +1,12 @@
 # make and upload solution
-1. `pnpm run make` creates sharepoint/solution/sbpubdef-sol.sppkg
-2. upload to AppCatalog
+1. `pnpm run make` creates `sharepoint/solution/sbpubdef-sol.sppkg`
+2. upload to AppCatalog: `https://<tenant>.sharepoint.com/sites/appcatalog/AppCatalog/Forms/AllItems.aspx`
 
-# legacy spfx readme (sbpubdef-legacy)
+&nbsp;
+
+&nbsp;
+
+# ~~legacy spfx readme (sbpubdef-legacy)~~
 when ready to make a release, edit:
 
 config/write-manifests.json (NOTES)

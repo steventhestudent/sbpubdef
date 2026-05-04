@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -40,7 +41,16 @@ def run_export(*, site_id: str | None = None) -> Path:
     lists_root = out / "lists"
     lists_root.mkdir(parents=True, exist_ok=True)
 
-    site = site_id or sp_client.get_site_id(migration_site_name())
+    site_name = migration_site_name()
+    site = site_id or sp_client.get_site_id(site_name)
+    tenant = (os.getenv("TENANT_NAME") or "").strip()
+    site_url = sp_client.sp_site_absolute_url(tenant, site_name) if tenant else ""
+
+    # Graph `.../lists/{id}/views` is missing on many SharePoint sites ("segment 'views'").
+    # Probe once; then use SharePoint REST /_api/web/lists(guid'...')/views when sharePointIds.listId exists.
+    graph_views_ok: bool | None = None
+    rest_views_unavailable_logged = False
+
     raw_lists = sp_client.get_site_lists(site, include_hidden=True)
     index: list[dict] = []
 
@@ -55,19 +65,65 @@ def run_export(*, site_id: str | None = None) -> Path:
         cols = sp_client.get_list_columns(site, list_id)
 
         views: list[dict] = []
-        views_url = f"{sp_client.GRAPH_V1}/sites/{site}/lists/{list_id}/views"
-        try:
-            for v in sp_client.graph_get_paginated(views_url):
-                views.append(v)
-        except Exception as e:
-            logger.warning("Views export failed for list %s: %s", display, e)
+        views_source = "none"
+
+        if graph_views_ok is not False:
+            views_url = f"{sp_client.GRAPH_V1}/sites/{site}/lists/{list_id}/views"
+            vr = sp_client.graph_request("GET", views_url, params={"$top": "200"})
+            if vr.status_code < 300:
+                graph_views_ok = True
+                d0 = vr.json()
+                views.extend(d0.get("value", []))
+                next_link = d0.get("@odata.nextLink")
+                while next_link:
+                    r2 = sp_client.graph_request("GET", next_link)
+                    if r2.status_code >= 300:
+                        break
+                    d2 = r2.json()
+                    views.extend(d2.get("value", []))
+                    next_link = d2.get("@odata.nextLink")
+                views_source = "microsoftGraph"
+            else:
+                if graph_views_ok is None:
+                    graph_views_ok = False
+                    logger.info(
+                        "Graph list views not available for this site (HTTP %s); "
+                        "using SharePoint REST for views when list GUID is present.",
+                        vr.status_code,
+                    )
+
+        if not views and site_url:
+            sp_ids = detail.get("sharePointIds") or {}
+            list_guid = (sp_ids.get("listId") or "").strip()
+            if list_guid:
+                rest_views = sp_client.list_views_via_sharepoint_rest(site_url, list_guid)
+                if rest_views is not None:
+                    views = rest_views
+                    views_source = "sharePointRest"
+                elif not rest_views_unavailable_logged:
+                    rest_views_unavailable_logged = True
+                    logger.warning(
+                        "SharePoint REST list views failed (e.g. 401 app-only). "
+                        "Views will be empty unless you use delegated auth or a token accepted by SPO REST."
+                    )
 
         sub = lists_root / _safe_list_dir_name(display, list_id)
         sub.mkdir(parents=True, exist_ok=True)
         sp_client.export_json(sub / "list.json", detail)
         # Full Graph column definitions; `name` is the internal column name (preserve typos).
         sp_client.export_json(sub / "columns.json", cols)
-        sp_client.export_json(sub / "views.json", {"views": views, "note": "Empty if Graph views API unavailable or returned no rows."})
+        sp_client.export_json(
+            sub / "views.json",
+            {
+                "views": views,
+                "source": views_source,
+                "note": (
+                    "source=microsoftGraph: from Graph /lists/{id}/views. "
+                    "source=sharePointRest: from /_api/web/lists(guid'...')/views. "
+                    "source=none: neither worked (Graph segment missing and/or REST rejected token)."
+                ),
+            },
+        )
 
         inner = (detail.get("list") or {})
         index.append(

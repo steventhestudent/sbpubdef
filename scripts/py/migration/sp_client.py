@@ -89,7 +89,9 @@ def graph_request(
     return last  # type: ignore[return-value]
 
 
-def graph_get_paginated(url: str, *, params: dict[str, Any] | None = None) -> Iterator[dict[str, Any]]:
+def graph_get_paginated(
+    url: str, *, params: dict[str, Any] | None = None, log_failures: bool = True
+) -> Iterator[dict[str, Any]]:
     """
     Yield each JSON object from a Graph collection, following @odata.nextLink.
     For nextLink requests, the URL is absolute — params are only used on the first request.
@@ -100,7 +102,8 @@ def graph_get_paginated(url: str, *, params: dict[str, Any] | None = None) -> It
         r = graph_request("GET", next_url, params=params if first else None)
         first = False
         if r.status_code >= 300:
-            logger.warning("Graph GET failed %s %s", r.status_code, r.text[:500])
+            if log_failures:
+                logger.warning("Graph GET failed %s %s", r.status_code, r.text[:500])
             break
         data = r.json()
         for item in data.get("value", []):
@@ -145,12 +148,17 @@ def is_document_library_list(list_obj: dict[str, Any]) -> bool:
     return str(bt).lower() == "documentlibrary"
 
 
-def sp_rest_get(site_absolute_url: str, api_path: str) -> dict[str, Any] | None:
+def sp_rest_get(
+    site_absolute_url: str, api_path: str, *, log_failures: bool = True
+) -> dict[str, Any] | None:
     """
     GET SharePoint REST (/_api/...). Returns parsed JSON or None on failure.
 
     Limitations: only captures what this endpoint returns; large roleassignment payloads
     may need additional expands not implemented here.
+
+    Some tenants return **401 Unsupported app only token** for SharePoint REST even when
+    Graph works; pass log_failures=False to avoid spamming logs when probing fallbacks.
     """
     url = site_absolute_url.rstrip("/") + api_path
     try:
@@ -160,12 +168,38 @@ def sp_rest_get(site_absolute_url: str, api_path: str) -> dict[str, Any] | None:
         }
         r = requests.get(url, headers=headers, timeout=120)
         if r.status_code >= 300:
-            logger.warning("SharePoint REST GET %s -> %s %s", api_path, r.status_code, r.text[:300])
+            if log_failures:
+                logger.warning("SharePoint REST GET %s -> %s %s", api_path, r.status_code, r.text[:300])
             return None
         return r.json()
     except Exception as e:
-        logger.warning("SharePoint REST GET %s failed: %s", api_path, e)
+        if log_failures:
+            logger.warning("SharePoint REST GET %s failed: %s", api_path, e)
         return None
+
+
+def normalize_guid_for_rest(list_guid: str) -> str:
+    """Ensure braces form for SharePoint REST lists(guid'...')."""
+    g = (list_guid or "").strip().strip("{}").lower()
+    return g
+
+
+def list_views_via_sharepoint_rest(site_absolute_url: str, list_guid: str) -> list[dict[str, Any]] | None:
+    """
+    GET /_api/web/lists(guid'...')/views — works when Graph has no list views segment.
+
+    Returns None on failure; otherwise the `value` array (may be empty).
+    """
+    g = normalize_guid_for_rest(list_guid)
+    if not g:
+        return None
+    path = f"/_api/web/lists(guid'{g}')/views"
+    data = sp_rest_get(site_absolute_url, path, log_failures=False)
+    if not data:
+        return None
+    if "value" in data:
+        return list(data["value"])
+    return None
 
 
 def export_json(path: Any, data: Any) -> None:

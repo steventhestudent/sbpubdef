@@ -76,17 +76,19 @@ def run_export(*, site_id: str | None = None) -> Path:
             notes.append(f"sitegroups exception: {e}")
 
         # Role assignments — expand may be rejected on large sites; try minimal first
-        for suffix in (
-            "/_api/web/roleassignments",
-            "/_api/web/roleassignments?$expand=Member,RoleDefinitionBindings",
-        ):
-            try:
-                ra = sp_client.sp_rest_get(site_url, suffix)
-                if ra:
-                    name = "sp_rest_roleassignments.json" if "expand" not in suffix else "sp_rest_roleassignments_expanded.json"
-                    sp_client.export_json(perm_dir / name, ra)
-            except Exception as e:
-                notes.append(f"roleassignments {suffix}: {e}")
+        try:
+            ra = sp_client.sp_rest_get(site_url, "/_api/web/roleassignments", log_failures=True)
+            if ra:
+                sp_client.export_json(perm_dir / "sp_rest_roleassignments.json", ra)
+            ra_exp = sp_client.sp_rest_get(
+                site_url,
+                "/_api/web/roleassignments?$expand=Member,RoleDefinitionBindings",
+                log_failures=False,
+            )
+            if ra_exp:
+                sp_client.export_json(perm_dir / "sp_rest_roleassignments_expanded.json", ra_exp)
+        except Exception as e:
+            notes.append(f"roleassignments: {e}")
 
     sp_client.export_json(
         perm_dir / "notes.json",

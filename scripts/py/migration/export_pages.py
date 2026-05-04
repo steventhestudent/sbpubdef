@@ -7,8 +7,11 @@ Writes:
 
 API notes (limitations called out in exported JSON):
 - Uses Graph **beta** `GET /sites/{site-id}/pages` — schema may change; app registration must allow beta usage.
-- Canvas layout / web parts: attempted via `$expand=canvasLayout` on list and/or single-page GET.
-  Not all tenants return full web part property bags; SPFx custom properties may be incomplete.
+- Per-page detail: Graph sometimes rejects `$expand=canvasLayout` with “property … on baseSitePage”
+  even when the path includes `/microsoft.graph.sitePage` (OData parser quirk). This exporter loads
+  `.../pages/{id}/microsoft.graph.sitePage` **without** expand, then loads **canvasLayout** via
+  `.../microsoft.graph.sitePage/canvasLayout` and merges it into the saved JSON when that succeeds.
+- Web part property bags may still be incomplete; SPFx custom data is not guaranteed.
 - Classic wiki pages / Web Part Pages in non-site-pages libraries are **not** enumerated here.
   Use export_libraries.py on the "Site Pages" / "Pages" library as files if needed.
 
@@ -30,6 +33,46 @@ from migration.config import migration_output_dir, migration_site_name
 from migration import sp_client
 
 logger = logging.getLogger(__name__)
+
+_PAGE_ACCEPT = {"Accept": "application/json;odata.metadata=minimal"}
+
+
+def _save_page_detail(site: str, pid: str, pages_dir: Path, file_base: str) -> None:
+    """
+    Fetch page JSON without fragile $expand=canvasLayout on the main GET (Graph may still type the
+    node as baseSitePage for expand parsing). Merge layout from .../sitePage/canvasLayout when available.
+    """
+    site_page = f"{sp_client.GRAPH_BETA}/sites/{site}/pages/{pid}/microsoft.graph.sitePage"
+    base = f"{sp_client.GRAPH_BETA}/sites/{site}/pages/{pid}"
+
+    r = sp_client.graph_request("GET", site_page, extra_headers=_PAGE_ACCEPT)
+    if r.status_code >= 300:
+        r = sp_client.graph_request("GET", base, extra_headers=_PAGE_ACCEPT)
+        if r.status_code < 300:
+            sp_client.export_json(pages_dir / f"{file_base}.json", r.json())
+            return
+        sp_client.export_json(
+            pages_dir / f"{file_base}.error.json",
+            {"status": r.status_code, "body": r.text[:8000], "id": pid},
+        )
+        return
+
+    payload = r.json()
+    cl_r = sp_client.graph_request(
+        "GET",
+        f"{site_page}/canvasLayout",
+        extra_headers=_PAGE_ACCEPT,
+    )
+    if cl_r.status_code < 300:
+        payload["canvasLayout"] = cl_r.json()
+    else:
+        logger.info(
+            "canvasLayout segment HTTP %s for page id=%s (page metadata still exported).",
+            cl_r.status_code,
+            pid,
+        )
+
+    sp_client.export_json(pages_dir / f"{file_base}.json", payload)
 
 
 def run_export(*, site_id: str | None = None) -> Path:
@@ -83,20 +126,7 @@ def run_export(*, site_id: str | None = None) -> Path:
         frag = (str(pid).replace("-", "")[-12:]) if pid else "noid"
         file_base = f"{safe}_{frag}"[:200]
         if pid:
-            detail_url = f"{sp_client.GRAPH_BETA}/sites/{site}/pages/{pid}"
-            # Web part internals may not support $expand on all tenants; canvasLayout is the main hook.
-            dr = sp_client.graph_request(
-                "GET",
-                detail_url,
-                params={"$expand": "canvasLayout"},
-            )
-            if dr.status_code < 300:
-                sp_client.export_json(pages_dir / f"{file_base}.json", dr.json())
-            else:
-                sp_client.export_json(
-                    pages_dir / f"{file_base}.error.json",
-                    {"status": dr.status_code, "body": dr.text[:8000], "id": pid},
-                )
+            _save_page_detail(site, str(pid), pages_dir, file_base)
         else:
             sp_client.export_json(pages_dir / f"{file_base}.partial.json", p)
 
