@@ -9,6 +9,9 @@ src/type/env.global.generated.d.ts
 !.env.public.prod
 
 copilot-instructions.md
+# SharePoint migration exports (scripts/py/migration)
+scripts/py/migration/.migration_output
+
 # nested repo(s)
 resource/
 
