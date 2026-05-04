@@ -2,12 +2,13 @@
 
 ### docs/
 
--   [making the project - pnpm spfx macos.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/making%20the%20project%20-%20pnpm%20spfx%20macos.md)
--   [laptop notes.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/laptop%20notes.md)
--   [sbpubdef todo.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/sbpubdef%20todo.md)
--   [flow — Add Embed Page (List Item) - New Page-Embed.md](https://github.com/steventhestudent/sbpubdef/blob/main/docs/flow%20%E2%80%94%20Add%20Embed%20Page%20(List%20item)%20-%20New%20Page-Embed.md)
+-   [making the project - pnpm spfx macos.md](docs/making%20the%20project%20-%20pnpm%20spfx%20macos.md)
+-   [laptop notes.md](docs/laptop%20notes.md)
+-   [new webpart.md](docs/transfer%20of%20work/transfer%20of%20work.md)
 -   [new webpart.md](docs/new%20webpart.md)
+-   [new webpart.md](docs/new%20role.md)
 -   [new azure function.md](docs/azure%20functions/new%20azure%20function.md)
+-   [make and upload solution.md](docs/make%20and%20upload%20solution.md)
     &nbsp;
 
 ## Install
@@ -41,12 +42,6 @@ you may have to manually visit https://localhost:4321/temp/build/manifests.js to
 ~~```pnpm npx gulp clean```~~
 ~~```pnpm run build```~~
 ```pnpm run tailwind:build```
-
-**Production release + install as sharepoint app**
-
-see [README](https://github.com/steventhestudent/sbpubdef-legacy.git) (sbpubdef-legacy) for detailed instructions
-
-- extensions: ensure they exist in ClientSideInstance.xml (define prod props here), elements.xml, ... you only put props in extension's .manifest.js for defaults used only if no instance props are supplied at deploy time.
 
 &nbsp;
 
