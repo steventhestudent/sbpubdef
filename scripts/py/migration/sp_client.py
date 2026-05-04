@@ -89,6 +89,26 @@ def graph_request(
     return last  # type: ignore[return-value]
 
 
+def graph_post(
+    url: str,
+    *,
+    json_body: Any | None = None,
+    params: dict[str, Any] | None = None,
+    extra_headers: dict[str, str] | None = None,
+) -> requests.Response:
+    return graph_request("POST", url, params=params, json_body=json_body, extra_headers=extra_headers)
+
+
+def graph_patch(
+    url: str,
+    *,
+    json_body: Any | None = None,
+    params: dict[str, Any] | None = None,
+    extra_headers: dict[str, str] | None = None,
+) -> requests.Response:
+    return graph_request("PATCH", url, params=params, json_body=json_body, extra_headers=extra_headers)
+
+
 def graph_get_paginated(
     url: str, *, params: dict[str, Any] | None = None, log_failures: bool = True
 ) -> Iterator[dict[str, Any]]:

@@ -1,6 +1,6 @@
-# SharePoint Online export (migration prep)
+# SharePoint Online migration (export + target import)
 
-Python scripts to extract site configuration and data to local files under the configured output root (default **`scripts/py/migration/.migration_output`** relative to the repo; override with `MIGRATION_OUTPUT_DIR`). This is an **export / backup** step, not a destination migration.
+Python scripts under this folder support **exporting** a source SharePoint site and **provisioning / importing** into a **target** tenant using that bundle. Extraction is under the configured output root (default **`scripts/py/migration/.migration_output`**; override with `MIGRATION_OUTPUT_DIR` or `MIGRATION_EXPORT_DIR` for imports). Imports are a **rebuild / provision** process, not a blind restore — see **Import** below.
 
 ## Prerequisites
 
@@ -79,5 +79,109 @@ Scripts are **idempotent** in the sense that they overwrite artifacts for each r
 
 ## Shared module
 
-- **`sp_client.py`** — Graph pagination, retries, JSON export helpers, SharePoint REST GETs, and re-exports `authenticate` / `get_site_id` / list helpers from `azure_function.sbpubdef.local_upload`.
-- **`config.py`** — Output path and site name resolution from environment variables.
+- **`sp_client.py`** — Graph pagination, retries, JSON export helpers, SharePoint REST GETs, `graph_post` / `graph_patch`, and re-exports `authenticate` / `get_site_id` / list helpers from `azure_function.sbpubdef.local_upload`.
+- **`config.py`** — Export output path and source site name resolution.
+- **`import_context.py`** — Loads **`config/.env.migration.target`** only; target site name and `MIGRATION_EXPORT_DIR`.
+- **`import_client.py`** — Read export JSON, write `import_reports/*.json`, list id map, drive uploads.
+
+---
+
+## Target app registration (prerequisite for import)
+
+See **[`target_app_registration.md`](target_app_registration.md)** for:
+
+- Tenant ID, client ID, secret/certificate handling  
+- **Graph** permissions (`Sites.ReadWrite.All` typical for import; `Sites.Read.All` for read-only validation)  
+- **SharePoint** application permissions and admin consent  
+- SharePoint REST vs Graph token behavior (401 app-only notes)
+
+Create **`config/.env.migration.target`** from **`config/.env.migration.target.example`** (file is **gitignored**). Do **not** put target secrets into `config/.env.dev` unless you intentionally want them there.
+
+---
+
+## Import / provision (target tenant)
+
+### Philosophy
+
+- Use exported JSON as **source of truth**, but **transform** URLs, ids, and tenant-specific references where needed.  
+- **Preserve internal column names exactly** (example: internal `Statuc` vs display name `Status` — do not “fix” the typo during import unless you accept breaking compatibility).  
+- Where Graph is unsafe or incomplete, scripts write **reports and checklists** instead of pretending success.
+
+### Environment (`config/.env.migration.target`)
+
+| Variable | Purpose |
+|----------|---------|
+| `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` | App-only to **target** tenant (or multi-tenant app). |
+| `TENANT_NAME` | **Target** SharePoint hostname prefix. |
+| `MIGRATION_TARGET_SITE_NAME` | Target site path (`/sites/{name}`). |
+| `MIGRATION_EXPORT_DIR` | Folder containing the **export** tree (`lists/`, `list_items/`, `libraries/`, `pages/`, …). |
+| `MIGRATION_DRY_RUN` | `true` = log only, no creates/uploads. |
+| `MIGRATION_LIST_BLOCKLIST` | Comma-separated list **internal** names to skip creating (default includes `users`, `TaxonomyHiddenList`). |
+| `MIGRATION_SKIP_SYSTEM_LISTS` | Default `true`: skip export index rows with `system: true`. |
+
+### Run order (orchestrated)
+
+`run_full_import.py` runs:
+
+1. **`provision_site.py`** — Validates Graph auth and that the target site exists.  
+2. **`import_content_types.py`** — Inventory + **manual** checklist (full CT automation not implemented).  
+3. **`import_site_columns.py`** — Site columns **manual** checklist.  
+4. **`import_lists.py`** — Creates lists / libraries from `lists/index.json`; writes **`import_reports/list_name_to_new_id.json`**.  
+5. **`import_list_columns.py`** — Creates **text-only** columns via Graph; other types listed for manual/PnP.  
+6. **`import_list_views.py`** — Views **manual** checklist from export.  
+7. **`import_list_items.py`** — Creates items from `list_items/*.jsonl` (skips document libraries).  
+8. **`import_libraries.py`** — Compares export `_manifest.json` drive names to target drives.  
+9. **`upload_library_files.py`** — Uploads files under `libraries/<drive>/files/`.  
+10. **Manual** — Deploy SPFx `.sppkg` to target app catalog (`pnpm run make`, then SharePoint admin).  
+11. **`provision_pages.py`** — Generates **per-page reconstruction Markdown** under `import_reports/page_reconstruction/`.  
+12. **`apply_page_webparts.py`** — Aggregates web parts into remediation JSON/Markdown.  
+13. **`validate_import.py`** — Read-only comparison vs export (counts, missing lists, `Statuc` spot-check).  
+14. **`diagnose_permissions_migration.py`** — Permissions **manual** checklist (uses export `permissions/` if present).
+
+### Commands
+
+```bash
+# Full import pipeline (target env required)
+PYTHONPATH=scripts/py python3 scripts/py/migration/run_full_import.py
+
+# Or individual steps
+PYTHONPATH=scripts/py python3 scripts/py/migration/provision_site.py
+PYTHONPATH=scripts/py python3 scripts/py/migration/import_lists.py
+# … etc.
+```
+
+### What is automated vs manual
+
+| Automated (best effort) | Manual / report |
+|-------------------------|-----------------|
+| Site reachability check | Creating the **root** site collection if it does not exist |
+| List / document library create (Graph) | Full **content type** hierarchy, hub inheritance |
+| Text columns on lists | Most non-text columns, choice/lookup/person complexity |
+| List items (non–doc-lib) | Person/lookup resolution, attachments |
+| Library file upload (Graph PUT) | Very large files, path edge cases, special metadata |
+| Validation counts | **Permissions** recreation (see diagnose script) |
+| Page / web part **reports** | Actual **Graph page POST** / canvas PATCH after SPFx deploy |
+
+### SPFx
+
+- Build and package: **`pnpm run make`** (see repo README).  
+- Install the `.sppkg` on the **target** tenant app catalog before expecting custom web parts to match export.
+
+### Permissions migration (TODO / limits)
+
+- Exports may **not** include list- or item-level unique permissions.  
+- **`diagnose_permissions_migration.py`** emits a **manual verification checklist** and embeds export `permissions/notes.json` when available.  
+- **TODO (operators):** Review site groups, broken inheritance, Entra group bindings, and sharing links in the target admin UIs.
+
+### Troubleshooting (import)
+
+- **`import_lists` errors**: template not supported, name collision, or missing `Sites.ReadWrite.All`.  
+- **`import_list_items` errors**: Graph rejects fields (read-only, missing column, lookup id from old tenant). Strip or remap fields in a follow-up script.  
+- **`upload_library_files`**: target drive **name** must match export manifest; create libraries first.  
+- **Internal names**: never rename columns in import scripts unless you add an explicit compatibility flag and document it.
+
+---
+
+## Export (source tenant) — details
+
+The **Prerequisites**, **Configuration**, **How to run**, **Output layout**, and **What gets exported** sections **above** describe **export** using `config/.env.dev` / your usual env files — **not** `config/.env.migration.target`.

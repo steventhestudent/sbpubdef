@@ -7,6 +7,9 @@ src/type/env.global.generated.d.ts
 !.env.public
 !.env.public.dev
 !.env.public.prod
+# Target tenant secrets for migration import (keep local only)
+config/.env.migration.target
+!config/.env.migration.target.example
 
 copilot-instructions.md
 # SharePoint migration exports (scripts/py/migration)
