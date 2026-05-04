@@ -6,7 +6,7 @@
 3. Create New Communication Site: PD Intranet
    1. **Site Settings:** /sites/PD-Intranet/_layouts/15/settings.aspx  
       1. ...  
-   2. **optional:**  make it a hub (if you want extra top bar of nav links / site collection associations), **note:** after installing solution, _ThemeInjector_  hides it)
+   2. **optional:**  make it a hub (if you want extra top bar of nav links / site collection associations), **note that:** after installing solution, _ThemeInjector_  hides it)
 
 - update config/
     - .env.public.prod

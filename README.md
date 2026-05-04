@@ -13,22 +13,21 @@
 
 ## Install
 
--   laptops need: git, vscode, [chatgpt (edu)](https://www.calstatela.edu/genai/chatgpt-edu-faq)
 -   node w/ pnpm
-    -   `pnpm env use --global lts`
+    -   `pnpm env use --global 22`
 
 1. `git clone https://github.com/steventhestudent/sbpubdef.git`
 2. `cd sbpubdef`
 3. `pnpm install`
 4. `pnpm npx gulp trust-dev-cert`
-5. `git config --local user.name ""  &&  git config --local user.email "@calstatela.edu"`
+5. `git config --local user.name ""  &&  git config --local user.email ""`
 6. **optionally:** scraped forms / resource folder (private repo, so that this one can stay public): `git clone git@github.com:steventhestudent/sbpubdef-resources.git resource` ask for an invite
 
 #### now, hot reload + tailwind (gulp) server works:
 
 **webpart workbench:** ```pnpm run dev```
 
-**other gulp serve commands:** ```pnpm theme``` ~~```pnpm npx fast-serve --config=themeInjector```~~ ~~`pnpm npx gulp serve` (webparts) or ```gulp serve --config landingRedirectExt``` etc.~~
+**other gulp serve commands:** ```pnpm run theme``` (hot reload webparts in-place on pages they're on) ~~```pnpm npx fast-serve --config=themeInjector```~~ ~~`pnpm npx gulp serve` (webparts) or ```gulp serve --config landingRedirectExt``` etc.~~
 
 you may have to manually visit https://localhost:4321/temp/build/manifests.js to trust the certificate
 
@@ -45,25 +44,16 @@ you may have to manually visit https://localhost:4321/temp/build/manifests.js to
 
 &nbsp;
 
-**Dev Environment (Details):** `making the project - pnpm spfx macos.md`
 
-&nbsp;
-
-### **Using NPM:** just run `npm install`... also run w/o leading 'pnpm npx' (i.e.: instead of `pnpm npx gulp trust-dev-cert`, you will run `gulp trust-dev-cert`)
-**Note:** you will have to change Package.json scripts to use npm-style (i.e.: drop the '```pnpm npx```')
-
-then ```npm run dev``` works.
-
-# Ask for environment file (config/.env.dev) —currently only `scripts/py/sharepoint_upload_to_doc_lib.py` depends on it
+# using scripts/py
+to use the app registration 'pnp', copy `.env.example` as  `.env.dev` (or `.env.prod`) and fill it out from Entra ID
 
 &nbsp;
 
 &nbsp;
 
-## Laptop rotation
+### **Using NPM:** just run `npm install`... run w/o leading 'pnpm npx' (i.e.: instead of `pnpm npx gulp trust-dev-cert`, you will run `gulp trust-dev-cert`)
+**Note:** you will have to change `package.json` scripts to use npm-style (drop  '```pnpm npx```' , etc.)
 
-Logged in on:
--   git cli &nbsp; &nbsp;-so you will have to `git config --local user.name "x" && git config --local user.email "x@x.com"`
--   browser:
-    -   github
-    -   chatgpt
+, then ```npm run dev``` or ```npm run theme``` works.
+
