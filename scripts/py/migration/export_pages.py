@@ -7,10 +7,9 @@ Writes:
 
 API notes (limitations called out in exported JSON):
 - Uses Graph **beta** `GET /sites/{site-id}/pages` — schema may change; app registration must allow beta usage.
-- Per-page detail: Graph sometimes rejects `$expand=canvasLayout` with “property … on baseSitePage”
-  even when the path includes `/microsoft.graph.sitePage` (OData parser quirk). This exporter loads
-  `.../pages/{id}/microsoft.graph.sitePage` **without** expand, then loads **canvasLayout** via
-  `.../microsoft.graph.sitePage/canvasLayout` and merges it into the saved JSON when that succeeds.
+- Canvas: tries **beta and v1.0**, nested `$expand=canvasLayout(...)` on the sitePage URL, plain
+  `/canvasLayout` with expands, and `/canvasLayout/horizontalSections`. If Graph still returns 400 for
+  all strategies, rely on **Site Pages `.aspx` files** from `export_libraries` (they contain client-side page JSON).
 - Web part property bags may still be incomplete; SPFx custom data is not guaranteed.
 - Classic wiki pages / Web Part Pages in non-site-pages libraries are **not** enumerated here.
   Use export_libraries.py on the "Site Pages" / "Pages" library as files if needed.
@@ -36,11 +35,101 @@ logger = logging.getLogger(__name__)
 
 _PAGE_ACCEPT = {"Accept": "application/json;odata.metadata=minimal"}
 
+# Nested $expand on sitePage sometimes succeeds when GET .../canvasLayout returns 400 (service OData quirks).
+_CANVAS_EXPAND_TRIES = [
+    "canvasLayout($expand=horizontalSections($expand=columns($expand=webparts)))",
+    "canvasLayout($expand=horizontalSections($expand=columns))",
+    "canvasLayout($expand=horizontalSections)",
+    "canvasLayout",
+]
 
-def _save_page_detail(site: str, pid: str, pages_dir: Path, file_base: str) -> None:
+_CL_SEG_EXPAND_TRIES = [
+    {"$expand": "horizontalSections($expand=columns($expand=webparts))"},
+    {"$expand": "horizontalSections($expand=columns)"},
+    {"$expand": "horizontalSections"},
+    None,
+]
+
+
+def _try_extract_canvas_from_page_json(data: dict) -> dict | None:
+    cl = data.get("canvasLayout")
+    if isinstance(cl, dict) and cl:
+        return cl
+    return None
+
+
+def _fetch_canvas_layout(site: str, pid: str) -> tuple[dict | None, str | None]:
     """
-    Fetch page JSON without fragile $expand=canvasLayout on the main GET (Graph may still type the
-    node as baseSitePage for expand parsing). Merge layout from .../sitePage/canvasLayout when available.
+    Return (canvasLayout dict or None, first_error_snippet for diagnostics).
+    Tries beta + v1.0, $expand chains on sitePage, /canvasLayout variants, and horizontalSections collection.
+    """
+    first_err: str | None = None
+    bases = (sp_client.GRAPH_BETA, sp_client.GRAPH_V1)
+
+    for graph_base in bases:
+        site_page = f"{graph_base}/sites/{site}/pages/{pid}/microsoft.graph.sitePage"
+
+        for ex in _CANVAS_EXPAND_TRIES:
+            r = sp_client.graph_request(
+                "GET",
+                site_page,
+                params={"$expand": ex},
+                extra_headers=_PAGE_ACCEPT,
+            )
+            if r.status_code < 300:
+                cl = _try_extract_canvas_from_page_json(r.json())
+                if cl:
+                    return cl, None
+            elif first_err is None:
+                first_err = r.text[:400]
+
+        for params in _CL_SEG_EXPAND_TRIES:
+            r = sp_client.graph_request(
+                "GET",
+                f"{site_page}/canvasLayout",
+                params=params,
+                extra_headers=_PAGE_ACCEPT,
+            )
+            if r.status_code < 300:
+                return r.json(), None
+            elif first_err is None:
+                first_err = r.text[:400]
+
+        r = sp_client.graph_request(
+            "GET",
+            f"{site_page}/canvasLayout/horizontalSections",
+            extra_headers=_PAGE_ACCEPT,
+        )
+        if r.status_code < 300:
+            data = r.json()
+            rows = data.get("value")
+            if isinstance(rows, list):
+                return {"horizontalSections": rows}, None
+        elif first_err is None:
+            first_err = r.text[:400]
+
+    return None, first_err
+
+
+def _merge_canvas(payload: dict, site: str, pid: str, stats: dict) -> None:
+    canvas, err_snip = _fetch_canvas_layout(site, pid)
+    if canvas:
+        payload["canvasLayout"] = canvas
+        stats["canvas_ok"] += 1
+        return
+    stats["canvas_missing"] += 1
+    if err_snip and not stats.get("_logged_canvas_err"):
+        stats["_logged_canvas_err"] = 1
+        logger.warning(
+            "Could not load canvasLayout for any page (Graph). Example error: %s — "
+            "full markup may still exist under libraries/.../SitePages/*.aspx from export_libraries.",
+            err_snip[:300],
+        )
+
+
+def _save_page_detail(site: str, pid: str, pages_dir: Path, file_base: str, *, stats: dict) -> None:
+    """
+    Fetch page metadata, then best-effort canvasLayout via several Graph strategies.
     """
     site_page = f"{sp_client.GRAPH_BETA}/sites/{site}/pages/{pid}/microsoft.graph.sitePage"
     base = f"{sp_client.GRAPH_BETA}/sites/{site}/pages/{pid}"
@@ -49,7 +138,9 @@ def _save_page_detail(site: str, pid: str, pages_dir: Path, file_base: str) -> N
     if r.status_code >= 300:
         r = sp_client.graph_request("GET", base, extra_headers=_PAGE_ACCEPT)
         if r.status_code < 300:
-            sp_client.export_json(pages_dir / f"{file_base}.json", r.json())
+            payload = r.json()
+            _merge_canvas(payload, site, pid, stats)
+            sp_client.export_json(pages_dir / f"{file_base}.json", payload)
             return
         sp_client.export_json(
             pages_dir / f"{file_base}.error.json",
@@ -58,19 +149,7 @@ def _save_page_detail(site: str, pid: str, pages_dir: Path, file_base: str) -> N
         return
 
     payload = r.json()
-    cl_r = sp_client.graph_request(
-        "GET",
-        f"{site_page}/canvasLayout",
-        extra_headers=_PAGE_ACCEPT,
-    )
-    if cl_r.status_code < 300:
-        payload["canvasLayout"] = cl_r.json()
-    else:
-        logger.info(
-            "canvasLayout segment HTTP %s for page id=%s (page metadata still exported).",
-            cl_r.status_code,
-            pid,
-        )
+    _merge_canvas(payload, site, pid, stats)
 
     sp_client.export_json(pages_dir / f"{file_base}.json", payload)
 
@@ -119,6 +198,7 @@ def run_export(*, site_id: str | None = None) -> Path:
 
     index_payload["pageCount"] = len(pages)
 
+    stats: dict = {"canvas_ok": 0, "canvas_missing": 0}
     for p in pages:
         pid = p.get("id")
         title = p.get("title") or p.get("name") or str(pid)
@@ -126,12 +206,20 @@ def run_export(*, site_id: str | None = None) -> Path:
         frag = (str(pid).replace("-", "")[-12:]) if pid else "noid"
         file_base = f"{safe}_{frag}"[:200]
         if pid:
-            _save_page_detail(site, str(pid), pages_dir, file_base)
+            _save_page_detail(site, str(pid), pages_dir, file_base, stats=stats)
         else:
             sp_client.export_json(pages_dir / f"{file_base}.partial.json", p)
 
+    index_payload["canvasLayoutStats"] = {
+        "withCanvasLayout": stats["canvas_ok"],
+        "withoutCanvasLayout": stats["canvas_missing"],
+    }
     sp_client.export_json(pages_dir / "index.json", index_payload)
-    logger.info("Pages export finished (%d entries)", len(pages))
+    logger.info(
+        "Pages export finished (%d entries, canvasLayout on %d pages).",
+        len(pages),
+        stats["canvas_ok"],
+    )
     return pages_dir / "index.json"
 
 
