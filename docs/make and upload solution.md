@@ -1,5 +1,6 @@
 # make and upload solution
 1. `pnpm run make` creates `sharepoint/solution/sbpubdef-sol.sppkg`
+   - oneliner: `pnpm clean && pnpm tailwind:build && pnpm make`
 2. upload to AppCatalog: `https://<tenant>.sharepoint.com/sites/appcatalog/AppCatalog/Forms/AllItems.aspx`
 
 &nbsp;

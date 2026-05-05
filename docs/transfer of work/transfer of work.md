@@ -23,30 +23,34 @@
          with a JSON body that grants **sbpubdef-provisioning**’s Application (client) ID a role of **`write`**
       ![img.png](img.png)
    5. **Env files**:
-      1.  set `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET`, `TENANT_NAME` 
-         2. config/ `.env.example` → `.env.dev` or `.env.prod`
+      1. config/ `.env.example` → `.env.dev` or `.env.prod`
+         1.  set `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET`
+         2. in the public env file, update `TENANT_NAME` 
          2. For migration import: `.env.migration.target.example` → `.env.migration.target`
             3. set  `MIGRATION_TARGET_SITE_NAME`. (assuming you already ran `run_full_export.py`) Details: [scripts/py/migration/target_app_registration.md](../../scripts/py/migration/target_app_registration.md).
 
    **4.2 Run full import on the new tenant** (after the site exists and the grant above succeeds)
 
-   1. Confirm the communication site URL matches `MIGRATION_TARGET_SITE_NAME` / hub name you use in app config.
    2. `py scripts/py/migration/run_full_import.py`  
-   3. Mid-run, the script stops for a **manual** step: build and upload the SPFx `.sppkg` to the **target** app catalog (`pnpm run make`, then SharePoint admin) before web parts can resolve.
+   3. Mid-run, the script stops for a **manual** step: build and upload the SPFx `.sppkg` to the **target** app catalog (`pnpm run make`, then SharePoint admin: approve requested advanced->api permissions) before web parts can resolve.
 
    **4.3 sbpubdef-EasyAuth**
 
    - Azure Functions authentication / API app registration used for **incoming** auth (EasyAuth / `AadHttpClient`). This is separate from the daemon/app-only app.
 
-- update config/
-    - .env.public.prod
-    - .env.prod
+
+&nbsp;
+
+- `config/`
     - package-solution.json
         - webApiPermissionRequests from app registration: Application (client) ID + scope name
-    - scripts/py/azure_function
-        - set AZURE_FUNCTIONS_ENVIRONMENT to any value to ensure they use production
-    - scripts/js (gen-env)
-        - ensure that process.env.NODE_ENV === "production"
+
+
+### to ensure production environment is used:
+  - scripts/py/azure_function
+      - set AZURE_FUNCTIONS_ENVIRONMENT to any value to ensure they use production
+  - scripts/js (gen-env)
+      - ensure that process.env.NODE_ENV === "production"
 
   
 # Entra ID -> Groups -> Security Groups  
