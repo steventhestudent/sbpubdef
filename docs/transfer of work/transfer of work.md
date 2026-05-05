@@ -7,7 +7,20 @@
    1. **Site Settings:** /sites/PD-Intranet/_layouts/15/settings.aspx  
       1. ...  
    2. **optional:**  make it a hub (if you want extra top bar of nav links / site collection associations), **note that:** after installing solution, _ThemeInjector_  hides it)
-
+4. Recreate ([Entra](https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade/quickStartType~/null/sourceType/Microsoft_AAD_IAM)) app registrations:
+   1. sbpubdef-provisioning
+      2. ![img.png](img0.png)
+      3. Client credentials -> [Add a certificate or secret](), copy the value
+      4. make env files:
+         1. `env.example` => .env.dev / .env.prod 
+         2. `.env.migration.target`  if using scripts/py/migrate/run_full_import.py
+      5. Enterprise applications → sbpubdef-provisioning → Permissions
+         1. Confirm Microsoft Graph has:
+            1. Application: Sites.Selected ~~`Sites.ReadWrite.All` and/or `Sites.FullControl.All`~~
+            2. Admin consent granted
+         2. ...
+   2. sbpubdef-EasyAuth
+      3. azure functions authentication api app registration
 - update config/
     - .env.public.prod
     - .env.prod
