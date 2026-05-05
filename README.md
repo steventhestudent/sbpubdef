@@ -45,7 +45,7 @@ you may have to manually visit https://localhost:4321/temp/build/manifests.js to
 
 
 # using scripts/py
-to use the app registration 'pnp', copy `.env.example` as  `.env.dev` (or `.env.prod`) and fill it out from Entra ID.
+to use the app registration **sbpubdef-provisioning** (or equivalent), copy `config/.env.example` as `config/.env.dev` (or `config/.env.prod`) and fill it out from Entra ID.
 
 if using migration scripts: copy and edit` .env.migration.target.example`
 

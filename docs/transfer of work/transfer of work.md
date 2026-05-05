@@ -8,19 +8,35 @@
       1. ...  
    2. **optional:**  make it a hub (if you want extra top bar of nav links / site collection associations), **note that:** after installing solution, _ThemeInjector_  hides it)
 4. Recreate ([Entra](https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade/quickStartType~/null/sourceType/Microsoft_AAD_IAM)) app registrations:
-   1. sbpubdef-provisioning
-      2. ![img.png](img0.png)
-      3. Client credentials -> [Add a certificate or secret](), copy the value
-      4. make env files:
-         1. `env.example` => .env.dev / .env.prod 
-         2. `.env.migration.target`  if using scripts/py/migrate/run_full_import.py
-      5. Enterprise applications → sbpubdef-provisioning → Permissions
-         1. Confirm Microsoft Graph has:
-            1. Application: Sites.Selected ~~`Sites.ReadWrite.All` and/or `Sites.FullControl.All`~~
-            2. Admin consent granted
-         2. ...
-   2. sbpubdef-EasyAuth
-      3. azure functions authentication api app registration
+
+   **4.1 sbpubdef-provisioning** (migration / provisioning automation; least privilege)
+
+   1. ![img.png](img0.png)
+   2. **Certificates & secrets** → add a client secret → copy the value once.
+   3. **API permissions** → **Microsoft Graph** → add **Application** permission **`Sites.Selected`** 
+      4. **Grant admin consent** for the tenant (from _Enterprise Apps_).
+   4. **Grant this app access to the PD Intranet site collection** (required for `Sites.Selected` to do anything):
+      1. As a site admin (or Global/SharePoint admin), get the **site collection id**, e.g. open  
+         `https://<tenant>.sharepoint.com/sites/PD-Intranet/_api/site/id`  
+      2. Call Microsoft Graph (Graph Explorer as admin):  
+         `POST https://graph.microsoft.com/v1.0/sites/{siteCollectionId}/permissions`  
+         with a JSON body that grants **sbpubdef-provisioning**’s Application (client) ID a role of **`write`** (try first) or **`owner`** if you hit permission errors. See [Darwin Droll — Sites.Selected](https://www.darwindroll.com/blog/use-sitesselected-application-permission-in-microsoft-graph)
+   5. **Env files**:
+      1.  set `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET`, `TENANT_NAME` 
+         2. config/ `.env.example` → `.env.dev` or `.env.prod`
+         2. For migration import: `.env.migration.target.example` → `.env.migration.target`
+            3. set  `MIGRATION_TARGET_SITE_NAME`. (assuming you already ran `run_full_export.py`) Details: [scripts/py/migration/target_app_registration.md](../../scripts/py/migration/target_app_registration.md).
+
+   **4.2 Run full import on the new tenant** (after the site exists and the grant above succeeds)
+
+   1. Confirm the communication site URL matches `MIGRATION_TARGET_SITE_NAME` / hub name you use in app config.
+   2. `py scripts/py/migration/run_full_import.py`  
+   3. Mid-run, the script stops for a **manual** step: build and upload the SPFx `.sppkg` to the **target** app catalog (`pnpm run make`, then SharePoint admin) before web parts can resolve.
+
+   **4.3 sbpubdef-EasyAuth**
+
+   - Azure Functions authentication / API app registration (Graph `Mail.Send`, `Calendars.ReadWrite`, etc. as needed—**not** on sbpubdef-provisioning).
+
 - update config/
     - .env.public.prod
     - .env.prod

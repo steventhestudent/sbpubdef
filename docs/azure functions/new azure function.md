@@ -37,4 +37,4 @@ configured @ Function App -> Authentication -> **Identity provider** (azure_func
 
 &nbsp;
 
-**note:** ask for environment file: .config/.env.dev (if you need permissions available to the app registration *pnp* (e.g.: Send.mail, Sites.FullControl.All, Sites.ReadWrite.All, etc.))
+**note:** ask for `config/.env.dev` as needed. **Microsoft Graph** permissions such as `Mail.Send` and `Calendars.ReadWrite` belong on the **Function app / EasyAuth** (or dedicated API) registration that backs `AadHttpClient`, not on **sbpubdef-provisioning** (tenant migration automation; prefer Graph application **`Sites.Selected`** and site-scoped grants — see `scripts/py/migration/target_app_registration.md`).
