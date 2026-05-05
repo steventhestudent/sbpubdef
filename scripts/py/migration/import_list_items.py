@@ -29,6 +29,29 @@ from migration import sp_client
 
 logger = logging.getLogger(__name__)
 
+def _acceptable_field_keys(site_id: str, list_id: str) -> set[str]:
+    """
+    Determine which `fields` keys are likely accepted by Graph for create.
+
+    - Always allow actual column internal names.
+    - Also allow the common Graph pattern for lookups/person fields: `<Name>LookupId`.
+      (Exported JSONL often uses that form.)
+    """
+    cols = sp_client.get_list_columns(site_id, list_id) or []
+    allowed: set[str] = set()
+    for c in cols:
+        name = (c.get("name") or "").strip()
+        if not name:
+            continue
+        allowed.add(name)
+        # When a column is lookup-like, Graph listItem.fields commonly uses NameLookupId
+        if "lookup" in c or "personOrGroup" in c:
+            allowed.add(f"{name}LookupId")
+    # Never allow these even if they appear in exports
+    allowed.discard("AuthorLookupId")
+    allowed.discard("EditorLookupId")
+    return allowed
+
 
 def run_import() -> dict:
     ctx.load_migration_target_env()
@@ -50,6 +73,8 @@ def run_import() -> dict:
     created = 0
     skipped = 0
     errors: list[dict] = []
+    dropped_fields_total = 0
+    dropped_field_keys: dict[str, int] = {}
 
     for entry in idx.get("lists") or []:
         export_name = (entry.get("name") or "").strip()
@@ -70,13 +95,23 @@ def run_import() -> dict:
         if not jsonl or not jsonl.is_file():
             continue
 
+        allowed_keys = _acceptable_field_keys(site_id, list_id)
+
         with open(jsonl, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:
                     continue
                 row = json.loads(line)
-                fields = import_client.fields_for_graph_create(row.get("fields") or {})
+                raw_fields = import_client.fields_for_graph_create(row.get("fields") or {})
+                # Filter to columns that exist on the target list (plus lookup id variants).
+                fields: dict = {}
+                for k, v in raw_fields.items():
+                    if k in allowed_keys:
+                        fields[k] = v
+                    else:
+                        dropped_fields_total += 1
+                        dropped_field_keys[k] = dropped_field_keys.get(k, 0) + 1
                 if dry:
                     created += 1
                     continue
@@ -93,6 +128,12 @@ def run_import() -> dict:
         "dryRun": dry,
         "itemsCreatedOrCounted": created,
         "listsSkippedDocLibOrMissing": skipped,
+        "droppedFieldsTotal": dropped_fields_total,
+        "topDroppedFieldKeys": sorted(
+            [{"field": k, "count": v} for k, v in dropped_field_keys.items()],
+            key=lambda x: x["count"],
+            reverse=True,
+        )[:40],
         "errorSamples": errors[:300],
         "errorCount": len(errors),
     }

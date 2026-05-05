@@ -90,14 +90,23 @@ def run_import() -> dict:
             continue
 
         r = sp_client.graph_post(url, json_body=body)
+        # Some list templates are not valid in some tenants (or for app-only).
+        # If we get "Invalid list template.", retry once as a generic list.
+        if r.status_code == 400 and "Invalid list template" in (r.text or "") and tmpl.lower() != "genericlist":
+            body2 = {"displayName": disp, "list": {"template": "genericList"}}
+            r = sp_client.graph_post(url, json_body=body2)
+            tmpl_used = "genericList"
+        else:
+            tmpl_used = tmpl
+
         if r.status_code < 300:
             data = r.json()
             new_id = data.get("id")
             if new_id:
                 name_to_new_id[name] = new_id
-            created.append({"name": name, "id": new_id, "displayName": disp, "template": tmpl})
+            created.append({"name": name, "id": new_id, "displayName": disp, "template": tmpl_used})
         else:
-            errors.append({"name": name, "status": r.status_code, "body": r.text[:2000]})
+            errors.append({"name": name, "status": r.status_code, "body": r.text[:2000], "template": tmpl_used})
 
     import_client.save_list_id_map(name_to_new_id)
     report = {
