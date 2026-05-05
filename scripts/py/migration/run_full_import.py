@@ -34,6 +34,28 @@ from migration import validate_import
 
 logger = logging.getLogger(__name__)
 
+def _error_count(result: object) -> int:
+    """
+    Best-effort extraction of "how many errors happened" from step reports.
+    Import steps return heterogeneous dict shapes; this keeps the wrapper honest.
+    """
+    if not isinstance(result, dict):
+        return 0
+    if isinstance(result.get("errorCount"), int):
+        return int(result["errorCount"])
+    # Some steps use "errors" as an int, others as a list.
+    errs = result.get("errors")
+    if isinstance(errs, int):
+        return int(errs)
+    if isinstance(errs, list):
+        return len(errs)
+    # Common alternative keys
+    for k in ("errorSamples", "failed", "failures"):
+        v = result.get(k)
+        if isinstance(v, list):
+            return len(v)
+    return 0
+
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -65,7 +87,10 @@ def main() -> None:
             )
             continue
         try:
-            fn()
+            result = fn()
+            nerr = _error_count(result)
+            if nerr:
+                errors.append((name, f"step_reported_errors={nerr}"))
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
             print(f"ERROR: {err}")

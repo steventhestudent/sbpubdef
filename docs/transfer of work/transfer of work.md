@@ -16,12 +16,11 @@
    3. **API permissions** → **Microsoft Graph** → add **Application** permission **`Sites.Selected`** 
       4. **Grant admin consent** for the tenant (from _Enterprise Apps_).
    4. **Grant this app access to the PD Intranet site collection** (required for `Sites.Selected` to do anything):
-      1. get site collection id from response:
-         `https://<tenant>.sharepoint.com/sites/PD-Intranet/_api/site/id`  
+      1. GET comma-separated site collection id from `https://graph.microsoft.com/v1.0/sites/<tenant>.sharepoint.com:/sites/PD-Intranet`
       2. Call Microsoft Graph (Graph Explorer with `Sites.ReadWrite.All` / `Sites.FullControl.All` / `Sites.Manage.All`):  
          `POST https://graph.microsoft.com/v1.0/sites/{siteCollectionId}/permissions`  
-         with a JSON body that grants **sbpubdef-provisioning**’s Application (client) ID a role of **`write`**
-      ![img.png](img.png)
+         with a JSON body that grants **sbpubdef-provisioning**’s Application (client) ID a role of **`manage`**
+      ![img_1.png](img_1.png)
    5. **Env files**:
       1. config/ `.env.example` → `.env.dev` or `.env.prod`
          1.  set `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET`
