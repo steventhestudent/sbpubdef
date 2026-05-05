@@ -79,3 +79,6 @@ troubleshoot
     - `User.Read.All` (application) only if you need Entra user object-id lookup (`graph_get_user_object_id`)
     
 - Details: [scripts/py/migration/target_app_registration.md](../../scripts/py/migration/target_app_registration.md)
+
+# serve.json, write-manifests.json:
+ensure urls use TENANT_NAME

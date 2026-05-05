@@ -545,7 +545,7 @@ def main() -> None:
     now = datetime.now(timezone.utc)
 
     # Prefer seeding for real users that exist in the site user-info list.
-    current_user_email = os.getenv("DEV_CURRENT_USER_EMAIL") or "sgonzales@csproject25.onmicrosoft.com"
+    current_user_email = os.getenv("DEV_CURRENT_USER_EMAIL") or f"sgonzales@{os.getenv("TENANT_NAME")}.onmicrosoft.com"
     demo_users = [current_user_email]
     extra = (os.getenv("DEV_DEMO_EMAILS") or "").strip()
     if extra:

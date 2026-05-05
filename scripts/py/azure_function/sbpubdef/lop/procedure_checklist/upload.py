@@ -20,12 +20,12 @@ if not(UPDATE_MODE == UPDATE_MODES.NO_API_REQUESTS):
     steps_list_id = get_list_id(site_id, os.getenv("LIST_PROCEDURESTEPS"))
 
 def upload_file(file_path, skip=False): # todo: remove skip=True, add UPDATE_MODES to accomodate skipping all file uploads / IMAGE_ONLY / NO_IMAGE / PDF_ONLY
-    if skip or UPDATE_MODE == UPDATE_MODES.NO_API_REQUESTS or (UPDATE_MODE == UPDATE_MODES.JSON_ONLY and not(file_path.endswith('.json'))): return "https://csproject25.sharepoint.com/sites/PD-Intranet/user_uploads/resource/LOP/ProcedureChecklist/" + os.path.basename(file_path)
+    if skip or UPDATE_MODE == UPDATE_MODES.NO_API_REQUESTS or (UPDATE_MODE == UPDATE_MODES.JSON_ONLY and not(file_path.endswith('.json'))): return f"https://{os.getenv("TENANT_NAME")}.sharepoint.com/sites/PD-Intranet/user_uploads/resource/LOP/ProcedureChecklist/" + os.path.basename(file_path)
     return _upload_file(site_id, drive_id, file_path, "resource/LOP/ProcedureChecklist")
 
 def add_list_item(procedure: ProcedureChecklist): # must use internal column names found w/ get_list_columns()
     print("added listing")
-    if UPDATE_MODE.value < UPDATE_MODES.ALL.value: return "https://csproject25.sharepoint.com/sites/PD-Intranet/lists/LOPProcedureChecklist/0_.000" # we don't use this so it's ok to always use 0_.000
+    if UPDATE_MODE.value < UPDATE_MODES.ALL.value: return f"https://{os.getenv("TENANT_NAME")}.sharepoint.com/sites/PD-Intranet/lists/LOPProcedureChecklist/0_.000" # we don't use this so it's ok to always use 0_.000
     return _add_list_item(site_id, procedures_list_id, {
         "Title": procedure.title[0] if isinstance(procedure.title, list) else procedure.title, # just in case our title handling is buggy
         "Purpose": procedure.purpose,
