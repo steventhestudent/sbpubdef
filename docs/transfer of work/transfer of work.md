@@ -16,11 +16,12 @@
    3. **API permissions** → **Microsoft Graph** → add **Application** permission **`Sites.Selected`** 
       4. **Grant admin consent** for the tenant (from _Enterprise Apps_).
    4. **Grant this app access to the PD Intranet site collection** (required for `Sites.Selected` to do anything):
-      1. As a site admin (or Global/SharePoint admin), get the **site collection id**, e.g. open  
+      1. get site collection id from response:
          `https://<tenant>.sharepoint.com/sites/PD-Intranet/_api/site/id`  
-      2. Call Microsoft Graph (Graph Explorer as admin):  
+      2. Call Microsoft Graph (Graph Explorer with `Sites.ReadWrite.All` / `Sites.FullControl.All` / `Sites.Manage.All`):  
          `POST https://graph.microsoft.com/v1.0/sites/{siteCollectionId}/permissions`  
-         with a JSON body that grants **sbpubdef-provisioning**’s Application (client) ID a role of **`write`** (try first) or **`owner`** if you hit permission errors. See [Darwin Droll — Sites.Selected](https://www.darwindroll.com/blog/use-sitesselected-application-permission-in-microsoft-graph)
+         with a JSON body that grants **sbpubdef-provisioning**’s Application (client) ID a role of **`write`**
+      ![img.png](img.png)
    5. **Env files**:
       1.  set `AZURE_TENANT_ID`, `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET`, `TENANT_NAME` 
          2. config/ `.env.example` → `.env.dev` or `.env.prod`
@@ -35,7 +36,7 @@
 
    **4.3 sbpubdef-EasyAuth**
 
-   - Azure Functions authentication / API app registration (Graph `Mail.Send`, `Calendars.ReadWrite`, etc. as needed—**not** on sbpubdef-provisioning).
+   - Azure Functions authentication / API app registration used for **incoming** auth (EasyAuth / `AadHttpClient`). This is separate from the daemon/app-only app.
 
 - update config/
     - .env.public.prod
@@ -70,3 +71,11 @@ PortalCalendar uses 1 SharePoint calendar (and it reads from outlook calendar as
 ![Connect to Office or Connect to](Attachments/A1BEA429-2E40-4A57-85BF-1C1179BB9DE6.tiff)  
 troubleshoot  
 ... you may want additional calendars so the user can choose which to subscribe to.  e.g.: 1 per department, + an Assignments calendar, etc.
+
+# **More on App Registrations: Current repo model (single daemon app):** keep app-only Graph permissions on **sbpubdef-provisioning** so local scripts + functions share the same credentials:
+    - `Sites.Selected` (application) + site permission grant (required)
+    - `Mail.Send` (application)
+    - `Calendars.ReadWrite` (application) for creating events in staff mailboxes (PortalCalendar, Assignments, ...)
+    - `User.Read.All` (application) only if you need Entra user object-id lookup (`graph_get_user_object_id`)
+    
+- Details: [scripts/py/migration/target_app_registration.md](../../scripts/py/migration/target_app_registration.md)

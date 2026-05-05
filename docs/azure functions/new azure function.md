@@ -37,4 +37,9 @@ configured @ Function App -> Authentication -> **Identity provider** (azure_func
 
 &nbsp;
 
-**note:** ask for `config/.env.dev` as needed. **Microsoft Graph** permissions such as `Mail.Send` and `Calendars.ReadWrite` belong on the **Function app / EasyAuth** (or dedicated API) registration that backs `AadHttpClient`, not on **sbpubdef-provisioning** (tenant migration automation; prefer Graph application **`Sites.Selected`** and site-scoped grants — see `scripts/py/migration/target_app_registration.md`).
+**note:** ask for `config/.env.dev` as needed.
+
+- **EasyAuth / incoming auth**: the Function App’s identity provider app registration is for validating who called the function (delegated token from SPFx / `AadHttpClient`).
+- **App-only Graph work** (what the function does after validating the caller) uses the daemon credentials loaded by `azure_function.sbpubdef.local_upload.authenticate()`.
+
+If you keep the repo’s common “single daemon app” model, put these on **sbpubdef-provisioning** (Microsoft Graph **application** permissions + admin consent):\n\n- `Sites.Selected` (plus the one-time site permission grant)\n- `Mail.Send` (for `scripts/py/test_email.py`)\n- `Calendars.ReadWrite` (for `create_assignment_calendar_event.py`)\n- `User.Read.All` only if you need user object id lookup\n\nSee: `scripts/py/migration/target_app_registration.md`.

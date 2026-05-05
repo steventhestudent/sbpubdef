@@ -2,7 +2,7 @@
 
 Use a **dedicated** app registration for the **destination** tenant (recommended: **sbpubdef-provisioning**), or the same multi-tenant app if your security model allows it. Grant **admin consent** in the **target** tenant after adding API permissions.
 
-Keep **mail, calendar, and tenant-wide SharePoint** permissions on your **Azure Functions / EasyAuth** app (or other registrations)—not on the provisioning app unless you intentionally want one highly privileged daemon.
+If you want to keep the current operational model (Azure Functions uses the same app you also use locally in `scripts/py/`), you can place **mail + calendar** permissions on **sbpubdef-provisioning** as well. This is higher privilege than a strict split-app model, but it avoids modifying many Python scripts and keeps local workflows working.
 
 ## Values to record
 
@@ -34,6 +34,20 @@ Keep **mail, calendar, and tenant-wide SharePoint** permissions on your **Azure 
 3. **Grant admin consent** for **`Sites.Selected`** on **sbpubdef-provisioning** in Entra → API permissions.
 
 Repeat step 2 for each additional site if you automate more than one hub.
+
+### Unified app: add exact mail/calendar/user permissions (if you keep one app)
+
+These are required by existing Python/Azure Function helpers in this repo:
+
+| Permission | Used by | Why |
+|------------|---------|-----|
+| `Mail.Send` | `azure_function.sbpubdef.local_upload.send_email()` and `scripts/py/test_email.py` | App-only `POST /users/{sender_upn}/sendMail` |
+| `Calendars.ReadWrite` | `scripts/py/azure_function/sbpubdef/create_assignment_calendar_event.py` | App-only `POST /users/{assignee}/events` (write events in other users’ calendars) |
+| `User.Read.All` | `azure_function.sbpubdef.local_upload.graph_get_user_object_id()` | App-only `GET /users/{email}?$select=id` (Entra object id lookup) |
+
+Notes:
+- These are **Microsoft Graph application** permissions and require **admin consent**.
+- If you *don’t* use calendar creation or Entra user lookups, you can omit `Calendars.ReadWrite` and/or `User.Read.All`.
 
 ### Legacy / broad alternative (tenant-wide)
 
