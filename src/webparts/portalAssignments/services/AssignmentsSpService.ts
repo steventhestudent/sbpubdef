@@ -97,10 +97,6 @@ export class AssignmentsSpService {
 		return this.pnp.web();
 	}
 
-	public statusFieldName(): string {
-		return ENV.INTERNALCOLUMN_ASSIGNMENTSTATUS?.trim() || "Status";
-	}
-
 	private embedCompletionFieldName(): string {
 		return ENV.INTERNALCOLUMN_FINALEMBEDCOMPLETED?.trim() || "";
 	}
@@ -110,7 +106,6 @@ export class AssignmentsSpService {
 		limit = 200,
 	): Promise<UserAssignmentItem[]> {
 		const list = this.web().lists.getByTitle(ENV.LIST_ASSIGNMENTS);
-		const statusField = this.statusFieldName();
 		const embedField = this.embedCompletionFieldName();
 
 		const rows: Array<Record<string, unknown>> = await list.items
@@ -174,7 +169,6 @@ export class AssignmentsSpService {
 		id: number,
 	): Promise<UserAssignmentItem | undefined> {
 		const list = this.web().lists.getByTitle(ENV.LIST_ASSIGNMENTS);
-		const statusField = this.statusFieldName();
 		const embedField = this.embedCompletionFieldName();
 
 		const r: Record<string, unknown> = await list.items
@@ -186,7 +180,7 @@ export class AssignmentsSpService {
 				"EmployeeEmail",
 				"Reason",
 				"DueDate",
-				statusField,
+				"Status",
 				"CurrentStepOrder",
 				"PercentComplete",
 				"LastOpenedOn",
@@ -195,11 +189,7 @@ export class AssignmentsSpService {
 			)();
 
 		const status =
-			getFirstDefined<string>(
-				getProp<string>(r, statusField),
-				getProp<string>(r, "Status"),
-				getProp<string>(r, "AssignmentStatus"),
-			) ?? undefined;
+			getFirstDefined<string>(getProp<string>(r, "Status")) ?? undefined;
 
 		const catalogId = safeNumber(
 			getFirstDefined<unknown>(

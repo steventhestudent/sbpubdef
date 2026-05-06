@@ -16,14 +16,17 @@ Environment variables are loaded from repo `config/` via `azure_function.sbpubde
 Usage (from repository root):
 
   PYTHONPATH=scripts/py python3 scripts/py/migration/run_full_export.py
+  PYTHONPATH=scripts/py python3 scripts/py/migration/run_full_export.py --skip-library-exports
 
 Or from `scripts/py`:
 
   PYTHONPATH=. python3 migration/run_full_export.py
+  PYTHONPATH=. python3 migration/run_full_export.py --skip-library-exports
 """
 
 from __future__ import annotations
 
+import argparse
 import logging
 import sys
 from collections.abc import Callable
@@ -45,15 +48,26 @@ from migration.config import migration_output_dir
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    parser = argparse.ArgumentParser(description="Run migration export steps in order.")
+    parser.add_argument(
+        "--skip-library-exports",
+        action="store_true",
+        help="Skip document library export (export_libraries step).",
+    )
+    args = parser.parse_args()
+
     out = migration_output_dir()
     print(f"Migration output directory: {out}")
 
-    steps: list[tuple[str, Callable[..., object]]] = [
+    steps: list[tuple[str, Callable[..., object] | None]] = [
         ("export_site", export_site.run_export),
         ("export_content_types", export_content_types.run_export),
         ("export_lists", export_lists.run_export),
         ("export_list_items", export_list_items.run_export),
-        ("export_libraries", export_libraries.run_export),
+        (
+            "export_libraries",
+            None if args.skip_library_exports else export_libraries.run_export,
+        ),
         ("export_pages", export_pages.run_export),
         ("export_permissions", export_permissions.run_export),
     ]
@@ -61,6 +75,10 @@ def main() -> None:
     errors: list[tuple[str, str]] = []
     for name, fn in steps:
         print(f"\n=== {name} ===")
+        if fn is None:
+            if name == "export_libraries" and args.skip_library_exports:
+                print("SKIPPED: --skip-library-exports")
+                continue
         try:
             fn()
         except Exception as e:

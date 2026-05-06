@@ -59,7 +59,6 @@ export function AssignmentsManager({
 
 		try {
 			const web = pnpWrapper.web();
-			const statusField = ENV.INTERNALCOLUMN_ASSIGNMENTSTATUS || "Status";
 
 			const base = web.lists
 				.getByTitle(assignmentsListTitle)
@@ -68,7 +67,7 @@ export function AssignmentsManager({
 					"Title",
 					"EmployeeEmail",
 					"DueDate",
-					statusField,
+					"Status",
 					"PercentComplete",
 				)
 				.orderBy("Id", false)
@@ -93,8 +92,8 @@ export function AssignmentsManager({
 						: undefined,
 				dueDate: typeof r.DueDate === "string" ? r.DueDate : undefined,
 				status:
-					typeof r[statusField] === "string"
-						? (r[statusField] as string)
+					typeof r.Status === "string"
+						? (r.Status as string)
 						: undefined,
 				percentComplete:
 					typeof r.PercentComplete === "number"

@@ -25,6 +25,8 @@ if str(_SP) not in sys.path:
 from migration import import_client
 from migration import import_context as ctx
 from migration import sp_client
+from migration.list_allowlist import effective_export_list_names
+from migration.list_import_order import ordered_export_names
 
 logger = logging.getLogger(__name__)
 
@@ -55,10 +57,22 @@ def run_import() -> dict:
 
     index = import_client.read_json(idx_path)
     lists_meta = index.get("lists") or []
+    sort_order = ordered_export_names(lists_meta)
+    pos = {n: i for i, n in enumerate(sort_order)}
+    lists_meta = sorted(
+        lists_meta,
+        key=lambda e: pos.get((e.get("name") or "").strip(), 10**9),
+    )
     block = _blocklist()
     skip_sys = _skip_system_lists()
+    allow = effective_export_list_names(lists_meta)
+    if allow is not None:
+        logger.info(
+            "MIGRATION_LIST_ALLOWLIST active: creating %s list(s) (includes lookup prerequisites).",
+            len(allow),
+        )
 
-    name_to_new_id: dict[str, str] = {}
+    name_to_new_id: dict[str, str] = dict(import_client.load_list_id_map())
     created: list[dict] = []
     skipped: list[dict] = []
     errors: list[dict] = []
@@ -68,6 +82,8 @@ def run_import() -> dict:
         disp = (entry.get("displayName") or name).strip()
         tmpl = (entry.get("listTemplate") or "genericList").strip()
         if not name:
+            continue
+        if allow is not None and name not in allow:
             continue
         if name in block:
             skipped.append({"name": name, "reason": "blocklist"})
@@ -123,6 +139,10 @@ def run_import() -> dict:
 
 
 def main() -> None:
+    import os
+
+    if "--dry-run" in sys.argv:
+        os.environ["MIGRATION_DRY_RUN"] = "true"
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     r = run_import()
     print(

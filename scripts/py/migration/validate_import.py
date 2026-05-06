@@ -18,6 +18,7 @@ if str(_SP) not in sys.path:
 from migration import import_client
 from migration import import_context as ctx
 from migration import sp_client
+from migration.list_allowlist import effective_export_list_names
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ def run_import() -> dict:
     site_id = import_client.target_site_id()
     idx = import_client.read_json(import_client.lists_index_path())
     export_lists = idx.get("lists") or []
+    allow = effective_export_list_names(export_lists)
     target_lists = sp_client.get_site_lists(site_id, include_hidden=True)
     target_by_name = {l.get("name"): l for l in target_lists}
 
@@ -50,6 +52,8 @@ def run_import() -> dict:
         name = e.get("name")
         if not name:
             continue
+        if allow is not None and name not in allow:
+            continue
         if name not in target_by_name:
             missing_lists.append(name)
 
@@ -57,6 +61,8 @@ def run_import() -> dict:
     statuc_note = []
     root = ctx.migration_export_root()
     for e in export_lists:
+        if allow is not None and e.get("name") not in allow:
+            continue
         rel = e.get("exportPath")
         if not rel:
             continue

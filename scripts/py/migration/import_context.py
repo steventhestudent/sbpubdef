@@ -48,6 +48,20 @@ def import_reports_dir() -> Path:
     return d
 
 
+def reports_dir() -> Path:
+    """Structured migration diagnostics under export root: schema diff, import order, failures."""
+    d = migration_export_root() / "reports"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def state_dir() -> Path:
+    """Persistent migration state under export root (e.g. source→target item id map)."""
+    d = migration_export_root() / "state"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
 def migration_target_site_name() -> str:
     v = (os.getenv("MIGRATION_TARGET_SITE_NAME") or os.getenv("MIGRATION_SITE_NAME") or "").strip()
     if not v:

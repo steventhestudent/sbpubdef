@@ -233,9 +233,6 @@ From **`config/.env.public.dev`**: e.g. `LIST_ASSIGNMENTS="Assignments"`, `LIST_
 
 **`config/.env.public.dev`** documents:
 
-- **`INTERNALCOLUMN_ASSIGNMENTSTATUS="Statuc"`**
-- Comment: old naming conflict; column display renamed to **Status** but internal name remained **`Statuc`**.
-
 Code references **(fact—repo):**
 
 - `AssignmentsSpService.ts` falls back to `"Status"` only if env unset; production should keep **`Statuc`** via env.

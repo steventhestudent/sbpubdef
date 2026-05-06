@@ -17,7 +17,40 @@ import requests
 from migration import import_context as ctx
 from migration import sp_client
 
+from azure_function.sbpubdef import local_upload as lu
+
 logger = logging.getLogger(__name__)
+
+# Fields not writable on Graph item create (extends SharePoint built-in read-only names).
+_EXTRA_SKIP_FIELDS = frozenset(
+    {
+        "AuthorLookupId",
+        "EditorLookupId",
+        "AppAuthorLookupId",
+        "AppEditorLookupId",
+        "_UIVersionString",
+        "LinkTitle",
+        "LinkTitleNoMenu",
+        "DocIcon",
+        "ItemChildCount",
+        "FolderChildCount",
+        "_ComplianceFlags",
+        "_ComplianceTag",
+        "_ComplianceTagWrittenTime",
+        "_ComplianceTagUserId",
+        "_IsRecord",
+        "SelectTitle",
+        "InstanceID",
+        "Order",
+        "GUID",
+        "WorkflowVersion",
+        "WorkflowInstanceID",
+        "ParentVersionString",
+        "SyncVersion",
+        "MetaInfo",
+    }
+)
+_SKIP_GRAPH_ITEM_FIELDS = frozenset(lu.SHAREPOINT_LIST_COLUMNS) | _EXTRA_SKIP_FIELDS
 
 
 def read_json(path: Path) -> Any:
@@ -36,6 +69,37 @@ def write_text_report(name: str, text: str) -> Path:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text, encoding="utf-8")
     return out
+
+
+def write_migration_reports_json(stem: str, data: Any) -> Path:
+    """Write `reports/<stem>.json` under migration export root."""
+    out = ctx.reports_dir() / f"{stem}.json"
+    sp_client.export_json(out, data)
+    return out
+
+
+def write_migration_reports_markdown(stem: str, text: str) -> Path:
+    out = ctx.reports_dir() / f"{stem}.md"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(text, encoding="utf-8")
+    return out
+
+
+def item_id_map_path() -> Path:
+    return ctx.state_dir() / "item_id_map.json"
+
+
+def load_item_id_map() -> dict[str, Any]:
+    p = item_id_map_path()
+    if not p.is_file():
+        return {"bySourceListId": {}}
+    return read_json(p)
+
+
+def save_item_id_map(data: dict[str, Any]) -> None:
+    p = item_id_map_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    sp_client.export_json(p, data)
 
 
 def target_site_id() -> str:
@@ -82,6 +146,8 @@ def fields_for_graph_create(fields: dict[str, Any]) -> dict[str, Any]:
         if any(k.startswith(p) for p in ("odata.", "OData_")):
             continue
         if k in ("id", "ID", "Modified", "Created", "Author", "Editor", "FileLeafRef"):
+            continue
+        if k in _SKIP_GRAPH_ITEM_FIELDS:
             continue
         if v is None:
             continue

@@ -115,8 +115,9 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 | `TENANT_NAME` | **Target** SharePoint hostname prefix. |
 | `MIGRATION_TARGET_SITE_NAME` | Target site path (`/sites/{name}`). |
 | `MIGRATION_EXPORT_DIR` | Folder containing the **export** tree (`lists/`, `list_items/`, `libraries/`, `pages/`, …). |
-| `MIGRATION_DRY_RUN` | `true` = log only, no creates/uploads. |
+| `MIGRATION_DRY_RUN` | `true` = log only, no creates/uploads (also `--dry-run` on `run_full_import.py` / some steps). |
 | `MIGRATION_LIST_BLOCKLIST` | Comma-separated list **internal** names to skip creating (default includes `users`, `TaxonomyHiddenList`). |
+| `MIGRATION_LIST_ALLOWLIST` | Optional. Comma-separated **internal** names to limit `import_lists`, `import_list_columns`, `schema_diff`, and `import_list_items`. Lists referenced by lookup columns on those lists are included automatically so lookup columns can be created. Also set via `run_full_import.py --lists A,B`. |
 | `MIGRATION_SKIP_SYSTEM_LISTS` | Default `true`: skip export index rows with `system: true`. |
 
 ### Run order (orchestrated)
@@ -126,17 +127,28 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 1. **`provision_site.py`** — Validates Graph auth and that the target site exists.  
 2. **`import_content_types.py`** — Inventory + **manual** checklist (full CT automation not implemented).  
 3. **`import_site_columns.py`** — Site columns **manual** checklist.  
-4. **`import_lists.py`** — Creates lists / libraries from `lists/index.json`; writes **`import_reports/list_name_to_new_id.json`**.  
-5. **`import_list_columns.py`** — Creates **text-only** columns via Graph; other types listed for manual/PnP.  
-6. **`import_list_views.py`** — Views **manual** checklist from export.  
-7. **`import_list_items.py`** — Creates items from `list_items/*.jsonl` (skips document libraries).  
-8. **`import_libraries.py`** — Compares export `_manifest.json` drive names to target drives.  
-9. **`upload_library_files.py`** — Uploads files under `libraries/<drive>/files/`.  
-10. **Manual** — Deploy SPFx `.sppkg` to target app catalog (`pnpm run make`, then SharePoint admin).  
-11. **`provision_pages.py`** — Generates **per-page reconstruction Markdown** under `import_reports/page_reconstruction/`.  
-12. **`apply_page_webparts.py`** — Aggregates web parts into remediation JSON/Markdown.  
-13. **`validate_import.py`** — Read-only comparison vs export (counts, missing lists, `Statuc` spot-check).  
-14. **`diagnose_permissions_migration.py`** — Permissions **manual** checklist (uses export `permissions/` if present).
+4. **`list_identity.py`** — Writes **`reports/list_identity_report.json`** (display vs internal names, collisions).  
+5. **`list_import_order.py`** — Writes **`reports/list_import_order.json`** (lookup-aware item order).  
+6. **`import_lists.py`** — Creates lists / libraries from `lists/index.json`; writes **`import_reports/list_name_to_new_id.json`** (uses import order when present).  
+7. **`import_list_columns.py`** — Creates columns via Graph (**text, note, choice, multi-choice, number, currency, boolean, dateTime, hyperlink, person/group, lookup**) — lookups in phase 2 after all lists exist.  
+8. **`import_list_views.py`** — Views **manual** checklist from export.  
+9. **`schema_diff.py`** — Writes **`reports/schema_diff_<list>.json`**, **`.md`**, and **`reports/schema_diff_summary.json`** — gates item import (`itemImportReady`).  
+10. **`import_list_items.py`** — Two-pass items from `list_items/*.jsonl` (pass 1 create; pass 2 PATCH lookups); skips document libraries; writes **`state/item_id_map.json`**, **`reports/item_import_failures_<list>.json`**, **`reports/unresolved_users.json`**.  
+11. **`import_libraries.py`** — Compares export `_manifest.json` drive names to target drives.  
+12. **`upload_library_files.py`** — Uploads files under `libraries/<drive>/files/`.  
+13. **Manual** — Deploy SPFx `.sppkg` to target app catalog (`pnpm run make`, then SharePoint admin).  
+14. **`provision_pages.py`** — Generates **per-page reconstruction Markdown** under `import_reports/page_reconstruction/`.  
+15. **`apply_page_webparts.py`** — Aggregates web parts into remediation JSON/Markdown.  
+16. **`validate_import.py`** — Read-only comparison vs export (counts, missing lists, `Statuc` spot-check).  
+17. **`diagnose_permissions_migration.py`** — Permissions **manual** checklist (uses export `permissions/` if present).
+
+Structured artifacts live under the migration export root (`MIGRATION_EXPORT_DIR`, default `scripts/py/migration/.migration_output/`):
+
+| Path | Purpose |
+|------|---------|
+| `reports/` | Schema diff, import order, identity, item failures, unresolved users |
+| `state/item_id_map.json` | Source list item id → target Graph item id (for lookups) |
+| `import_reports/` | Legacy JSON summaries (`import_lists.json`, …) |
 
 ### Commands
 
@@ -144,9 +156,19 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 # Full import pipeline (target env required)
 PYTHONPATH=scripts/py python3 scripts/py/migration/run_full_import.py
 
+# Rehearsal: no list/item mutations (still performs Graph reads for schema diff / validation paths that GET data)
+PYTHONPATH=scripts/py python3 scripts/py/migration/run_full_import.py --dry-run
+
+PYTHONPATH=scripts/py python3 scripts/py/migration/run_full_import.py --skip-library-uploads
+
 # Or individual steps
 PYTHONPATH=scripts/py python3 scripts/py/migration/provision_site.py
+PYTHONPATH=scripts/py python3 scripts/py/migration/list_identity.py
+PYTHONPATH=scripts/py python3 scripts/py/migration/list_import_order.py
 PYTHONPATH=scripts/py python3 scripts/py/migration/import_lists.py
+PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_columns.py
+PYTHONPATH=scripts/py python3 scripts/py/migration/schema_diff.py
+PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_items.py
 # … etc.
 ```
 
@@ -156,10 +178,11 @@ PYTHONPATH=scripts/py python3 scripts/py/migration/import_lists.py
 |-------------------------|-----------------|
 | Site reachability check | Creating the **root** site collection if it does not exist |
 | List / document library create (Graph) | Full **content type** hierarchy, hub inheritance |
-| Text columns on lists | Most non-text columns, choice/lookup/person complexity |
-| List items (non–doc-lib) | Person/lookup resolution, attachments |
+| Typed list columns (Graph) — see step 7 above | **Managed metadata** (`term`), **calculated** columns (skipped + documented), exotic column types |
+| List items with **typed** fields + **two-pass lookups** | **Person/User values** (not resolved by Graph in this repo — see `reports/unresolved_users.json`) |
+| Lookup IDs remapped via `state/item_id_map.json` | Attachments, corrupt export rows |
 | Library file upload (Graph PUT) | Very large files, path edge cases, special metadata |
-| Validation counts | **Permissions** recreation (see diagnose script) |
+| Schema diff + failure JSON per list | **Permissions** recreation (see diagnose script) |
 | Page / web part **reports** | Actual **Graph page POST** / canvas PATCH after SPFx deploy |
 
 ### SPFx
@@ -175,10 +198,26 @@ PYTHONPATH=scripts/py python3 scripts/py/migration/import_lists.py
 
 ### Troubleshooting (import)
 
-- **`import_lists` errors**: template not supported, name collision, or missing `Sites.ReadWrite.All`.  
-- **`import_list_items` errors**: Graph rejects fields (read-only, missing column, lookup id from old tenant). Strip or remap fields in a follow-up script.  
+#### Why list items fail or stay at zero
+
+1. **`reports/schema_diff_<list>.md`** — If `itemImportReady` is **false**, **`import_list_items.py` will not import** that list (schema gate). Fix columns on the target (or re-run **`import_list_columns.py`**) until the diff is green.  
+2. **Internal vs display names** — Imports key off export **`name`** (internal). Example: display “Assignments” may still be internal `Assignments1` after renames; **`reports/list_identity_report.json`** shows collisions. SPFx/code that assumes `/Lists/Assignments` may break unless internal names match.  
+3. **CSV exports** — Do **not** use CSV as source of truth for typed lists: choice sets, lookups, multi-choice, rich text, and person fields lose fidelity. Use **`list_items/*.jsonl`** and **`lists/*/columns.json`**.  
+4. **Lookups** — Pass 1 creates rows **without** lookup values; pass 2 PATCHes **`…LookupId`** using **`state/item_id_map.json`**. Parent lists must import **first** (see **`reports/list_import_order.json`**). Old tenant numeric IDs are never copied blindly.  
+5. **Person fields** — Values are **not** resolved to target users (no `User.Read.All`). They are logged to **`reports/unresolved_users.json`** and omitted from payloads.  
+6. **`reports/item_import_failures_<list>.json`** — Item-level Graph errors and schema gate messages; safe to delete and re-run after fixes.  
+7. **Read-only fields** — `_UIVersionString`, `AuthorLookupId`, built-in link fields, etc. are stripped; never “fix” by coercing types to plain text.
+
+#### Rerunning after deleting lists on the target
+
+- Re-run **`import_lists.py`** → **`import_list_columns.py`** → **`schema_diff.py`** → **`import_list_items.py`** (or full orchestrator).  
+- **`state/item_id_map.json`** — Delete if you bulk-deleted target items so lookups remap cleanly.
+
+#### Other
+
+- **`import_lists` errors**: template not supported, name collision, or missing `Sites.ReadWrite.All` / `Sites.Selected` site grant.  
 - **`upload_library_files`**: target drive **name** must match export manifest; create libraries first.  
-- **Internal names**: never rename columns in import scripts unless you add an explicit compatibility flag and document it.
+- **Internal column typo `Statuc`** — Preserve as-is across export/import; do not rename unless you update all consumers.
 
 ---
 
