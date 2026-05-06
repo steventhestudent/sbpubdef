@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import sys
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -27,9 +28,25 @@ from migration import import_context as ctx
 from migration import sp_client
 from migration.list_allowlist import effective_export_list_names
 
+logger = logging.getLogger(__name__)
+
 
 def _guid_norm(g: str) -> str:
     return (g or "").strip().strip("{}").lower()
+
+
+def _is_graph_list_guid(value: object) -> bool:
+    """True if value looks like a list id from Graph/export (UUID), not a token like AppPrincipals."""
+    if value is None:
+        return False
+    raw = str(value).strip()
+    if not raw:
+        return False
+    try:
+        uuid.UUID(raw.strip("{}"), version=None)
+        return True
+    except (ValueError, AttributeError, TypeError):
+        return False
 
 
 def _guid_to_export_name(index_lists: list[dict]) -> dict[str, str]:
@@ -60,7 +77,11 @@ def _lookup_targets_match(
         return False
     if bool(elu.get("allowMultipleValues")) != bool(tlu.get("allowMultipleValues")):
         return False
-    src_guid = _guid_norm(str(elu.get("listId") or ""))
+    src_list_id = elu.get("listId")
+    # Exports often use SharePoint tokens (e.g. AppPrincipals) for App Author/Editor — not in index.json.
+    if not _is_graph_list_guid(src_list_id):
+        return True
+    src_guid = _guid_norm(str(src_list_id))
     prereq_name = guid_to_name.get(src_guid)
     if not prereq_name:
         return False

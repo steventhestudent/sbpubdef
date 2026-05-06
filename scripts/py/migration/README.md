@@ -200,7 +200,7 @@ PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_items.py
 
 #### Why list items fail or stay at zero
 
-1. **`reports/schema_diff_<list>.md`** — If `itemImportReady` is **false**, **`import_list_items.py` will not import** that list (schema gate). Fix columns on the target (or re-run **`import_list_columns.py`**) until the diff is green.  
+1. **`reports/schema_diff_<list>.md`** — If `itemImportReady` is **false**, **`import_list_items.py` will not import** that list (schema gate). Fix columns on the target (or re-run **`import_list_columns.py`**) until the diff is green. **App Author / App Editor** lookups often export `lookup.listId` as the token **`AppPrincipals`** (not a UUID); `schema_diff` ignores list-id equality for those so they do not block imports.  
 2. **Internal vs display names** — Imports key off export **`name`** (internal). Example: display “Assignments” may still be internal `Assignments1` after renames; **`reports/list_identity_report.json`** shows collisions. SPFx/code that assumes `/Lists/Assignments` may break unless internal names match.  
 3. **CSV exports** — Do **not** use CSV as source of truth for typed lists: choice sets, lookups, multi-choice, rich text, and person fields lose fidelity. Use **`list_items/*.jsonl`** and **`lists/*/columns.json`**.  
 4. **Lookups** — Pass 1 creates rows **without** lookup values; pass 2 PATCHes **`…LookupId`** using **`state/item_id_map.json`**. Parent lists must import **first** (see **`reports/list_import_order.json`**). Old tenant numeric IDs are never copied blindly.  
