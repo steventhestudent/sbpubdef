@@ -160,6 +160,7 @@ def run_import() -> dict:
                         "column": cname,
                         "phase": phase,
                         "status": r.status_code,
+                        "requestBody": body,
                         "body": r.text[:800],
                     }
                 )

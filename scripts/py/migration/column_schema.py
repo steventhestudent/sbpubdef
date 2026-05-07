@@ -51,8 +51,9 @@ def choice_allow_multiple_values(col: dict[str, Any]) -> bool:
         return False
     if ch.get("allowMultipleValues") is True:
         return True
-    da = (ch.get("displayAs") or "").lower()
-    return da in ("checkboxes", "checkboxes")
+    # Do not infer multi-select from displayAs. Export bundles sometimes emit
+    # displayAs="checkBoxes" even when Graph rejects allowMultipleValues on create.
+    return False
 
 
 def build_graph_column_create_body(
@@ -103,10 +104,18 @@ def build_graph_column_create_body(
         if not isinstance(choices, list):
             choices = []
         allow_multi = choice_allow_multiple_values(col)
+        display_as = (ch.get("displayAs") or "dropDownMenu").strip()
+        # Graph is picky about choice.displayAs during column creation.
+        # Exports commonly emit "checkBoxes" which has caused Graph 400 invalidRequest in practice.
+        # For create, prefer a stable value; multi-choice still works via allowMultipleValues.
+        if display_as.lower() in ("checkboxes", "checkbox", "checkboxes "):
+            display_as = "dropDownMenu"
+        if display_as == "checkBoxes":
+            display_as = "dropDownMenu"
         body["choice"] = {
             "allowTextEntry": bool(ch.get("allowTextEntry", False)),
             "choices": [str(c) for c in choices],
-            "displayAs": ch.get("displayAs") or "dropDownMenu",
+            "displayAs": display_as,
         }
         if allow_multi:
             body["choice"]["allowMultipleValues"] = True

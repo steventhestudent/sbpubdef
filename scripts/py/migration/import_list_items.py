@@ -259,15 +259,19 @@ def run_import() -> dict[str, Any]:
             )
             continue
 
+        logger.info("[%s] importing items (expected=%s) ...", export_name, expected_rows)
+
         created_ok = 0
         failed_p1 = 0
 
         # Pass 1
+        pass1_seen = 0
         with open(jsonl, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:
                     continue
+                pass1_seen += 1
                 row = json.loads(line)
                 raw_fields = import_client.fields_for_graph_create(row.get("fields") or {})
                 src_list_id = _norm_source_list_id(row.get("listId") or export_id)
@@ -306,6 +310,15 @@ def run_import() -> dict[str, Any]:
                     failed_p1 += 1
                     pass1_failures.append({"sourceItemId": src_item_id, "error": str(e)[:500]})
 
+                if pass1_seen % 50 == 0:
+                    logger.info(
+                        "[%s] pass1 progress: seen=%s created=%s failed=%s",
+                        export_name,
+                        pass1_seen,
+                        created_ok,
+                        failed_p1,
+                    )
+
         import_client.save_item_id_map(item_map)
 
         patched_ok = 0
@@ -319,11 +332,13 @@ def run_import() -> dict[str, Any]:
             and not (c.get("readOnly") and (c.get("lookup") or {}).get("primaryLookupColumnId"))
         ]
 
+        pass2_seen = 0
         with open(jsonl, encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:
                     continue
+                pass2_seen += 1
                 row = json.loads(line)
                 raw_fields = import_client.fields_for_graph_create(row.get("fields") or {})
                 src_list_id = _norm_source_list_id(row.get("listId") or export_id)
@@ -410,6 +425,15 @@ def run_import() -> dict[str, Any]:
                     failed_p2 += 1
                     pass2_failures.append(
                         {"sourceItemId": src_item_id, "targetItemId": tgt_item_id, "patch": patch, "error": txt[:500]}
+                    )
+
+                if (patched_ok + failed_p2) % 50 == 0:
+                    logger.info(
+                        "[%s] pass2 progress: patched=%s failed=%s (seen=%s)",
+                        export_name,
+                        patched_ok,
+                        failed_p2,
+                        pass2_seen,
                     )
 
         global_counts["pass1Created"] += created_ok
