@@ -190,6 +190,20 @@ def run_report() -> dict[str, Any]:
 
         seg = safe_report_filename_segment(export_name)
 
+        if export_name == "SitePages" or tmpl in ("sitepages", "sitepageslibrary", "webpagelibrary"):
+            diff = {
+                "exportInternalName": export_name,
+                "displayName": e.get("displayName"),
+                "targetListId": name_map.get(export_name),
+                "itemImportReady": True,
+                "skippedReason": "handled_by_provision_pages",
+                "fields": [],
+            }
+            import_client.write_migration_reports_json(f"schema_diff_{seg}", diff)
+            import_client.write_migration_reports_markdown(f"schema_diff_{seg}", _markdown_for_list(export_name, diff))
+            summary_lists.append({"list": export_name, "itemImportReady": True, "note": "handled_by_provision_pages"})
+            continue
+
         if tmpl == "documentlibrary":
             diff = {
                 "exportInternalName": export_name,

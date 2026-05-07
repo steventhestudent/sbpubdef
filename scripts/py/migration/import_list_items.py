@@ -211,6 +211,10 @@ def run_import() -> dict[str, Any]:
             continue
         if allow is not None and export_name not in allow:
             continue
+        if export_name == "SitePages" or tmpl in ("sitepages", "sitepageslibrary", "webpagelibrary"):
+            # Modern pages are handled by provision_pages.py (targeted) rather than list item import.
+            global_counts["listsSkipped"] += 1
+            continue
         if tmpl == "documentlibrary":
             global_counts["listsSkipped"] += 1
             continue

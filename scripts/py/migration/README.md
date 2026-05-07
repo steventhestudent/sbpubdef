@@ -119,6 +119,7 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 | `MIGRATION_LIST_BLOCKLIST` | Comma-separated list **internal** names to skip creating (default includes `users`, `TaxonomyHiddenList`). |
 | `MIGRATION_LIST_ALLOWLIST` | Optional. Comma-separated **internal** names to limit `import_lists`, `import_list_columns`, `schema_diff`, and `import_list_items`. Lists referenced by lookup columns on those lists are included automatically so lookup columns can be created. Also set via `run_full_import.py --lists A,B`. |
 | `MIGRATION_SKIP_SYSTEM_LISTS` | Default `true`: skip export index rows with `system: true`. |
+| `MIGRATION_SPFX_DEPLOYED` | Optional. Set `true` after the SPFx `.sppkg` is deployed in the **target** tenant. `provision_pages.py` will skip attempting custom web parts unless this is set. |
 
 ### Run order (orchestrated)
 
@@ -137,7 +138,7 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 11. **`import_libraries.py`** — Compares export `_manifest.json` drive names to target drives.  
 12. **`upload_library_files.py`** — Uploads files under `libraries/<drive>/files/`.  
 13. **Manual** — Deploy SPFx `.sppkg` to target app catalog (`pnpm run make`, then SharePoint admin).  
-14. **`provision_pages.py`** — Generates **per-page reconstruction Markdown** under `import_reports/page_reconstruction/`.  
+14. **`provision_pages.py`** — **Targeted** modern page provision (best-effort): creates page shells + attempts a safe `canvasLayout` patch; writes per-page reports under `import_reports/page_reconstruction/` and `reports/page_import_summary.json`.  
 15. **`apply_page_webparts.py`** — Aggregates web parts into remediation JSON/Markdown.  
 16. **`validate_import.py`** — Read-only comparison vs export (counts, missing lists, `Statuc` spot-check).  
 17. **`diagnose_permissions_migration.py`** — Permissions **manual** checklist (uses export `permissions/` if present).
