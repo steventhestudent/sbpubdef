@@ -5,8 +5,8 @@ This is a constrained provisioner for small migrations (a few pages).
 
 Reads exported `pages/*.json` and attempts to:
   - create a modern page shell in the target tenant (Site Pages library)
-  - apply a safe, best-effort canvasLayout (sections/columns/web parts)
-  - publish the page where supported
+  - publish/check-in the page where supported
+  - (layout/web parts are intentionally deferred until publishing works)
 
 It always writes per-page reconstruction reports for anything that remains manual.
 
@@ -192,7 +192,7 @@ def _build_canvaslayout_payload(
 
 
 def _graph_create_site_page(site_id: str, name: str, title: str) -> tuple[dict[str, Any] | None, str | None]:
-    url = f"{sp_client.GRAPH_BETA}/sites/{site_id}/pages"
+    url = f"{sp_client.GRAPH_V1}/sites/{site_id}/pages"
     body = {
         "@odata.type": "microsoft.graph.sitePage",
         "name": name,
@@ -206,7 +206,7 @@ def _graph_create_site_page(site_id: str, name: str, title: str) -> tuple[dict[s
 
 
 def _graph_patch_page(site_id: str, page_id: str, payload: dict[str, Any]) -> tuple[bool, str | None]:
-    url = f"{sp_client.GRAPH_BETA}/sites/{site_id}/pages/{page_id}"
+    url = f"{sp_client.GRAPH_V1}/sites/{site_id}/pages/{page_id}"
     r = sp_client.graph_patch(url, json_body=payload)
     if r.status_code < 300:
         return True, None
@@ -214,7 +214,8 @@ def _graph_patch_page(site_id: str, page_id: str, payload: dict[str, Any]) -> tu
 
 
 def _graph_publish_page(site_id: str, page_id: str) -> tuple[bool, str | None]:
-    url = f"{sp_client.GRAPH_BETA}/sites/{site_id}/pages/{page_id}/publish"
+    # Use typed endpoint (Graph v1) to avoid /publish segment errors.
+    url = f"{sp_client.GRAPH_V1}/sites/{site_id}/pages/{page_id}/microsoft.graph.sitePage/publish"
     r = sp_client.graph_post(url, json_body={})
     if r.status_code < 300:
         return True, None
@@ -249,10 +250,12 @@ def run_import() -> dict:
         source_url = str(page.get("webUrl") or "")
 
         created = False
-        patched_layout = False
         published = False
         target_url = ""
         errors: list[str] = []
+        publish_endpoint_used = ""
+        publishing_state_before: Any = None
+        publishing_state_after: Any = None
 
         created_page: dict[str, Any] | None = None
         if not name:
@@ -267,27 +270,32 @@ def run_import() -> dict:
                 if created_page:
                     created = True
                     target_url = str(created_page.get("webUrl") or "")
+                    publishing_state_before = created_page.get("publishingState")
                 else:
                     errors.append(f"create_failed: {create_err}")
 
-        canvas_payload, wp_results = _build_canvaslayout_payload(canvas, allow_custom=allow_custom)
-        if created_page and canvas_payload:
-            if dry:
-                patched_layout = True
-            else:
-                ok, perr = _graph_patch_page(site_id, str(created_page.get("id") or ""), {"canvasLayout": canvas_payload})
-                patched_layout = ok
-                if not ok and perr:
-                    errors.append(f"layout_patch_failed: {perr}")
+        # Layout/web part patching intentionally deferred until publish/check-in works.
+        _canvas_payload, wp_results = _build_canvaslayout_payload(canvas, allow_custom=allow_custom)
 
         if created_page:
             if dry:
                 published = True
             else:
+                publish_endpoint_used = "POST /sites/{siteId}/pages/{pageId}/microsoft.graph.sitePage/publish"
                 ok, perr = _graph_publish_page(site_id, str(created_page.get("id") or ""))
                 published = ok
                 if not ok and perr:
                     errors.append(f"publish_failed: {perr}")
+                else:
+                    # Re-fetch after publish to get publishingState/webUrl.
+                    pid = str(created_page.get("id") or "")
+                    if pid:
+                        r2 = sp_client.graph_request("GET", f"{sp_client.GRAPH_V1}/sites/{site_id}/pages/{pid}")
+                        if r2.status_code < 300:
+                            after = r2.json()
+                            publishing_state_after = after.get("publishingState")
+                            if after.get("webUrl"):
+                                target_url = str(after.get("webUrl"))
 
         md_lines = [
             f"# Page reconstruction: {title}",
@@ -296,10 +304,10 @@ def run_import() -> dict:
             f"- Source page URL: `{source_url}`" if source_url else "- Source page URL: (unknown)",
             f"- Target page URL: `{target_url}`" if target_url else "- Target page URL: (not created)",
             f"- **Created page shell**: {created}",
-            f"- **Applied canvasLayout**: {patched_layout}",
             f"- **Published**: {published}",
             f"- **SPFx deployed**: {allow_custom}",
             f"- **Dry run**: {dry}",
+            f"- Publish endpoint: `{publish_endpoint_used}`" if publish_endpoint_used else "- Publish endpoint: (not attempted)",
             "",
             "## Expected web parts (from export)",
             "",
@@ -353,9 +361,12 @@ def run_import() -> dict:
                 "name": name,
                 "sourceUrl": source_url,
                 "targetUrl": target_url,
+                "targetPageId": str(created_page.get("id") or "") if isinstance(created_page, dict) else "",
                 "created": created,
-                "layoutPatched": patched_layout,
                 "published": published,
+                "publishEndpoint": publish_endpoint_used,
+                "publishingStateBefore": publishing_state_before,
+                "publishingStateAfter": publishing_state_after,
                 "webPartCount": len(wps),
                 "customWebPartCount": len(custom),
                 "spfxDeployed": allow_custom,

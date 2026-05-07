@@ -139,6 +139,7 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 12. **`upload_library_files.py`** — Uploads files under `libraries/<drive>/files/`.  
 13. **Manual** — Deploy SPFx `.sppkg` to target app catalog (`pnpm run make`, then SharePoint admin).  
 14. **`provision_pages.py`** — **Targeted** modern page provision (best-effort): creates page shells + attempts a safe `canvasLayout` patch; writes per-page reports under `import_reports/page_reconstruction/` and `reports/page_import_summary.json`.  
+    - **Publishing** uses the typed Graph endpoint: `POST /sites/{siteId}/pages/{pageId}/microsoft.graph.sitePage/publish`  
 15. **`apply_page_webparts.py`** — Aggregates web parts into remediation JSON/Markdown.  
 16. **`validate_import.py`** — Read-only comparison vs export (counts, missing lists, `Statuc` spot-check).  
 17. **`diagnose_permissions_migration.py`** — Permissions **manual** checklist (uses export `permissions/` if present).
@@ -208,6 +209,13 @@ PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_items.py
 5. **Person fields** — Values are **not** resolved to target users (no `User.Read.All`). They are logged to **`reports/unresolved_users.json`** and omitted from payloads.  
 6. **`reports/item_import_failures_<list>.json`** — Item-level Graph errors and schema gate messages; safe to delete and re-run after fixes.  
 7. **Read-only fields** — `_UIVersionString`, `AuthorLookupId`, built-in link fields, etc. are stripped; never “fix” by coercing types to plain text.
+
+#### Pages (Site Pages library)
+
+- `SitePages` is **skipped** by `import_list_items.py`. Modern pages are handled by `provision_pages.py` / `publish_pages.py`.
+- Draft pages may not appear in default library views. If pages are created but not visible, run:
+  - `PYTHONPATH=scripts/py python3 scripts/py/migration/publish_pages.py`
+  - Then re-check `reports/page_publish_results.json` and `reports/page_import_summary.json`.
 
 #### Rerunning after deleting lists on the target
 
