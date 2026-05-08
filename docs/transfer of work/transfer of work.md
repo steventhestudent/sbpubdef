@@ -51,6 +51,53 @@
   - scripts/js (gen-env)
       - ensure that process.env.NODE_ENV === "production"
 
+migration scripts
+run_full_export uses .env.dev
+- .migration_output
+   - content types (PD Form List, PD Announcement, PD Events)
+   - columns (PDDepartment)
+   - site pages
+   - lists
+   - document libraries
+     run_full_import uses .env.migration.target and .migration_output
+
+https://mycsproject25.sharepoint.com/sites/PD-Intranet/_layouts/15/ctypenew.aspx
+new content type: PD Announcement (Document Content Types, Site Page)
+
+Add from new site column: PDDepartment (Choice (menu to choose from) w/ ROLE_ keys (EVERYONE, PDINTRANET, IT, HR, ...))
+
+... PD Events, PD Form List (should be created via import script(s))
+
+Announcements webpart uses hub search to list results, so none display until you configure mapped property (MP):
+
+https://csproject25-admin.sharepoint.com/_layouts/15/searchadmin/ta_listmanagedproperties.aspx?level=tenant
+New Managed Property: PDDepartment Text	-	Query	Search	Retrieve	-	-	Safe	OWS_Q_CHCS_PDDEPARTMENT
+- searchable, queryable, retrievable, allow multiple values, safe for anonymous
+- mapping to crawled property: ows_q_CHCS_PDDepartment
+
+then in Crawled Properties:
+- ows_PD_x0020_Department (Mapped To Property: empty/null)
+- ows_q_CHCS_PDDepartment (Mapped To Property: PDDepartment )
+  reindex the site (from List Settings), reindex Site Pages document library (Settings -> Advanced settings)... then ows_q_CHCS_PDDepartment (crawled property) will appear, and you can map it to the MP
+
+Enable PD Announcement content type for Site Pages (Library Settings)
+
+upload spfx package
+- set .env.migration.target MIGRATION_SPFX_DEPLOYED=true
+- approve pending (`admin-<tenant>.sharepoint.com` -> advanced -> api):
+   - fix access_as_entra_user `The requested permission isn't valid. Reject this request and contact the developer to fix the problem and redeploy the solution.`
+      - aligned with azure functions (FUNCTION_API_APP_ID) (for EasyAuth authentication) `"resource": "<YOUR-azure_functions-CLIENT-ID>",` (package-solution)
+
+follow [azure_functions.md](docs/azure_functions/azure_functions.md) for in-depth azure function setup.
+- use `python3 patch_azure_function_environment.py azure_function_environment.json` to quickly patch exported environment variables w/ env files.
+
+reupload/reapprove pending
+
+run_full_import.py (use flag: --skip-library-uploads  —if need to rerun / avoid reupload)
+
+Navigation
+￼![Choose an option.tiff](Attachments/a.jpg)
+
   
 # Entra ID -> Groups -> Security Groups  
 
@@ -67,6 +114,8 @@
   
 Security Groups csv export. Recreate these with (onPremisesSyncEnabled) or update *.public.env.dev* ROLE_ keys with equivalent on-prem group  (displayName)  
   
+![Untitled.jpg](Attachments/Untitled.jpg)
+
 # invited users: Entra ID change guest to Microsoft Fabric (free) then optionally: after they access site once, change back to guest  
   
 PortalCalendar uses 1 SharePoint calendar (and it reads from outlook calendar as well)  
@@ -84,4 +133,16 @@ troubleshoot
 - Details: [scripts/py/migration/target_app_registration.md](../../scripts/py/migration/target_app_registration.md)
 
 # serve.json, write-manifests.json:
-ensure urls use TENANT_NAME
+ensure urls use new TENANT_NAME
+
+# sample .env.migration.target
+```
+AZURE_TENANT_ID=
+AZURE_CLIENT_ID=
+AZURE_CLIENT_SECRET=
+TENANT_NAME=mycsproject25
+MIGRATION_TARGET_SITE_NAME=PD-Intranet
+MIGRATION_EXPORT_DIR=scripts/py/migration/.migration_output
+MIGRATION_DRY_RUN=false
+MIGRATION_SPFX_DEPLOYED=true
+```
