@@ -5,8 +5,8 @@ This is a constrained provisioner for small migrations (a few pages).
 
 Reads exported `pages/*.json` and attempts to:
   - create a modern page shell in the target tenant (Site Pages library)
-  - publish/check-in the page where supported
-  - (layout/web parts are intentionally deferred until publishing works)
+  - PATCH ``canvasLayout`` from the export (best-effort; applied **before** publish while still draft)
+  - publish via typed ``.../microsoft.graph.sitePage/publish``
 
 It always writes per-page reconstruction reports for anything that remains manual.
 
@@ -33,6 +33,10 @@ from migration import sp_client
 logger = logging.getLogger(__name__)
 
 _SITEPAGES_INTERNAL_NAME = "SitePages"
+
+
+def _skip_canvas_patch() -> bool:
+    return (os.getenv("MIGRATION_SKIP_CANVAS_PATCH") or "").strip().lower() in ("1", "true", "yes", "on")
 
 
 def _spfx_deployed() -> bool:
@@ -68,6 +72,7 @@ def _sanitize_webpart_for_graph(
     wp: dict[str, Any],
     *,
     allow_custom: bool,
+    strip_instance_id: bool = False,
 ) -> tuple[dict[str, Any] | None, str | None]:
     """
     Return (sanitized_webpart, skip_reason). Never returns raw export dict.
@@ -82,6 +87,10 @@ def _sanitize_webpart_for_graph(
         if wp.get(k) is not None:
             out[k] = wp.get(k)
 
+    # Target pages need new instance IDs; exporting source GUIDs breaks placement.
+    if strip_instance_id:
+        out.pop("id", None)
+
     # Some exports use `type` instead of webPartType.
     if not out.get("webPartType") and wp.get("type") is not None:
         out["webPartType"] = wp.get("type")
@@ -89,7 +98,7 @@ def _sanitize_webpart_for_graph(
     data = wp.get("data")
     if isinstance(data, dict):
         d2: dict[str, Any] = {}
-        for k in ("title", "description", "properties", "serverProcessedContent"):
+        for k in ("title", "description", "properties", "serverProcessedContent", "innerHtml", "dataVersion"):
             if data.get(k) is not None:
                 d2[k] = data.get(k)
         if d2:
@@ -97,7 +106,9 @@ def _sanitize_webpart_for_graph(
 
     if not out.get("@odata.type"):
         return None, "missing_odata_type"
-    if not out.get("webPartType"):
+    od_l = str(out.get("@odata.type") or "").lower()
+    # Text / RTE web parts are valid without webPartType GUID.
+    if "textwebpart" not in od_l and not out.get("webPartType"):
         return None, "missing_webPartType"
     return out, None
 
@@ -150,7 +161,9 @@ def _build_canvaslayout_payload(
 
             wps_out: list[dict[str, Any]] = []
             for wp in col.get("webparts") or []:
-                swp, reason = _sanitize_webpart_for_graph(wp, allow_custom=allow_custom)
+                swp, reason = _sanitize_webpart_for_graph(
+                    wp, allow_custom=allow_custom, strip_instance_id=True
+                )
                 if swp is None:
                     results.append(
                         {
@@ -205,12 +218,28 @@ def _graph_create_site_page(site_id: str, name: str, title: str) -> tuple[dict[s
     return None, r.text[:1200]
 
 
-def _graph_patch_page(site_id: str, page_id: str, payload: dict[str, Any]) -> tuple[bool, str | None]:
-    url = f"{sp_client.GRAPH_V1}/sites/{site_id}/pages/{page_id}"
-    r = sp_client.graph_patch(url, json_body=payload)
-    if r.status_code < 300:
-        return True, None
-    return False, r.text[:1200]
+def _graph_patch_page_canvas(site_id: str, page_id: str, canvas_layout: dict[str, Any]) -> tuple[bool, str, str]:
+    """
+    PATCH `canvasLayout` on a draft page. Tries generic page URL then typed sitePage URL.
+
+    Returns (ok, endpoint_used_or_reason, error_body_snippet).
+    """
+    body = {"canvasLayout": canvas_layout}
+    urls = [
+        ("PATCH " + f"{sp_client.GRAPH_V1}/sites/{site_id}/pages/{page_id}", f"{sp_client.GRAPH_V1}/sites/{site_id}/pages/{page_id}"),
+        (
+            "PATCH "
+            + f"{sp_client.GRAPH_V1}/sites/{site_id}/pages/{page_id}/microsoft.graph.sitePage",
+            f"{sp_client.GRAPH_V1}/sites/{site_id}/pages/{page_id}/microsoft.graph.sitePage",
+        ),
+    ]
+    last_err = ""
+    for label, url in urls:
+        r = sp_client.graph_patch(url, json_body=body)
+        if r.status_code < 300:
+            return True, label, ""
+        last_err = r.text[:1200]
+    return False, urls[-1][0], last_err
 
 
 def _graph_publish_page(site_id: str, page_id: str) -> tuple[bool, str | None]:
@@ -220,6 +249,28 @@ def _graph_publish_page(site_id: str, page_id: str) -> tuple[bool, str | None]:
     if r.status_code < 300:
         return True, None
     return False, r.text[:1200]
+
+
+def _create_failed_name_conflict(create_err: str | None) -> bool:
+    if not create_err:
+        return False
+    compact = create_err.replace(" ", "").lower()
+    return "namealreadyexists" in compact or '"code":"namealreadyexists"' in compact
+
+
+def _find_existing_page_by_name(site_id: str, file_name: str) -> dict[str, Any] | None:
+    """Resolve `Assignments.aspx`-style file name to a Graph page object (target id + webUrl)."""
+    want = (file_name or "").strip().lower()
+    if not want:
+        return None
+    url = f"{sp_client.GRAPH_V1}/sites/{site_id}/pages"
+    try:
+        for p in sp_client.graph_get_all(url, params={"$top": "999"}):
+            if str(p.get("name") or "").strip().lower() == want:
+                return p
+    except Exception as e:
+        logger.warning("list pages for resolve failed: %s", e)
+    return None
 
 def run_import() -> dict:
     ctx.load_migration_target_env()
@@ -250,6 +301,8 @@ def run_import() -> dict:
         source_url = str(page.get("webUrl") or "")
 
         created = False
+        layout_patched = False
+        layout_patch_endpoint = ""
         published = False
         target_url = ""
         errors: list[str] = []
@@ -257,6 +310,7 @@ def run_import() -> dict:
         publishing_state_before: Any = None
         publishing_state_after: Any = None
 
+        reused_existing = False
         created_page: dict[str, Any] | None = None
         if not name:
             errors.append("missing_page_name")
@@ -271,11 +325,49 @@ def run_import() -> dict:
                     created = True
                     target_url = str(created_page.get("webUrl") or "")
                     publishing_state_before = created_page.get("publishingState")
+                elif _create_failed_name_conflict(create_err):
+                    # Pages from a previous run already exist: PATCH canvas onto them instead of failing.
+                    existing = _find_existing_page_by_name(site_id, name)
+                    if existing:
+                        created_page = existing
+                        reused_existing = True
+                        target_url = str(existing.get("webUrl") or "")
+                        publishing_state_before = existing.get("publishingState")
+                        logger.info(
+                            "Reusing existing page %s (id=%s) for canvas patch — create returned nameAlreadyExists",
+                            name,
+                            existing.get("id"),
+                        )
+                    else:
+                        errors.append(f"create_failed: {create_err}")
+                        errors.append(
+                            "nameAlreadyExists_but_existing_page_not_found_in_GET /sites/.../pages — check list or permissions"
+                        )
                 else:
                     errors.append(f"create_failed: {create_err}")
 
-        # Layout/web part patching intentionally deferred until publish/check-in works.
-        _canvas_payload, wp_results = _build_canvaslayout_payload(canvas, allow_custom=allow_custom)
+        canvas_payload, wp_results = _build_canvaslayout_payload(canvas, allow_custom=allow_custom)
+
+        # Apply canvas on a **draft** page before publish (Graph requires full canvasLayout replace).
+        if (
+            created_page
+            and canvas_payload
+            and not _skip_canvas_patch()
+            and str(created_page.get("id") or "") not in ("", "dry-run")
+        ):
+            if dry:
+                layout_patched = True
+                layout_patch_endpoint = "(dry-run)"
+            else:
+                ok_patch, endpoint_used, patch_err = _graph_patch_page_canvas(
+                    site_id, str(created_page.get("id")), canvas_payload
+                )
+                layout_patched = ok_patch
+                layout_patch_endpoint = endpoint_used
+                if not ok_patch and patch_err:
+                    errors.append(f"layout_patch_failed: {patch_err}")
+                elif ok_patch:
+                    logger.info("Canvas layout patched for page %s (%s)", name, endpoint_used)
 
         if created_page:
             if dry:
@@ -303,7 +395,10 @@ def run_import() -> dict:
             f"- Export file: `{fp.name}`",
             f"- Source page URL: `{source_url}`" if source_url else "- Source page URL: (unknown)",
             f"- Target page URL: `{target_url}`" if target_url else "- Target page URL: (not created)",
-            f"- **Created page shell**: {created}",
+            f"- **Reused existing page** (name conflict): {reused_existing}",
+            f"- **Created new page shell**: {created}",
+            f"- **Canvas layout PATCH applied**: {layout_patched}",
+            f"- Canvas PATCH endpoint: `{layout_patch_endpoint}`" if layout_patch_endpoint else "- Canvas PATCH: (skipped or none)",
             f"- **Published**: {published}",
             f"- **SPFx deployed**: {allow_custom}",
             f"- **Dry run**: {dry}",
@@ -362,7 +457,10 @@ def run_import() -> dict:
                 "sourceUrl": source_url,
                 "targetUrl": target_url,
                 "targetPageId": str(created_page.get("id") or "") if isinstance(created_page, dict) else "",
+                "reusedExisting": reused_existing,
                 "created": created,
+                "layoutPatched": layout_patched,
+                "layoutPatchEndpoint": layout_patch_endpoint,
                 "published": published,
                 "publishEndpoint": publish_endpoint_used,
                 "publishingStateBefore": publishing_state_before,
@@ -387,6 +485,7 @@ def run_import() -> dict:
             "counts": {
                 "total": len(summary),
                 "created": sum(1 for p in summary if p.get("created")),
+                "layoutPatched": sum(1 for p in summary if p.get("layoutPatched")),
                 "published": sum(1 for p in summary if p.get("published")),
                 "withErrors": sum(1 for p in summary if p.get("errors")),
             },
