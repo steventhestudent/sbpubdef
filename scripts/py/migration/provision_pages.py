@@ -68,6 +68,58 @@ def _is_custom_webpart(wp: dict[str, Any]) -> bool:
     return False
 
 
+def _is_pd_announcement_page(page: dict[str, Any]) -> bool:
+    """
+    Heuristic: PD Announcements are modern News pages with a custom content type.
+    These often include a Banner web part payload that Graph rejects on PATCH.
+    """
+    ct = page.get("contentType") or {}
+    ct_name = str(ct.get("name") or "").strip().lower()
+    promo = str(page.get("promotionKind") or "").strip().lower()
+    return ct_name in ("pd announcement", "pdannouncement") or promo == "newspost"
+
+
+def _first_export_text_html(page: dict[str, Any]) -> str:
+    canvas = page.get("canvasLayout")
+    if not isinstance(canvas, dict):
+        return ""
+    for hs in canvas.get("horizontalSections") or []:
+        if not isinstance(hs, dict):
+            continue
+        for col in hs.get("columns") or []:
+            if not isinstance(col, dict):
+                continue
+            for wp in col.get("webparts") or []:
+                if not isinstance(wp, dict):
+                    continue
+                od = str(wp.get("@odata.type") or "").lower()
+                if "textwebpart" in od:
+                    ih = wp.get("innerHtml")
+                    if isinstance(ih, str) and ih.strip():
+                        return ih.strip()
+    return ""
+
+
+def _announcement_html(page: dict[str, Any]) -> str:
+    """
+    Minimal content for PD Announcement pages:
+    - Prefer exported text web part innerHtml
+    - Fallback to exported `description`
+    - Optionally include a single thumbnail image (best-effort) if it looks like a real image URL
+    """
+    html = _first_export_text_html(page)
+    if not html:
+        desc = str(page.get("description") or "").strip()
+        if desc:
+            html = f"<p>{desc}</p>"
+    thumb = str(page.get("thumbnailWebUrl") or "").strip()
+    if thumb and "odm_spdefaultbanner" not in thumb and "sitepagethumbnail.png" not in thumb:
+        # Keep it simple: image above text.
+        img = f'<p><img src="{thumb}" alt="" /></p>'
+        html = img + (html or "")
+    return html
+
+
 def _sanitize_webpart_for_graph(
     wp: dict[str, Any],
     *,
@@ -101,6 +153,10 @@ def _sanitize_webpart_for_graph(
         for k in ("title", "description", "properties", "serverProcessedContent", "innerHtml", "dataVersion"):
             if data.get(k) is not None:
                 d2[k] = data.get(k)
+        # Graph rejects some standard webpart properties on PATCH (tenant-dependent).
+        props = d2.get("properties")
+        if isinstance(props, dict):
+            props.pop("customContentDropSupport", None)
         if d2:
             out["data"] = d2
 
@@ -202,6 +258,38 @@ def _build_canvaslayout_payload(
     if not hs_out:
         return None, results + [{"status": "skipped", "reason": "no_sections_in_export"}]
     return {"horizontalSections": hs_out}, results
+
+
+def _build_announcement_canvaslayout(page: dict[str, Any]) -> tuple[dict[str, Any] | None, list[dict[str, Any]]]:
+    """
+    PD Announcement/news posts: use a minimal, resilient canvas with a single text web part.
+    Avoids banner standard web part payloads that Graph may reject.
+    """
+    html = _announcement_html(page)
+    if not html:
+        return None, [{"status": "skipped", "reason": "no_description_or_textwebpart_in_export"}]
+    canvas = {
+        "horizontalSections": [
+            {
+                "id": "1",
+                "layout": "oneColumn",
+                "emphasis": "none",
+                "columns": [
+                    {
+                        "id": "1",
+                        "width": 12,
+                        "webparts": [
+                            {
+                                "@odata.type": "#microsoft.graph.textWebPart",
+                                "innerHtml": html,
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    return canvas, [{"status": "planned", "reason": "announcement_minimal_canvas"}]
 
 
 def _graph_create_site_page(site_id: str, name: str, title: str) -> tuple[dict[str, Any] | None, str | None]:
@@ -346,7 +434,10 @@ def run_import() -> dict:
                 else:
                     errors.append(f"create_failed: {create_err}")
 
-        canvas_payload, wp_results = _build_canvaslayout_payload(canvas, allow_custom=allow_custom)
+        if _is_pd_announcement_page(page):
+            canvas_payload, wp_results = _build_announcement_canvaslayout(page)
+        else:
+            canvas_payload, wp_results = _build_canvaslayout_payload(canvas, allow_custom=allow_custom)
 
         # Apply canvas on a **draft** page before publish (Graph requires full canvasLayout replace).
         if (
