@@ -415,7 +415,7 @@ export function NewPDContentDrawer({
 					AssignedById: assignedById,
 					AssignedDate: assignedIso,
 					DueDate: dueIso,
-					Statuc: "Not Started",
+					Status: "Not Started",
 					CalendarEventCreated: assignmentForm.createCalendarEvent,
 					AssignmentEmailSent: assignmentForm.sendEmail,
 				});
@@ -446,7 +446,7 @@ export function NewPDContentDrawer({
 				AssignedById: assignedById,
 				AssignedDate: assignedIso,
 				DueDate: dueIso,
-				Statuc: "Not Started",
+				Status: "Not Started",
 				CalendarEventCreated: assignmentForm.createCalendarEvent,
 				AssignmentEmailSent: assignmentForm.sendEmail,
 			});
