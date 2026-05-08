@@ -57,33 +57,45 @@ def run_import() -> dict:
         if name not in target_by_name:
             missing_lists.append(name)
 
-    # Internal column name check: first list that has columns export with Statuc
-    statuc_note = []
-    root = ctx.migration_export_root()
-    for e in export_lists:
-        if allow is not None and e.get("name") not in allow:
-            continue
-        rel = e.get("exportPath")
-        if not rel:
-            continue
-        cols = root / rel / "columns.json"
-        if not cols.is_file():
-            continue
-        data = import_client.read_json(cols)
-        names = [c.get("name") for c in data if isinstance(c, dict)]
-        if "Statuc" in names:
-            tlist = target_by_name.get(e.get("name"))
-            if tlist:
-                tcols = sp_client.get_list_columns(site_id, tlist["id"])
-                tnames = {c.get("name") for c in tcols}
-                statuc_note.append(
-                    {
-                        "list": e.get("name"),
-                        "Statuc_in_target": "Statuc" in tnames,
-                    }
-                )
-            break
+    schema_errors: list[dict[str, str]] = []
+    schema_warnings: list[dict[str, str]] = []
 
+    # Canonical schema checks (target tenant)
+    if "Assignments1" in target_by_name:
+        schema_errors.append(
+            {
+                "kind": "list_identity",
+                "message": "Target contains list internal name 'Assignments1' (should not exist).",
+            }
+        )
+
+    assignments = target_by_name.get("Assignments")
+    if not assignments:
+        schema_errors.append(
+            {
+                "kind": "list_identity",
+                "message": "Target is missing list internal name 'Assignments'.",
+            }
+        )
+    else:
+        tcols = sp_client.get_list_columns(site_id, assignments["id"])
+        tnames = {c.get("name") for c in tcols}
+        if "Statuc" in tnames:
+            schema_errors.append(
+                {
+                    "kind": "column_internal_name",
+                    "message": "Target Assignments contains legacy internal column 'Statuc' (must not exist).",
+                }
+            )
+        if "Status" not in tnames:
+            schema_errors.append(
+                {
+                    "kind": "column_internal_name",
+                    "message": "Target Assignments is missing internal column 'Status' (required).",
+                }
+            )
+
+    root = ctx.migration_export_root()
     jsonl_counts = _count_jsonl_rows(root / "list_items")
     pages_dir = root / "pages"
     page_files = list(pages_dir.glob("*.json")) if pages_dir.is_dir() else []
@@ -94,7 +106,8 @@ def run_import() -> dict:
         "exportListCount": len(export_lists),
         "targetListCount": len(target_lists),
         "missingListInternalNames": missing_lists[:200],
-        "statucSpotCheck": statuc_note,
+        "schemaErrors": schema_errors,
+        "schemaWarnings": schema_warnings,
         "exportJsonlFiles": len(jsonl_counts),
         "exportPageJsonFiles": page_n,
         "note": "Rough counts only; permissions and item-level ACLs are not verified here.",
@@ -106,6 +119,9 @@ def run_import() -> dict:
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     r = run_import()
+    if r.get("schemaErrors"):
+        logger.error("validate_import: schemaErrors=%s", len(r["schemaErrors"]))
+        raise SystemExit(2)
     print(
         f"validate_import: exportLists={r['exportListCount']} targetLists={r['targetListCount']} "
         f"missing={len(r['missingListInternalNames'])}"

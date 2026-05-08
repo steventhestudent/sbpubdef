@@ -191,6 +191,7 @@ def run_import() -> dict[str, Any]:
     item_map.setdefault("bySourceListId", {})
 
     unresolved_users: list[dict[str, Any]] = []
+    field_transform_counts: dict[str, int] = {}
     global_counts = {
         "pass1Created": 0,
         "pass1Failed": 0,
@@ -278,6 +279,13 @@ def run_import() -> dict[str, Any]:
                 pass1_seen += 1
                 row = json.loads(line)
                 raw_fields = import_client.fields_for_graph_create(row.get("fields") or {})
+                # One-time legacy export transform(s): keep these at the import boundary only.
+                # Old source exports may contain Assignments.Statuc (typo). Rebuilt target uses Assignments.Status.
+                if export_name == "Assignments" and "Statuc" in raw_fields and "Status" not in raw_fields:
+                    raw_fields["Status"] = raw_fields.get("Statuc")
+                    field_transform_counts["Assignments.Statuc->Status"] = (
+                        field_transform_counts.get("Assignments.Statuc->Status", 0) + 1
+                    )
                 src_list_id = _norm_source_list_id(row.get("listId") or export_id)
                 src_item_id = str(row.get("itemId") or raw_fields.get("id") or "").strip()
                 if not src_item_id:
@@ -345,6 +353,8 @@ def run_import() -> dict[str, Any]:
                 pass2_seen += 1
                 row = json.loads(line)
                 raw_fields = import_client.fields_for_graph_create(row.get("fields") or {})
+                if export_name == "Assignments" and "Statuc" in raw_fields and "Status" not in raw_fields:
+                    raw_fields["Status"] = raw_fields.get("Statuc")
                 src_list_id = _norm_source_list_id(row.get("listId") or export_id)
                 src_item_id = str(row.get("itemId") or raw_fields.get("id") or "").strip()
                 if not src_item_id:
@@ -498,11 +508,28 @@ def run_import() -> dict[str, Any]:
         "unresolved_users",
         {"items": unresolved_users[:5000], "total": len(unresolved_users)},
     )
+    if field_transform_counts:
+        import_client.write_migration_reports_json(
+            "field_transform_report",
+            {
+                "transforms": [
+                    {
+                        "sourceList": "Assignments",
+                        "sourceField": "Statuc",
+                        "targetField": "Status",
+                        "reason": "legacy typo corrected during rebuild",
+                        "appliedCount": field_transform_counts.get("Assignments.Statuc->Status", 0),
+                    }
+                ],
+                "counts": field_transform_counts,
+            },
+        )
 
     summary = {
         "dryRun": dry,
         **global_counts,
         "unresolvedUsersReported": len(unresolved_users),
+        "fieldTransformCounts": field_transform_counts,
         "errorCount": global_counts["pass1Failed"]
         + global_counts["pass2Failed"]
         + global_counts["listsSchemaBlocked"],

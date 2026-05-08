@@ -137,7 +137,7 @@ def list_item_jsonl_for_export_list(list_name: str, export_list_id: str) -> Path
 
 def fields_for_graph_create(fields: dict[str, Any]) -> dict[str, Any]:
     """
-    Strip Graph read-only / OData keys. Preserves internal column names exactly (e.g. Statuc).
+    Strip Graph read-only / OData keys.
     """
     out: dict[str, Any] = {}
     for k, v in (fields or {}).items():

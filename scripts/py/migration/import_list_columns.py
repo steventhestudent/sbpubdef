@@ -2,7 +2,7 @@
 Step 5: Create list columns on the target site from each exported `columns.json`.
 
 Supports common Graph column types; lookups are created in a second phase after all lists exist.
-Preserves internal names (e.g. `Statuc`).
+Assumes the target lists use the rebuilt canonical internal names (e.g. `Assignments.Status`).
 """
 
 from __future__ import annotations

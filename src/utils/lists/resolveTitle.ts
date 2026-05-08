@@ -33,12 +33,6 @@ export async function resolveTitle(title: string): Promise<string> {
 		// insert space before trailing/embedded digits: Assignments1 -> Assignments 1
 		out.add(raw.replace(/([a-zA-Z])(\d+)/g, "$1 $2"));
 
-		// drop trailing digits: Assignments1 -> Assignments
-		out.add(raw.replace(/\d+$/, ""));
-
-		// both
-		out.add(raw.replace(/\d+$/, "").replace(/([a-zA-Z])(\d+)/g, "$1 $2"));
-
 		return Array.from(out).filter(Boolean);
 	};
 

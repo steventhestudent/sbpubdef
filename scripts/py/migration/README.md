@@ -67,7 +67,7 @@ Under the configured output root (see `MIGRATION_OUTPUT_DIR` above):
 
 - **Azure Functions / Azure resources:** These scripts only target **SharePoint Online** (Graph + optional SharePoint REST). They do **not** export or migrate Azure Function Apps, app settings, deployment storage, Application Insights, or ARM definitions. For the Flex Consumption app you described, capture configuration separately (e.g. `az functionapp config appsettings list`, deployment slot exports, IaC templates, and this repo’s `scripts/py/azure_function` sources).
 
-- **Lists and columns:** Full Graph column definitions; internal names are in each column’s `name` property (including typos such as `Statuc`).
+- **Lists and columns:** Full Graph column definitions; internal names are in each column’s `name` property.
 - **Views:** Many tenants do **not** expose `GET .../lists/{id}/views` on Graph (400 “segment 'views'”). The exporter then uses SharePoint REST `/_api/web/lists(guid'...')/views` when `list.json` includes `sharePointIds.listId`. **App-only tokens are often rejected (401) by SharePoint REST** even when Graph works; in that case views stay empty unless you use a token SPO accepts for REST (e.g. delegated) or a different app configuration.
 - **List items:** Paginated; lookup columns appear as Graph exposes them (often `*LookupId` / expanded forms). Document library rows may be skipped by default to avoid duplicating drive exports—see `MIGRATION_EXPORT_DOC_LIB_LIST_ITEMS`.
 - **Libraries:** All files discovered via drive **children** traversal; very large libraries may take a long time and hit throttling (retries are included).
@@ -104,7 +104,7 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 ### Philosophy
 
 - Use exported JSON as **source of truth**, but **transform** URLs, ids, and tenant-specific references where needed.  
-- **Preserve internal column names exactly** (example: internal `Statuc` vs display name `Status` — do not “fix” the typo during import unless you accept breaking compatibility).  
+- The target tenant is assumed to have the **rebuilt canonical schema** for key lists (example: `Assignments` list with internal field `Status`).  
 - Where Graph is unsafe or incomplete, scripts write **reports and checklists** instead of pretending success.
 
 ### Environment (`config/.env.migration.target`)
@@ -144,7 +144,7 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 15. **`promote_news_pages.py`** — For **PD Announcement** pages: promotes them to **News posts** (so `PromotedState=2`) via Graph `promotionKind=newsPost`, then republishes. The Announcements web part filters to News-only (`PromotedState=2`). Writes `reports/page_promote_news_results.json`.  
 16. **`import_navigation.py`** — Best-effort import of site navigation (“header links”) from `navigation/*.json`. Uses SharePoint REST and may fail with `401 Unsupported app only token` in some tenants; emits `import_reports/import_navigation.json`.  
 15. **`apply_page_webparts.py`** — Aggregates web parts into remediation JSON/Markdown.  
-16. **`validate_import.py`** — Read-only comparison vs export (counts, missing lists, `Statuc` spot-check).  
+16. **`validate_import.py`** — Read-only comparison vs export (counts, missing lists, and canonical schema checks like `Assignments.Status`).  
 17. **`diagnose_permissions_migration.py`** — Permissions **manual** checklist (uses export `permissions/` if present).
 
 Structured artifacts live under the migration export root (`MIGRATION_EXPORT_DIR`, default `scripts/py/migration/.migration_output/`):
@@ -206,7 +206,7 @@ PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_items.py
 #### Why list items fail or stay at zero
 
 1. **`reports/schema_diff_<list>.md`** — If `itemImportReady` is **false**, **`import_list_items.py` will not import** that list (schema gate). Fix columns on the target (or re-run **`import_list_columns.py`**) until the diff is green. **App Author / App Editor** lookups often export `lookup.listId` as the token **`AppPrincipals`** (not a UUID); `schema_diff` ignores list-id equality for those so they do not block imports.  
-2. **Internal vs display names** — Imports key off export **`name`** (internal). Example: display “Assignments” may still be internal `Assignments1` after renames; **`reports/list_identity_report.json`** shows collisions. SPFx/code that assumes `/Lists/Assignments` may break unless internal names match.  
+2. **Internal vs display names** — Imports key off export **`name`** (internal). Ensure the **target** list identity is correct (for this project: internal name **`Assignments`**, not `Assignments1`).  
 3. **CSV exports** — Do **not** use CSV as source of truth for typed lists: choice sets, lookups, multi-choice, rich text, and person fields lose fidelity. Use **`list_items/*.jsonl`** and **`lists/*/columns.json`**.  
 4. **Lookups** — Pass 1 creates rows **without** lookup values; pass 2 PATCHes **`…LookupId`** using **`state/item_id_map.json`**. Parent lists must import **first** (see **`reports/list_import_order.json`**). Old tenant numeric IDs are never copied blindly.  
 5. **Person fields** — Values are **not** resolved to target users (no `User.Read.All`). They are logged to **`reports/unresolved_users.json`** and omitted from payloads.  
@@ -236,11 +236,17 @@ PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_items.py
 - Re-run **`import_lists.py`** → **`import_list_columns.py`** → **`schema_diff.py`** → **`import_list_items.py`** (or full orchestrator).  
 - **`state/item_id_map.json`** — Delete if you bulk-deleted target items so lookups remap cleanly.
 
+#### Legacy source quirks (one-time transforms)
+
+- **Source typo**: some historical exports may contain `Assignments.Statuc` (internal field typo) from the old tenant.
+- **Target correction**: the rebuilt target intentionally uses `Assignments.Status`.
+- **Import behavior**: item import translates `Statuc` → `Status` at the import boundary (read old export, write corrected target). `Statuc` must not exist in the target schema.
+
 #### Other
 
 - **`import_lists` errors**: template not supported, name collision, or missing `Sites.ReadWrite.All` / `Sites.Selected` site grant.  
 - **`upload_library_files`**: target drive **name** must match export manifest; create libraries first.  
-- **Internal column typo `Statuc`** — Preserve as-is across export/import; do not rename unless you update all consumers.
+- If imports fail for a single list, check `reports/schema_diff_<list>.md` and `reports/item_import_failures_<list>.json` first.
 
 ---
 

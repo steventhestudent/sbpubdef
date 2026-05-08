@@ -28,7 +28,7 @@ def run_import() -> dict:
     ctx.load_migration_target_env()
     manual = [
         "Site-scoped columns: use SharePoint settings UI or PnP where Graph coverage is incomplete.",
-        "Preserve internal names exactly when recreating (e.g. Statuc vs display name Status).",
+        "Target schema assumption: key lists use canonical internal names (e.g. Assignments.Status).",
     ]
     report = {"manualSteps": manual, "automatedCreates": 0}
     import_client.write_report("import_site_columns", report)

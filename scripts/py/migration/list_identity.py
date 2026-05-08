@@ -66,7 +66,7 @@ def run_report() -> dict[str, object]:
         "notes": [
             "Internal list name is fixed at creation time; renaming display name does not change it.",
             "Review displayNameCollisions when mapping exports to target lists — display names are not unique.",
-            "Investigate Assignments / Assignments1 / AttorneyAssignments style collisions here before relying on imports.",
+            "For this project, the target list identity should be canonical (internal name `Assignments`, not `Assignments1`).",
         ],
     }
     import_client.write_migration_reports_json("list_identity_report", report)

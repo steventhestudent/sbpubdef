@@ -34,7 +34,7 @@ Legend:
 | **SharePoint REST 401** with app-only | Export/import often rely on **Microsoft Graph**; classic `_api` may reject app-only tokens. |
 | **Page JSON** | Exported page metadata is **reconstruction reference**, not something to POST back verbatim. |
 | **Permissions** | List/item unique permissions may be **incomplete** in export; must be re-verified manually. |
-| **Internal column typo `Statuc`** | Display name may be **Status**; code and env **must** keep internal name **`Statuc`** unless you intentionally migrate and update **all** references. |
+| **Legacy source column typo (`Statuc`)** | Old source tenant exported a typo internal name **`Statuc`** (display may have been “Status”). Rebuilt target intentionally corrects this to internal name **`Status`**. Import transforms read `Statuc` from old exports and write `Status` to target. |
 
 ---
 
@@ -229,16 +229,20 @@ Summary:
 
 From **`config/.env.public.dev`**: e.g. `LIST_ASSIGNMENTS="Assignments"`, `LIST_ASSIGNMENTCATALOG="AssignmentCatalog"`, `LIST_EXPERTDIRECTORY="Expert Directory"`, `LIST_STAFFDIRECTORY="StaffDirectory"`, `LIST_PROCEDURECHECKLIST`, `LIST_PROCEDURESTEPS`, `LIST_HOTELINGRESERVATIONS`, `LIST_SITESETTINGS`, quiz lists, etc.
 
-### 8.2 Critical internal column: **Statuc** **(fact—repo)**
+### 8.2 Assignments status column (canonical target schema)
 
-**`config/.env.public.dev`** documents:
+**Canonical target schema (assumed):**
 
-Code references **(fact—repo):**
+- List internal identity: `Assignments`
+- Display name: `Assignments`
+- Internal column name: `Status`
+- Display name: `Status`
 
-- `AssignmentsSpService.ts` falls back to `"Status"` only if env unset; production should keep **`Statuc`** via env.
-- `NewPDContentDrawer.tsx` writes **`Statuc`** literally when creating assignment rows.
+**Legacy source quirk (historical):**
 
-**Migration rule:** recreate the column with internal name **`Statuc`** on the target (or accept breaking change and update **all** code, env, and list schema — **not** recommended unless planned).
+- Old source tenant had an internal name typo: `Statuc` (display often “Status”).
+- Rebuilt target intentionally corrects this to `Status`.
+- Migration scripts should treat `Statuc` only as an **import-time transform** (read old exports, write `Status`), and should **fail** if `Statuc` exists on the target list.
 
 ### 8.3 Content types and site columns **(fact—repo)**
 
@@ -331,7 +335,7 @@ Use **`diagnose_permissions_migration.py`** output plus:
 | Azure Functions URL | `FUNCTION_BASE_URL` | Point to target deployment |
 | API app id | `FUNCTION_API_APP_ID`, package-solution `resource` GUID | Match target app registration |
 | List titles | `LIST_*` | Must match SharePoint list **titles** on target |
-| Internal columns | `INTERNALCOLUMN_*`, especially **`Statuc`** | Must match recreated columns |
+| Internal columns | `INTERNALCOLUMN_*` | Must match recreated columns |
 | Solution version | `package-solution.json` | Bump when upgrading deployed package |
 
 **(fact—repo)** Some TS builds URLs with `` `/sites/${ENV.HUB_NAME}/...` `` — wrong hub breaks deep links.
@@ -377,7 +381,7 @@ Combined **tooling + operations**:
 |-------|----------------|
 | Lists exist | `validate_import.py` + SharePoint UI |
 | Libraries / files | Compare counts to export manifest; spot-check files |
-| Column **Statuc** exists on Assignments | `validate_import.py` spot-check + UI |
+| Assignments has internal column **Status** (and **no** `Statuc`) | `validate_import.py` + UI |
 | SPFx loads | Home page, key web parts |
 | API calls | Browser network tab to Functions + Graph |
 | Role “view as” | Login as sample users per role **(assumption)** |
@@ -400,7 +404,7 @@ Combined **tooling + operations**:
 - [ ] Latest **`run_full_export`** completed; output stored securely
 - [ ] **`config/.env.migration.target`** documented for operators (not committed)
 - [ ] **Target** site URL matches future **`HUB_NAME`** / `MIGRATION_TARGET_SITE_NAME`
-- [ ] **Statuc** documented for anyone editing lists or code
+- [ ] Canonical schema documented (Assignments.Status; legacy `Statuc` only in old exports)
 - [ ] **SPFx** deployed and version bumped if replacing solution
 - [ ] **Functions** live or features toggled off intentionally
 - [ ] **Smoke tests** passed (section 16)
