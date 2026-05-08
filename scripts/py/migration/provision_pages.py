@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 _SITEPAGES_INTERNAL_NAME = "SitePages"
 _EXPORT_PDDEPT_FIELD = "PD_x0020_Department"
 _TARGET_PDDEPT_FIELD = "PDDepartment"
+_PD_ANNOUNCEMENT_CT_NAME = "PD Announcement"
 
 
 def _skip_canvas_patch() -> bool:
@@ -149,6 +150,26 @@ def _load_target_sitepages_item_ids_by_leafref(site_id: str, sitepages_list_id: 
     return out
 
 
+def _load_target_sitepages_content_type_ids_by_name(site_id: str, sitepages_list_id: str) -> dict[str, str]:
+    """
+    Map content type name -> content type id for the Site Pages library.
+    Used to avoid using source tenant ContentTypeId values.
+    """
+    if not sitepages_list_id:
+        return {}
+    url = f"{sp_client.GRAPH_V1}/sites/{site_id}/lists/{sitepages_list_id}/contentTypes"
+    out: dict[str, str] = {}
+    try:
+        for ct in sp_client.graph_get_all(url, params={"$top": "999"}):
+            name = str(ct.get("name") or "").strip()
+            ct_id = str(ct.get("id") or "").strip()
+            if name and ct_id:
+                out[name.lower()] = ct_id
+    except Exception as e:
+        logger.warning("load target SitePages content types failed: %s", e)
+    return out
+
+
 def _patch_sitepages_fields(
     site_id: str,
     *,
@@ -157,6 +178,7 @@ def _patch_sitepages_fields(
     export_page: dict[str, Any],
     export_sitepages_fields: dict[str, dict[str, Any]],
     target_sitepages_item_ids: dict[str, str],
+    target_sitepages_ctids_by_name: dict[str, str],
 ) -> tuple[bool, str]:
     """
     Best-effort: set ContentTypeId + PDDepartment on the Site Pages library list item.
@@ -168,28 +190,41 @@ def _patch_sitepages_fields(
     if not item_id:
         return False, "missing_sitepages_list_item_for_leafref"
 
-    patch: dict[str, Any] = {}
+    errors: list[str] = []
+    ok_any = False
 
-    # Content type
-    ct = export_page.get("contentType") or {}
-    ct_id = str(ct.get("id") or "").strip()
-    if ct_id:
-        patch["ContentTypeId"] = ct_id
-
-    # PDDepartment value comes from list item fields export (more reliable than page JSON)
+    # 1) Patch PDDepartment via /fields (this works even when ContentTypeId is read-only).
     src_fields = export_sitepages_fields.get(leafref) or {}
     dept = str(src_fields.get(_EXPORT_PDDEPT_FIELD) or "").strip()
     if dept:
-        patch[_TARGET_PDDEPT_FIELD] = dept
+        url_fields = f"{sp_client.GRAPH_V1}/sites/{site_id}/lists/{sitepages_list_id}/items/{item_id}/fields"
+        rp = sp_client.graph_patch(url_fields, json_body={_TARGET_PDDEPT_FIELD: dept})
+        if rp.status_code < 300:
+            ok_any = True
+        else:
+            errors.append(f"PDDepartment_patch_failed:{rp.status_code}:{rp.text[:500]}")
 
-    if not patch:
+    # 2) Patch content type via listItem endpoint, using TARGET CT id (not export id).
+    ct = export_page.get("contentType") or {}
+    ct_name = str(ct.get("name") or "").strip()
+    want_ct_name = ct_name or _PD_ANNOUNCEMENT_CT_NAME
+    want_ct_id = str((target_sitepages_ctids_by_name or {}).get(want_ct_name.lower()) or "").strip()
+    if want_ct_id:
+        url_item = f"{sp_client.GRAPH_V1}/sites/{site_id}/lists/{sitepages_list_id}/items/{item_id}"
+        rp2 = sp_client.graph_patch(url_item, json_body={"contentType": {"id": want_ct_id}})
+        if rp2.status_code < 300:
+            ok_any = True
+        else:
+            errors.append(f"contentType_patch_failed:{rp2.status_code}:{rp2.text[:500]}")
+
+    if not dept and not want_ct_id:
         return True, "no_fields_to_patch"
 
-    url = f"{sp_client.GRAPH_V1}/sites/{site_id}/lists/{sitepages_list_id}/items/{item_id}/fields"
-    rp = sp_client.graph_patch(url, json_body=patch)
-    if rp.status_code < 300:
+    if ok_any and not errors:
         return True, ""
-    return False, f"fields_patch_failed:{rp.status_code}:{rp.text[:500]}"
+    if ok_any and errors:
+        return True, "partial_success:" + ";".join(errors)
+    return False, ";".join(errors) if errors else "no_fields_to_patch"
 
 def _first_export_text_html(page: dict[str, Any]) -> str:
     canvas = page.get("canvasLayout")
@@ -480,6 +515,7 @@ def run_import() -> dict:
     sitepages_list_id = name_map.get(_SITEPAGES_INTERNAL_NAME) or ""
     export_sitepages_fields = _load_export_sitepages_fields_by_leafref()
     target_sitepages_item_ids = _load_target_sitepages_item_ids_by_leafref(site_id, sitepages_list_id)
+    target_sitepages_ctids_by_name = _load_target_sitepages_content_type_ids_by_name(site_id, sitepages_list_id)
     pages_dir = ctx.migration_export_root() / "pages"
     if not pages_dir.is_dir():
         return {"error": "no pages export directory"}
@@ -592,6 +628,7 @@ def run_import() -> dict:
                 export_page=page,
                 export_sitepages_fields=export_sitepages_fields,
                 target_sitepages_item_ids=target_sitepages_item_ids,
+                target_sitepages_ctids_by_name=target_sitepages_ctids_by_name,
             )
             fields_patched = okf
             fields_patch_error = ferr
