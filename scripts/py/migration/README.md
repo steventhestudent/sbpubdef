@@ -141,6 +141,7 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 13. **Manual** — Deploy SPFx `.sppkg` to target app catalog (`pnpm run make`, then SharePoint admin).  
 14. **`provision_pages.py`** — **Targeted** modern page provision (best-effort): creates a page shell, **PATCHes `canvasLayout` from export** (draft, before publish), then **publishes**; writes per-page reports under `import_reports/page_reconstruction/` and `reports/page_import_summary.json`. Web part **instance** `id` values from the source tenant are stripped so the target assigns new ones.  
     - **Publishing** uses the typed Graph endpoint: `POST /sites/{siteId}/pages/{pageId}/microsoft.graph.sitePage/publish`  
+15. **`promote_news_pages.py`** — For **PD Announcement** pages: sets `PromotedState=2` on the Site Pages library item (so pages are treated as **News**) and republishes. The Announcements web part filters to News-only (`PromotedState=2`). Writes `reports/page_promote_news_results.json`.  
 15. **`apply_page_webparts.py`** — Aggregates web parts into remediation JSON/Markdown.  
 16. **`validate_import.py`** — Read-only comparison vs export (counts, missing lists, `Statuc` spot-check).  
 17. **`diagnose_permissions_migration.py`** — Permissions **manual** checklist (uses export `permissions/` if present).
@@ -215,9 +216,10 @@ PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_items.py
 
 - `SitePages` is **skipped** by `import_list_items.py`. Modern pages are handled by `provision_pages.py` / `publish_pages.py`.
 - Re-run `provision_pages.py` after shells already exist: on **nameAlreadyExists**, it **resolves the existing page by file name** and still applies **`canvasLayout`** (you do not need to delete pages first).
-- For **PD Announcement** (newsPost) pages, `provision_pages.py` also patches the underlying **Site Pages library item** to set:
-  - `ContentTypeId` (from export `contentType.id`)
-  - `PDDepartment` (from export `SitePages` list item field `PD_x0020_Department`)
+- For **PD Announcement** (newsPost) pages, `provision_pages.py` also patches the underlying **Site Pages library item** to set content type + `PDDepartment`.
+- If the Announcements web part shows no results and the Site Pages **Promoted State** column is `0`, run:
+  - `PYTHONPATH=scripts/py python3 scripts/py/migration/promote_news_pages.py`
+  - Then re-check `reports/page_promote_news_results.json` and refresh the web part (Search results may take time to update; REST results should be immediate on the hub site).
 - Draft pages may not appear in default library views. If pages are created but not visible, run:
   - `PYTHONPATH=scripts/py python3 scripts/py/migration/publish_pages.py`
   - Then re-check `reports/page_publish_results.json` and `reports/page_import_summary.json`.
