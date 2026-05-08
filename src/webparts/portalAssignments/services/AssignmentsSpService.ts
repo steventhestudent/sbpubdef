@@ -116,7 +116,7 @@ export class AssignmentsSpService {
 				"EmployeeEmail",
 				"Reason",
 				"DueDate",
-				statusField,
+				"Status",
 				"CurrentStepOrder",
 				"PercentComplete",
 				"LastOpenedOn",
@@ -130,7 +130,6 @@ export class AssignmentsSpService {
 		return (rows || []).map((r) => {
 			const status =
 				getFirstDefined<string>(
-					getProp<string>(r, statusField),
 					getProp<string>(r, "Status"),
 					getProp<string>(r, "AssignmentStatus"),
 				) ?? undefined;
