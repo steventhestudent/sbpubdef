@@ -127,7 +127,7 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 `run_full_import.py` runs:
 
 1. **`provision_site.py`** — Validates Graph auth and that the target site exists.  
-2. **`import_content_types.py`** — Inventory + **manual** checklist (full CT automation not implemented).  
+2. **`import_content_types.py`** — Inventory + **targeted automation** for project content types (**PD Announcement**, **PD Events**) and linking them to `SitePages` (full CT automation still not implemented).  
 3. **`import_site_columns.py`** — Site columns **manual** checklist.  
 4. **`list_identity.py`** — Writes **`reports/list_identity_report.json`** (display vs internal names, collisions).  
 5. **`list_import_order.py`** — Writes **`reports/list_import_order.json`** (lookup-aware item order).  
@@ -215,6 +215,9 @@ PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_items.py
 
 - `SitePages` is **skipped** by `import_list_items.py`. Modern pages are handled by `provision_pages.py` / `publish_pages.py`.
 - Re-run `provision_pages.py` after shells already exist: on **nameAlreadyExists**, it **resolves the existing page by file name** and still applies **`canvasLayout`** (you do not need to delete pages first).
+- For **PD Announcement** (newsPost) pages, `provision_pages.py` also patches the underlying **Site Pages library item** to set:
+  - `ContentTypeId` (from export `contentType.id`)
+  - `PDDepartment` (from export `SitePages` list item field `PD_x0020_Department`)
 - Draft pages may not appear in default library views. If pages are created but not visible, run:
   - `PYTHONPATH=scripts/py python3 scripts/py/migration/publish_pages.py`
   - Then re-check `reports/page_publish_results.json` and `reports/page_import_summary.json`.

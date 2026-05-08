@@ -33,6 +33,8 @@ from migration import sp_client
 logger = logging.getLogger(__name__)
 
 _SITEPAGES_INTERNAL_NAME = "SitePages"
+_EXPORT_PDDEPT_FIELD = "PD_x0020_Department"
+_TARGET_PDDEPT_FIELD = "PDDepartment"
 
 
 def _skip_canvas_patch() -> bool:
@@ -78,6 +80,116 @@ def _is_pd_announcement_page(page: dict[str, Any]) -> bool:
     promo = str(page.get("promotionKind") or "").strip().lower()
     return ct_name in ("pd announcement", "pdannouncement") or promo == "newspost"
 
+
+def _load_export_sitepages_fields_by_leafref() -> dict[str, dict[str, Any]]:
+    """
+    Map `FileLeafRef` (e.g. New-Compliance-Guidelines-Released.aspx) -> exported fields dict
+    from `list_items/SitePages_*.jsonl`.
+    """
+    try:
+        idx = import_client.read_json(import_client.lists_index_path())
+        lists_meta = idx.get("lists") or []
+        sitepages = next((e for e in lists_meta if (e.get("name") or "").strip() == _SITEPAGES_INTERNAL_NAME), None)
+        export_id = str((sitepages or {}).get("id") or "").strip()
+        if not export_id:
+            return {}
+        jsonl = import_client.list_item_jsonl_for_export_list(_SITEPAGES_INTERNAL_NAME, export_id)
+        if not jsonl or not jsonl.is_file():
+            return {}
+        out: dict[str, dict[str, Any]] = {}
+        with open(jsonl, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except Exception:
+                    continue
+                fields = row.get("fields") or {}
+                if not isinstance(fields, dict):
+                    continue
+                leaf = str(fields.get("FileLeafRef") or "").strip()
+                if leaf:
+                    out[leaf] = fields
+        return out
+    except Exception as e:
+        logger.warning("load export SitePages fields failed: %s", e)
+        return {}
+
+
+def _load_target_sitepages_item_ids_by_leafref(site_id: str, sitepages_list_id: str) -> dict[str, str]:
+    """
+    Map FileLeafRef -> target list item id for the Site Pages library.
+
+    We can't rely on `sharepointIds.listItemId` being present on GET /pages/{id} in all tenants.
+    This listing approach is acceptable for this project size (dozens of pages).
+    """
+    if not sitepages_list_id:
+        return {}
+    url = f"{sp_client.GRAPH_V1}/sites/{site_id}/lists/{sitepages_list_id}/items"
+    out: dict[str, str] = {}
+    try:
+        for it in sp_client.graph_get_all(
+            url,
+            params={
+                "$top": "999",
+                "$expand": "fields($select=FileLeafRef,ContentType,ContentTypeId,PDDepartment,PD_x0020_Department)",
+            },
+        ):
+            item_id = str(it.get("id") or "").strip()
+            fields = it.get("fields") or {}
+            if not item_id or not isinstance(fields, dict):
+                continue
+            leaf = str(fields.get("FileLeafRef") or "").strip()
+            if leaf:
+                out[leaf] = item_id
+    except Exception as e:
+        logger.warning("load target SitePages items failed: %s", e)
+    return out
+
+
+def _patch_sitepages_fields(
+    site_id: str,
+    *,
+    sitepages_list_id: str,
+    leafref: str,
+    export_page: dict[str, Any],
+    export_sitepages_fields: dict[str, dict[str, Any]],
+    target_sitepages_item_ids: dict[str, str],
+) -> tuple[bool, str]:
+    """
+    Best-effort: set ContentTypeId + PDDepartment on the Site Pages library list item.
+    """
+    if not sitepages_list_id:
+        return False, "missing_sitepages_list_id"
+
+    item_id = str((target_sitepages_item_ids or {}).get(leafref) or "").strip()
+    if not item_id:
+        return False, "missing_sitepages_list_item_for_leafref"
+
+    patch: dict[str, Any] = {}
+
+    # Content type
+    ct = export_page.get("contentType") or {}
+    ct_id = str(ct.get("id") or "").strip()
+    if ct_id:
+        patch["ContentTypeId"] = ct_id
+
+    # PDDepartment value comes from list item fields export (more reliable than page JSON)
+    src_fields = export_sitepages_fields.get(leafref) or {}
+    dept = str(src_fields.get(_EXPORT_PDDEPT_FIELD) or "").strip()
+    if dept:
+        patch[_TARGET_PDDEPT_FIELD] = dept
+
+    if not patch:
+        return True, "no_fields_to_patch"
+
+    url = f"{sp_client.GRAPH_V1}/sites/{site_id}/lists/{sitepages_list_id}/items/{item_id}/fields"
+    rp = sp_client.graph_patch(url, json_body=patch)
+    if rp.status_code < 300:
+        return True, ""
+    return False, f"fields_patch_failed:{rp.status_code}:{rp.text[:500]}"
 
 def _first_export_text_html(page: dict[str, Any]) -> str:
     canvas = page.get("canvasLayout")
@@ -364,6 +476,10 @@ def run_import() -> dict:
     ctx.load_migration_target_env()
     sp_client.authenticate()
     site_id = import_client.target_site_id()
+    name_map = import_client.load_list_id_map()
+    sitepages_list_id = name_map.get(_SITEPAGES_INTERNAL_NAME) or ""
+    export_sitepages_fields = _load_export_sitepages_fields_by_leafref()
+    target_sitepages_item_ids = _load_target_sitepages_item_ids_by_leafref(site_id, sitepages_list_id)
     pages_dir = ctx.migration_export_root() / "pages"
     if not pages_dir.is_dir():
         return {"error": "no pages export directory"}
@@ -383,6 +499,7 @@ def run_import() -> dict:
             continue
         title = str(page.get("title") or page.get("name") or fp.stem)
         name = _safe_page_name(str(page.get("name") or fp.stem))
+        leafref = name
         canvas = page.get("canvasLayout") if isinstance(page.get("canvasLayout"), dict) else None
         wps = _extract_webparts(canvas)
         custom = [w for w in wps if w.get("@odata.type") and "clientSide" in str(w["@odata.type"]).lower()]
@@ -397,6 +514,8 @@ def run_import() -> dict:
         publish_endpoint_used = ""
         publishing_state_before: Any = None
         publishing_state_after: Any = None
+        fields_patched = False
+        fields_patch_error = ""
 
         reused_existing = False
         created_page: dict[str, Any] | None = None
@@ -460,6 +579,25 @@ def run_import() -> dict:
                 elif ok_patch:
                     logger.info("Canvas layout patched for page %s (%s)", name, endpoint_used)
 
+        # After canvas, patch library fields (Content Type + PDDepartment) for PD Announcement/news posts.
+        if (
+            created_page
+            and str(created_page.get("id") or "") not in ("", "dry-run")
+            and _is_pd_announcement_page(page)
+        ):
+            okf, ferr = _patch_sitepages_fields(
+                site_id,
+                sitepages_list_id=sitepages_list_id,
+                leafref=leafref,
+                export_page=page,
+                export_sitepages_fields=export_sitepages_fields,
+                target_sitepages_item_ids=target_sitepages_item_ids,
+            )
+            fields_patched = okf
+            fields_patch_error = ferr
+            if not okf and ferr:
+                errors.append(f"sitepages_fields_patch_failed: {ferr}")
+
         if created_page:
             if dry:
                 published = True
@@ -490,6 +628,7 @@ def run_import() -> dict:
             f"- **Created new page shell**: {created}",
             f"- **Canvas layout PATCH applied**: {layout_patched}",
             f"- Canvas PATCH endpoint: `{layout_patch_endpoint}`" if layout_patch_endpoint else "- Canvas PATCH: (skipped or none)",
+            f"- **Patched Site Pages fields (CT + PDDepartment)**: {fields_patched}",
             f"- **Published**: {published}",
             f"- **SPFx deployed**: {allow_custom}",
             f"- **Dry run**: {dry}",
@@ -552,6 +691,8 @@ def run_import() -> dict:
                 "created": created,
                 "layoutPatched": layout_patched,
                 "layoutPatchEndpoint": layout_patch_endpoint,
+                "fieldsPatched": fields_patched,
+                "fieldsPatchError": fields_patch_error,
                 "published": published,
                 "publishEndpoint": publish_endpoint_used,
                 "publishingStateBefore": publishing_state_before,
