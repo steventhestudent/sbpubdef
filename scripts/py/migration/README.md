@@ -127,7 +127,7 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 `run_full_import.py` runs:
 
 1. **`provision_site.py`** — Validates Graph auth and that the target site exists.  
-2. **`import_content_types.py`** — Inventory + **targeted automation** for project content types (**PD Announcement**, **PD Events**) and linking them to `SitePages` (full CT automation still not implemented).  
+2. **`import_content_types.py`** — Inventory + **targeted automation** for project content types (**PD Announcement**, **PD Events**, **PD Form List**) (full CT automation still not implemented).  
 3. **`import_site_columns.py`** — Site columns **manual** checklist.  
 4. **`list_identity.py`** — Writes **`reports/list_identity_report.json`** (display vs internal names, collisions).  
 5. **`list_import_order.py`** — Writes **`reports/list_import_order.json`** (lookup-aware item order).  
@@ -141,7 +141,8 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 13. **Manual** — Deploy SPFx `.sppkg` to target app catalog (`pnpm run make`, then SharePoint admin).  
 14. **`provision_pages.py`** — **Targeted** modern page provision (best-effort): creates a page shell, **PATCHes `canvasLayout` from export** (draft, before publish), then **publishes**; writes per-page reports under `import_reports/page_reconstruction/` and `reports/page_import_summary.json`. Web part **instance** `id` values from the source tenant are stripped so the target assigns new ones.  
     - **Publishing** uses the typed Graph endpoint: `POST /sites/{siteId}/pages/{pageId}/microsoft.graph.sitePage/publish`  
-15. **`promote_news_pages.py`** — For **PD Announcement** pages: sets `PromotedState=2` on the Site Pages library item (so pages are treated as **News**) and republishes. The Announcements web part filters to News-only (`PromotedState=2`). Writes `reports/page_promote_news_results.json`.  
+15. **`promote_news_pages.py`** — For **PD Announcement** pages: promotes them to **News posts** (so `PromotedState=2`) via Graph `promotionKind=newsPost`, then republishes. The Announcements web part filters to News-only (`PromotedState=2`). Writes `reports/page_promote_news_results.json`.  
+16. **`import_navigation.py`** — Best-effort import of site navigation (“header links”) from `navigation/*.json`. Uses SharePoint REST and may fail with `401 Unsupported app only token` in some tenants; emits `import_reports/import_navigation.json`.  
 15. **`apply_page_webparts.py`** — Aggregates web parts into remediation JSON/Markdown.  
 16. **`validate_import.py`** — Read-only comparison vs export (counts, missing lists, `Statuc` spot-check).  
 17. **`diagnose_permissions_migration.py`** — Permissions **manual** checklist (uses export `permissions/` if present).
@@ -220,6 +221,12 @@ PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_items.py
 - If the Announcements web part shows no results and the Site Pages **Promoted State** column is `0`, run:
   - `PYTHONPATH=scripts/py python3 scripts/py/migration/promote_news_pages.py`
   - Then re-check `reports/page_promote_news_results.json` and refresh the web part (Search results may take time to update; REST results should be immediate on the hub site).
+
+#### Navigation (“header links”)
+
+- Export: `PYTHONPATH=scripts/py python3 scripts/py/migration/export_navigation.py`
+- Import: `PYTHONPATH=scripts/py python3 scripts/py/migration/import_navigation.py`
+- Note: this uses SharePoint REST `/_api/web/navigation/...` and may not work with app-only tokens in all tenants. If it fails, use a delegated tool (PnP PowerShell / PnPjs) and treat these JSON files as the desired source-of-truth for the nav structure.
 - Draft pages may not appear in default library views. If pages are created but not visible, run:
   - `PYTHONPATH=scripts/py python3 scripts/py/migration/publish_pages.py`
   - Then re-check `reports/page_publish_results.json` and `reports/page_import_summary.json`.

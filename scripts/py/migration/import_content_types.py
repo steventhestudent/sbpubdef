@@ -24,7 +24,9 @@ from migration import sp_client
 
 logger = logging.getLogger(__name__)
 
-_TARGET_CT_NAMES = ("PD Announcement", "PD Events")
+# Targeted automation: create these CTs if missing.
+# Note: only Site Pages-related CTs are automatically added to the SitePages library.
+_TARGET_CT_NAMES = ("PD Announcement", "PD Events", "PD Form List")
 _TARGET_PDDEPT_COL_NAME = "PDDepartment"
 _SITEPAGES_INTERNAL_NAME = "SitePages"
 
@@ -176,22 +178,25 @@ def run_import() -> dict:
         ct_id = str(ensured.get("id") or "").strip()
         automation.append({"contentType": ct_name, "status": "present", "id": ct_id})
 
-        if pddept_col_id and ct_id:
+        # Only PD Announcement / PD Events are expected to carry PDDepartment in this project.
+        if ct_name in ("PD Announcement", "PD Events") and pddept_col_id and ct_id:
             ok, e2 = _add_site_column_to_content_type(site_id, content_type_id=ct_id, site_column_id=pddept_col_id)
             if ok:
                 automation.append({"contentType": ct_name, "status": "linked_PDDepartment"})
             else:
                 errors.append({"contentType": ct_name, "step": "link_PDDepartment", "error": e2})
         else:
-            automation.append({"contentType": ct_name, "status": "PDDepartment_site_column_not_found_or_ct_missing_skip"})
+            if ct_name in ("PD Announcement", "PD Events"):
+                automation.append({"contentType": ct_name, "status": "PDDepartment_site_column_not_found_or_ct_missing_skip"})
 
-        if sitepages_list_id and ct_id:
+        # Only PD Announcement is expected to be added to the Site Pages library.
+        if ct_name == "PD Announcement" and sitepages_list_id and ct_id:
             ok, e3 = _add_content_type_to_list(site_id, list_id=sitepages_list_id, site_content_type_id=ct_id)
             if ok:
                 automation.append({"contentType": ct_name, "status": "added_to_SitePages"})
             else:
                 errors.append({"contentType": ct_name, "step": "add_to_SitePages", "error": e3})
-        else:
+        elif ct_name == "PD Announcement":
             automation.append({"contentType": ct_name, "status": "SitePages_list_id_missing_skip"})
 
     manual = [
@@ -207,7 +212,7 @@ def run_import() -> dict:
         "errorCount": len(errors),
         "errors": errors,
         "manualSteps": manual,
-        "note": "Arbitrary content type recreation remains out of scope; this step automates only specific project content types (PD Announcement / PD Events).",
+        "note": "Arbitrary content type recreation remains out of scope; this step automates only specific project content types (PD Announcement / PD Events / PD Form List).",
     }
     import_client.write_report("import_content_types", report)
     import_client.write_text_report(

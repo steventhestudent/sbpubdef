@@ -34,6 +34,7 @@ from migration import import_lists
 from migration import import_site_columns
 from migration import list_identity
 from migration import list_import_order
+from migration import promote_news_pages
 from migration import provision_pages
 from migration import provision_site
 from migration import schema_diff
@@ -119,6 +120,7 @@ def main() -> None:
         ),
         ("__manual__ SPFx package", None),
         ("provision_pages (reports)", provision_pages.run_import),
+        ("promote_news_pages (PD Announcements -> News)", promote_news_pages.run_import),
         ("apply_page_webparts (remediation)", apply_page_webparts.run_import),
         ("validate_import", validate_import.run_import),
         ("diagnose_permissions_migration", diagnose_permissions_migration.run_import),
