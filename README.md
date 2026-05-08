@@ -49,6 +49,8 @@ to use the app registration **sbpubdef-provisioning** (or equivalent), copy `con
 
 if using migration scripts: copy and edit` .env.migration.target.example`
 
+then, you can easily find a lists internal columns by modifying `scripts/py/get_list_internal_column_names.py`
+
 &nbsp;
 
 &nbsp;
