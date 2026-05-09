@@ -1,6 +1,6 @@
 # azure functions
 
-0. make [azure free account](https://azure.microsoft.com/en-us/pricing/purchase-options/azure-account) (1million free azure function runs), i updated to 'pay as you go' subscription because the function would 401 without frequent restarts.  
+0. make [azure free account](https://azure.microsoft.com/en-us/pricing/purchase-options/azure-account) (1million free azure function runs), I upgraded to 'pay as you go' subscription because the function would 401 without frequent restarts.  
    1, ~~choose consumption function~~ (flex consumption recommended if needed faster execution, but more $)  
    ![Project Details](Attachments/AFDEF7BB-87F2-407D-8AE4-3B4364B84F1C.jpg)
 
@@ -92,16 +92,14 @@ Before SPFx can call it from the browser, you must configure CORS.
 Go to: Azure Portal → Function App → API -> **CORS,** and add:
 
 ```
-https://csproject25.sharepoint.com
+https://<tenant>.sharepoint.com
 https://localhost:4321
-
 ```
 
 Otherwise the browser will block the call even if the function works.
 
 
 ```
-
 requires app registration w/ admin consent for Mail.send (sbpubdef-provisioning)
 
 add to script/spy/requirements.txt: ~~sendgrid~~  
@@ -115,14 +113,11 @@ go to function app -> function ->
 choose (Function key), add to add to config/.env.public
 
 ### send an email works!
-
 ```
 curl -i -X POST "https://sbpubdef-agfwa0d9e3b9anch.westus3-01.azurewebsites.net/api/SendEmail?code=<function key>" \
   -H "Content-Type: application/json" \
   -d '{"to_email":"sgonzales@csproject25.onmicrosoft.com","subject":"test (subject)","body":"test (body)"}'
-
 ```
-
 note: if u can't see the invocation or see HTTP 401 Unauthorized try restarting the Function App
 
 # using authentication
@@ -180,7 +175,7 @@ In your SPFx solution config/package-solution.json add:
     "scope": "access_as_user"
   }
 ]
-
+```
 
 # .env files:
 .env.public.dev / .env.public.prod
@@ -198,6 +193,7 @@ Don't forget to Change the ENV constant at the top of the script. (dev or prod)
 
 ## Step 4 — Call your Function from SPFx using AadHttpClient (no keys, no CORS pain)
 Use AadHttpClient instead of fetch. Example:
+
 ```
 import { AadHttpClient } from '@microsoft/sp-http';
 
@@ -220,13 +216,11 @@ const response = await client.post(
     })
   }
 );
-
 ```
 
 ## Step 5 — Update Function authLevel
 Once EasyAuth is on, set your function to:
 ```
 "authLevel": "anonymous"
-
 ```
 Why: you’re no longer using function keys for security; EasyAuth is the security boundary. Keeping function auth just adds a second “key” layer you don’t want to ship. (This is a common pattern when fronting Functions with platform auth.)  
