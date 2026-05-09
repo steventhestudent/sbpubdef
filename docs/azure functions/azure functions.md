@@ -1,7 +1,7 @@
 # azure functions
 
-0. make azure free account (1million free azure function runs), i tried updating to 'pay as you go' subscription because the function would 401 if i didn't restart it often.  
-   1, ~~choose consumption function~~ (flex consumption recommended if needed faster execution, but more $$$)  
+0. make [azure free account](https://azure.microsoft.com/en-us/pricing/purchase-options/azure-account) (1million free azure function runs), i updated to 'pay as you go' subscription because the function would 401 without frequent restarts.  
+   1, ~~choose consumption function~~ (flex consumption recommended if needed faster execution, but more $)  
    ![Project Details](Attachments/AFDEF7BB-87F2-407D-8AE4-3B4364B84F1C.jpg)
 1. use continuous deployment and modify AZURE_FUNCTIONAPP_PACKAGE_PATH to 'scripts/py/sbpubdef/azure_function' (in .github/ workflow file (github action))
 
@@ -61,9 +61,11 @@ In Microsoft 365 admin center:
 # set environment variables from .env.public.dev / .env.dev @ azure portal -> Function App -> Settings -> Environment Variables
 
 ￼![](Attachments/49DF477D-DD98-4051-8A84-8747242CBD0A.jpg)
-```
 
-```
+provide `scripts/py/patch_azure_function_environment.py` with the exported json from your azure function, and import its output. This gives it access to .env file definitions.
+
+Don't forget to Change the ENV constant at the top of the script. (dev or prod)
+
 
 # build fails
 
@@ -72,7 +74,18 @@ working-directory: scripts/py/azure_function
 
 ```
 
-(see current workflow .yaml)
+ choosing to use CI/CD means our (correct) configuration in `.github/workflows/main_sbpubdef.yaml` is replaced.
+ 
+`git pull` to sync the repo, then rollback the file 1 commit:
+
+`git restore --source=HEAD~1 -- .github/workflows/main_sbpubdef.yml`.
+
+We only need to use the new `client-id`, `tenant-id`, `subscription-id` values.
+
+`git add -A . && git commit -m "update azure function ci/cd"
+
+`git push` and it should redeploy.
+
 
 # now if build succeeds and deploy fails do this:
 
