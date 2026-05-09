@@ -1,12 +1,10 @@
 # transfer of work
 
-  
-1. Choose m365 business premium (has **feature complete** Entra ID  —needed in order to define *role groups* for Azure Function's), (not yet configured, see: [Securing Azure Functions.md](../azure%20functions/securing%20azure%20functions.md)  
+0. for production: you will edit `.env.public.prod` & `.env.prod` (save `.env.public.dev` as `.env.public.prod`)
+0. Choose m365 business premium (has **feature complete** Entra ID  —needed in order to define *role groups* for Azure Function's), (not yet configured, see: [Securing Azure Functions.md](../azure%20functions/securing%20azure%20functions.md)  
 2. optional _CSLA Dev Project_ teams group:  add in **Active teams and groups** [https://admin.cloud.microsoft/?trysignin=0#/groups](https://admin.cloud.microsoft/?trysignin=0#/groups)  
 3. Create New Communication Site: PD Intranet
-   1. **Site Settings:** /sites/PD-Intranet/_layouts/15/settings.aspx  
-      1. ...  
-   2. **optional:**  make it a hub (if you want extra top bar of nav links / site collection associations), **note that:** after installing solution, _ThemeInjector_  hides it)
+   1. **optional:**  make it a hub (if you want extra top bar of nav links / site collection associations), **note that:** after installing solution, _ThemeInjector_  hides it)
 4. Recreate ([Entra](https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade/quickStartType~/null/sourceType/Microsoft_AAD_IAM)) app registrations:
 
    **4.1 sbpubdef-provisioning** (migration / provisioning automation; least privilege)
@@ -146,3 +144,6 @@ MIGRATION_EXPORT_DIR=scripts/py/migration/.migration_output
 MIGRATION_DRY_RUN=false
 MIGRATION_SPFX_DEPLOYED=true
 ```
+
+# individual list permissions
+...
