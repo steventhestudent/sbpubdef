@@ -17,7 +17,7 @@
 
 0.  **Environment Files**
 
-- `.env.dev` → used for export from source tenant
+- `.env.dev` → used for export from source tenant, azure functions
 - `.env.migration.target` → used for import into new tenant
 - `.env.public.dev` → source tenant SPFx config
 - `.env.public.prod` → target tenant SPFx config
