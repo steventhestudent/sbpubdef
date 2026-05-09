@@ -3,7 +3,6 @@
 0. make [azure free account](https://azure.microsoft.com/en-us/pricing/purchase-options/azure-account) (1million free azure function runs), i updated to 'pay as you go' subscription because the function would 401 without frequent restarts.  
    1, ~~choose consumption function~~ (flex consumption recommended if needed faster execution, but more $)  
    ![Project Details](Attachments/AFDEF7BB-87F2-407D-8AE4-3B4364B84F1C.jpg)
-1. use continuous deployment and modify AZURE_FUNCTIONAPP_PACKAGE_PATH to 'scripts/py/sbpubdef/azure_function' (in .github/ workflow file (github action))
 
 details/summary:  
 ![Details](Attachments/5C9F14B8-A2E4-404C-AA1D-69432E8B1B3F.jpg)  
@@ -37,9 +36,10 @@ you can also choose any user email: e.g. [sgonzales@csproject25.onmicrosoft.com]
 ... but we'll make one (Create a dedicated “service account” mailbox)
 
 ```
-sbpubdef@csproject25.onmicrosoft.com
+sbpubdef@<tenant>.onmicrosoft.com
 
 ```
+(or customize by editing .env.public.dev / .env.public.prod ORG_MAIL_USER)
 
 In Microsoft 365 admin center:
 
@@ -57,14 +57,6 @@ In Microsoft 365 admin center:
 - **++Teams & groups → Shared mailboxes → Add a shared mailbox++**
 
 [sbpubdef@csproject25.sharepoint.com](mailto:sbpubdef@csproject25.sharepoint.com)
-
-# set environment variables from .env.public.dev / .env.dev @ azure portal -> Function App -> Settings -> Environment Variables
-
-￼![](Attachments/49DF477D-DD98-4051-8A84-8747242CBD0A.jpg)
-
-provide `scripts/py/patch_azure_function_environment.py` with the exported json from your azure function, and import its output. This gives it access to .env file definitions.
-
-Don't forget to Change the ENV constant at the top of the script. (dev or prod)
 
 
 # build fails
@@ -87,23 +79,12 @@ We only need to use the new `client-id`, `tenant-id`, `subscription-id` values.
 `git push` and it should redeploy.
 
 
-# now if build succeeds and deploy fails do this:
+# now if build succeeds (and deploy fails) do this:
 
 missing environment variable: **AzureWebJobsStorage** **Value:** _(storage connection string)_  
 You can get the connection string from: **Storage account → Security + networking -> Access keys → Connection string**  
 (If you don’t already have a storage account, create one first.)  
 ![Create a storage account](Attachments/E819FB7F-8367-4161-8862-4BD2AD60D12C.jpg)
-
-# fix packages not included in build .zip (module not found error)
-
-replace pip install in workflow .yaml _build_ job:
-
-```
-pip install --target="./.python_packages/lib/site-packages" -r requirements.txt
-
-```
-
-or try: cd scripts/py/azure_function && func azure functionapp publish SendEmail --build remote
 
 ## 3️⃣ Important: CORS
 
@@ -118,45 +99,10 @@ https://localhost:4321
 
 Otherwise the browser will block the call even if the function works.
 
-# new function: SendEmail
-
-### scripts/py/azure_function/SendEmail/**init**.py
-
-```
-import json
-import logging
-import azure.functions as func
-
-def main(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info("HTTP trigger function processed a request.")
-    return func.HttpResponse(json.dumps({"success": True}), mimetype="application/json")
 
 ```
 
-### scripts/py/azure_function/SendEmail/function.json
-
-```
-{
-	"scriptFile": "__init__.py",
-	"bindings": [
-		{
-			"authLevel": "function",
-			"type": "httpTrigger",
-			"direction": "in",
-			"name": "req",
-			"methods": ["post"]
-		},
-		{
-			"type": "http",
-			"direction": "out",
-			"name": "$return"
-		}
-	]
-}
-
-```
-
-requires app registration w/ admin consent for Mail.send
+requires app registration w/ admin consent for Mail.send (sbpubdef-provisioning)
 
 add to script/spy/requirements.txt: ~~sendgrid~~  
  azure-functions
@@ -182,9 +128,9 @@ note: if u can't see the invocation or see HTTP 401 Unauthorized try restarting 
 # using authentication
 
 **note:** we probably shouldn't expose Function key to spfx... so use auth instead
-
+```
 # Authentication: Entra ID auth + spfx AadHttpClient:
-### new app registration (azure_functions) (just to link to 'Expose An API'... the Azure Function App itself will use the other app registration w/ more consent)
+### new app registration (sbpubdef-EasyAuth) (just to link to 'Expose An API'... the Azure Function App itself will use the other app registration w/ more consent)
 - ![Application (dient)](Attachments/589DD7E4-2216-40F2-8078-7FAD060215E9.tiff)
 
 ## Entra app registration
@@ -200,12 +146,12 @@ note: if u can't see the invocation or see HTTP 401 Unauthorized try restarting 
   ?code=<functionKey> (secret in URL)     -->    Authorization: Bearer <access_token>
 
 ### allow sharepoint past 403 error
-authentication -> Identity Provider -> Allowed client applications -> Add a client application: 08e18876-6177-487e-b8b5-cf950c1e598c  
+function settings -> authentication -> Identity Provider -> Allowed client applications -> Add a client application: 08e18876-6177-487e-b8b5-cf950c1e598c  
 this is the 'key / bearer's azp claim'
 
 ### ~~allow azure cli~~
-~~app registration -> azure_functions | Expose an API -> Authorized client applications -> Add a client application: 04b07795-8ddb-461a-bbee-02f9e1bf7b46~~
-```
+~~app registration -> sbpubdef-EasyAuth | Expose an API -> Authorized client applications -> Add a client application: 04b07795-8ddb-461a-bbee-02f9e1bf7b46~~
+
 # token for your API (recommended once you expose an API scope)
 TOKEN=$(az account get-access-token --resource api://<YOUR-FUNCTION-APP-CLIENT-ID> --query accessToken -o tsv)
 
@@ -214,12 +160,12 @@ curl -i -X POST "https://<yourfunc>.azurewebsites.net/api/SendEmail" \
   -H "Content-Type: application/json" \
   -d '{"to_email":"you@csproject25.onmicrosoft.com","subject":"hi","body":"from curl"}'
 
-```
+
 [install azure cli](https://learn.microsoft.com/en-us/cli/azure/?view=azure-cli-latest)
 
 ## Step 2 — Turn on Authentication (Easy Auth) on the Function App
 Azure Portal → Function App (**sbpubdef**) → **Authentication** → **Add identity provider** → **Microsoft**.
-* **App registration:** select **azure_functions**
+* **App registration:** select **sbpubdef-EasyAuth**
 * options: **any signed-in tenant user** / ~~specific users/groups~~
 * **Require authentication:** **On**
 * Allow requests from specific client applications (list of client/app id's (leave blank))  
@@ -230,12 +176,24 @@ In your SPFx solution config/package-solution.json add:
 ```
 "webApiPermissionRequests": [
   {
-    "resource": "<YOUR-azure_functions-CLIENT-ID>",
+    "resource": "<YOUR-sbpubdef-EasyAuth-CLIENT-ID>",
     "scope": "access_as_user"
   }
 ]
 
-```
+
+# .env files:
+.env.public.dev / .env.public.prod
+update: FUNCTION_BASE_URL, FUNCTION_API_APP_ID
+
+# set environment variables from .env.public.dev / .env.dev @ azure portal -> Function App -> Settings -> Environment Variables
+
+￼![](Attachments/49DF477D-DD98-4051-8A84-8747242CBD0A.jpg)
+
+provide `scripts/py/patch_azure_function_environment.py` with the exported json from your azure function, and import its output. This gives it access to .env file definitions.
+
+Don't forget to Change the ENV constant at the top of the script. (dev or prod)
+
 * pnpm run make -> Upload to App Catalog -> In SharePoint Admin Center → **API access**, approve the pending request
 
 ## Step 4 — Call your Function from SPFx using AadHttpClient (no keys, no CORS pain)
@@ -246,7 +204,7 @@ import { AadHttpClient } from '@microsoft/sp-http';
 const apiBase = "https://sbpubdef-agfwa0d9e3b9anch.westus3-01.azurewebsites.net";
 
 const client = await this.context.aadHttpClientFactory.getClient(
-  "api://<YOUR-azure_functions-CLIENT-ID>"
+  "api://<YOUR-sbpubdef-EasyAuth-CLIENT-ID>"
 );
 
 const response = await client.post(
