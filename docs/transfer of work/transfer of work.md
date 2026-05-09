@@ -11,7 +11,7 @@
 6. Configure SharePoint content (content types, search)
 7. Set up Azure Functions
 8. Verify lists, pages, permissions
-9. Sample .env.migraiton.target / Invite Guest User
+9. Sample .env.migration.target / Invite Guest User
 
 # Steps
 
@@ -157,16 +157,16 @@ The tables below are a **starting pattern**, not a legal requirement—adjust fo
 
 | Env key | Typical list title on site | Permissions                             |
 | ------- | ---------------------------- |-----------------------------------------|
-| `LIST_EXPERTDIRECTORY` | Expert Directory | Read: all; Write: IT, ComplianceOfficer                       |
-| `LIST_STAFFDIRECTORY` | StaffDirectory | Read: all; Write: IT, ComplianceOfficer                       |
-| `LIST_ASSIGNMENTS` | Assignments | Read: all; Write: IT, ComplianceOfficer                       |
-| `LIST_ASSIGNMENTCATALOG` | AssignmentCatalog | Read: all; Write: IT, ComplianceOfficer                       |
-| `LIST_ASSIGNMENTSTEPS` | AssignmentSteps | Read: all; Write: IT, ComplianceOfficer                       |
-| `LIST_ASSIGNMENTQUIZQUESTIONS` | AssignmentQuizQuestions | Read: all; Write: IT, ComplianceOfficer                       |
-| `LIST_ASSIGNMENTQUIZATTEMPTS` | AssignmentQuizAttempts | Read: all; Write: IT, ComplianceOfficer                       |
-| `LIST_PROCEDURECHECKLIST` | LOPProcedureChecklist | Read: all; Write: IT, ComplianceOfficer                       |
-| `LIST_PROCEDURESTEPS` | ProcedureSteps | Read: all; Write: IT, ComplianceOfficer                       |
-| `LIST_HOTELINGRESERVATIONS` | HotelingReservations | Read: all; Write: IT, ComplianceOfficer                       |
+| `LIST_EXPERTDIRECTORY` | Expert Directory | Read: all; Write: IT, ComplianceOfficer |
+| `LIST_STAFFDIRECTORY` | StaffDirectory | Read: all; Write: IT, ComplianceOfficer |
+| `LIST_ASSIGNMENTS` | Assignments | Read: all; Write: IT, ComplianceOfficer |
+| `LIST_ASSIGNMENTCATALOG` | AssignmentCatalog | Read: all; Write: IT, ComplianceOfficer |
+| `LIST_ASSIGNMENTSTEPS` | AssignmentSteps | Read: all; Write: IT, ComplianceOfficer |
+| `LIST_ASSIGNMENTQUIZQUESTIONS` | AssignmentQuizQuestions | Read: all; Write: IT, ComplianceOfficer |
+| `LIST_ASSIGNMENTQUIZATTEMPTS` | AssignmentQuizAttempts | Read: all; Write: IT, ComplianceOfficer |
+| `LIST_PROCEDURECHECKLIST` | LOPProcedureChecklist | Read: all; Write: IT, ComplianceOfficer |
+| `LIST_PROCEDURESTEPS` | ProcedureSteps | Read: all; Write: IT, ComplianceOfficer |
+| `LIST_HOTELINGRESERVATIONS` | HotelingReservations | inherit from site                       |
 | `LIST_SITESETTINGS` | SiteSettings | Read: all; Write: IT, ComplianceOfficer |
 
 'inherit from site' uses Site Access (see above screenshot)
