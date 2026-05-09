@@ -155,19 +155,19 @@ The tables below are a **starting pattern**, not a legal requirement—adjust fo
 
 **`LIST_*` → SharePoint list title** (values from `.env.public.dev`; titles must match what exists on the site).
 
-| Env key | Typical list title on site | Permissions       |
-| ------- | ---------------------------- |-------------------|
-| `LIST_EXPERTDIRECTORY` | Expert Directory | inherit from site |
-| `LIST_STAFFDIRECTORY` | StaffDirectory | inherit from site |
-| `LIST_ASSIGNMENTS` | Assignments | inherit from site |
-| `LIST_ASSIGNMENTCATALOG` | AssignmentCatalog | inherit from site |
-| `LIST_ASSIGNMENTSTEPS` | AssignmentSteps | inherit from site |
-| `LIST_ASSIGNMENTQUIZQUESTIONS` | AssignmentQuizQuestions | inherit from site |
-| `LIST_ASSIGNMENTQUIZATTEMPTS` | AssignmentQuizAttempts | inherit from site |
-| `LIST_PROCEDURECHECKLIST` | LOPProcedureChecklist | inherit from site |
-| `LIST_PROCEDURESTEPS` | ProcedureSteps | inherit from site |
-| `LIST_HOTELINGRESERVATIONS` | HotelingReservations | inherit from site |
-| `LIST_SITESETTINGS` | SiteSettings | inherit from site |
+| Env key | Typical list title on site | Permissions                             |
+| ------- | ---------------------------- |-----------------------------------------|
+| `LIST_EXPERTDIRECTORY` | Expert Directory | Read: all; Write: IT, ComplianceOfficer                       |
+| `LIST_STAFFDIRECTORY` | StaffDirectory | Read: all; Write: IT, ComplianceOfficer                       |
+| `LIST_ASSIGNMENTS` | Assignments | Read: all; Write: IT, ComplianceOfficer                       |
+| `LIST_ASSIGNMENTCATALOG` | AssignmentCatalog | Read: all; Write: IT, ComplianceOfficer                       |
+| `LIST_ASSIGNMENTSTEPS` | AssignmentSteps | Read: all; Write: IT, ComplianceOfficer                       |
+| `LIST_ASSIGNMENTQUIZQUESTIONS` | AssignmentQuizQuestions | Read: all; Write: IT, ComplianceOfficer                       |
+| `LIST_ASSIGNMENTQUIZATTEMPTS` | AssignmentQuizAttempts | Read: all; Write: IT, ComplianceOfficer                       |
+| `LIST_PROCEDURECHECKLIST` | LOPProcedureChecklist | Read: all; Write: IT, ComplianceOfficer                       |
+| `LIST_PROCEDURESTEPS` | ProcedureSteps | Read: all; Write: IT, ComplianceOfficer                       |
+| `LIST_HOTELINGRESERVATIONS` | HotelingReservations | Read: all; Write: IT, ComplianceOfficer                       |
+| `LIST_SITESETTINGS` | SiteSettings | Read: all; Write: IT, ComplianceOfficer |
 
 'inherit from site' uses Site Access (see above screenshot)
 
