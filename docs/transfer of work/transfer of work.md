@@ -53,7 +53,8 @@ For production:
 
    **4.2 Run full import on the new tenant** (after the site exists and the grant above succeeds)
 
-   2. `py scripts/py/migration/run_full_import.py`  
+   2. `py scripts/py/migration/run_full_import.py`
+      - **but, first:** [download .migration_output](https://github.com/steventhestudent/sbpubdef-resources/tree/main/.migration_output) to `scripts/py/migration` (request access)
    3. Mid-run, the script stops for a **manual** step: build and upload the SPFx `.sppkg` to the **target** app catalog (`pnpm run make`, then SharePoint admin: approve requested advanced->api permissions) before web parts can resolve.
 
    **4.3 sbpubdef-EasyAuth**
