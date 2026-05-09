@@ -145,5 +145,27 @@ MIGRATION_DRY_RUN=false
 MIGRATION_SPFX_DEPLOYED=true
 ```
 
-# individual list permissions
-...
+# Individual list permissions (example model)
+
+Configure each list: **List settings** → **Permissions for this list**.  
+If the list should differ from the site default, **Stop inheriting permissions** first, then add the Entra security groups whose **display names** match your `ROLE_*` values in `config/.env.public.dev` / `.env.public.prod`.
+
+The tables below are a **starting pattern**, not a legal requirement—adjust for your org. Permission levels use SharePoint’s built-in names (e.g. **Read**, **Contribute**, **Edit**); exact names can vary slightly if you use custom levels.
+
+**`LIST_*` → SharePoint list title** (values from `.env.public.dev`; titles must match what exists on the site).
+
+| Env key | Typical list title on site | Permissions       |
+| ------- | ---------------------------- |-------------------|
+| `LIST_EXPERTDIRECTORY` | Expert Directory | inherit from site |
+| `LIST_STAFFDIRECTORY` | StaffDirectory | inherit from site |
+| `LIST_ASSIGNMENTS` | Assignments | inherit from site |
+| `LIST_ASSIGNMENTCATALOG` | AssignmentCatalog | inherit from site |
+| `LIST_ASSIGNMENTSTEPS` | AssignmentSteps | inherit from site |
+| `LIST_ASSIGNMENTQUIZQUESTIONS` | AssignmentQuizQuestions | inherit from site |
+| `LIST_ASSIGNMENTQUIZATTEMPTS` | AssignmentQuizAttempts | inherit from site |
+| `LIST_PDASSIGNMENT` | *(deprecated alias → same as Assignments)* | inherit from site |
+| `LIST_PROCEDURECHECKLIST` | LOPProcedureChecklist | inherit from site |
+| `LIST_PROCEDURESTEPS` | ProcedureSteps | inherit from site |
+| `LIST_HOTELINGRESERVATIONS` | HotelingReservations | inherit from site |
+| `LIST_SITESETTINGS` | SiteSettings | inherit from site |
+
