@@ -161,7 +161,7 @@ curl -i -X POST "https://<yourfunc>.azurewebsites.net/api/SendEmail" \
   -d '{"to_email":"you@csproject25.onmicrosoft.com","subject":"hi","body":"from curl"}'
 
 
-[install azure cli](https://learn.microsoft.com/en-us/cli/azure/?view=azure-cli-latest)
+for local dev: [install azure cli](https://learn.microsoft.com/en-us/cli/azure/?view=azure-cli-latest)
 
 ## Step 2 — Turn on Authentication (Easy Auth) on the Function App
 Azure Portal → Function App (**sbpubdef**) → **Authentication** → **Add identity provider** → **Microsoft**.
