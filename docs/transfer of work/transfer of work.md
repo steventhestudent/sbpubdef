@@ -1,7 +1,32 @@
-# transfer of work
+# Transfer of Work
 
-0. for production: you will edit `.env.public.prod` & `.env.prod` (save `.env.public.dev` as `.env.public.prod`)
-0. Choose m365 business premium (has **feature complete** Entra ID  —needed in order to define *role groups* for Azure Function's), (not yet configured, see: [Securing Azure Functions.md](../azure%20functions/securing%20azure%20functions.md)  
+## Table of Contents
+
+0. Environment Files
+1. Set up target tenant + site
+2. Create app registration (sbpubdef-provisioning)
+3. Configure `.env.migration.target`
+4. Run `run_full_import.py`
+5. Deploy `.sppkg` when prompted
+6. Configure SharePoint content (content types, search)
+7. Set up Azure Functions
+8. Verify lists, pages, permissions
+9. Sample .env.migraiton.target / Invite Guest User
+
+# Steps
+
+0.  **Environment Files**
+
+- `.env.dev` → used for export from source tenant
+- `.env.migration.target` → used for import into new tenant
+- `.env.public.dev` → source tenant SPFx config
+- `.env.public.prod` → target tenant SPFx config
+
+For production:
+- Copy `.env.public.dev` → `.env.public.prod`
+- Update values (TENANT_NAME, URLs, etc.) for the new tenant
+- Do NOT modify `.env.public.dev`
+1. **Set up target tenant + site:** Choose m365 business premium (has **feature complete** Entra ID  —needed in order to define *role groups* for Azure Function's), (not yet configured, see: [Securing Azure Functions.md](../azure%20functions/securing%20azure%20functions.md)  
 2. optional _CSLA Dev Project_ teams group:  add in **Active teams and groups** [https://admin.cloud.microsoft/?trysignin=0#/groups](https://admin.cloud.microsoft/?trysignin=0#/groups)  
 3. Create New Communication Site: PD Intranet
    1. **optional:**  make it a hub (if you want extra top bar of nav links / site collection associations), **note that:** after installing solution, _ThemeInjector_  hides it)
@@ -36,16 +61,8 @@
    - Azure Functions authentication / API app registration used for **incoming** auth (EasyAuth / `AadHttpClient`). This is separate from the daemon/app-only app.
 
 
-&nbsp;
-
-- `config/`
-    - package-solution.json
-        - webApiPermissionRequests from app registration: Application (client) ID + scope name
-
-
 ### to ensure production environment is used:
-  - scripts/py/azure_function
-      - set AZURE_FUNCTIONS_ENVIRONMENT to any value to ensure they use production
+  - azure function environment variable AZURE_FUNCTIONS_ENVIRONMENT to any value to ensure they use production
   - scripts/js (gen-env)
       - ensure that process.env.NODE_ENV === "production"
 
@@ -86,7 +103,7 @@ upload spfx package
    - fix access_as_entra_user `The requested permission isn't valid. Reject this request and contact the developer to fix the problem and redeploy the solution.`
       - aligned with azure functions (FUNCTION_API_APP_ID) (for EasyAuth authentication) `"resource": "<YOUR-azure_functions-CLIENT-ID>",` (package-solution)
 
-follow [azure_functions.md](docs/azure_functions/azure_functions.md) for in-depth azure function setup.
+follow [docs/azure functions/azure_functions.md](docs/azure_functions/azure_functions.md) for in-depth azure function setup.
 - use `python3 patch_azure_function_environment.py azure_function_environment.json` to quickly patch exported environment variables w/ env files.
 
 reupload/reapprove pending
@@ -114,14 +131,6 @@ Security Groups csv export. Recreate these with (onPremisesSyncEnabled) or updat
   
 ![Untitled.jpg](Attachments/Untitled.jpg)
 
-# invited users: Entra ID change guest to Microsoft Fabric (free) then optionally: after they access site once, change back to guest  
-  
-PortalCalendar uses 1 SharePoint calendar (and it reads from outlook calendar as well)  
-****to add an entire SharePoint calendar to outlook: Site Contents ->  Events -> Calendar (top ribbon bar)****  
-![Connect to Office or Connect to](Attachments/A1BEA429-2E40-4A57-85BF-1C1179BB9DE6.tiff)  
-troubleshoot  
-... you may want additional calendars so the user can choose which to subscribe to.  e.g.: 1 per department, + an Assignments calendar, etc.
-
 # **More on App Registrations: Current repo model (single daemon app):** keep app-only Graph permissions on **sbpubdef-provisioning** so local scripts + functions share the same credentials:
     - `Sites.Selected` (application) + site permission grant (required)
     - `Mail.Send` (application)
@@ -133,17 +142,9 @@ troubleshoot
 # serve.json, write-manifests.json:
 ensure urls use new TENANT_NAME
 
-# sample .env.migration.target
-```
-AZURE_TENANT_ID=
-AZURE_CLIENT_ID=
-AZURE_CLIENT_SECRET=
-TENANT_NAME=mycsproject25
-MIGRATION_TARGET_SITE_NAME=PD-Intranet
-MIGRATION_EXPORT_DIR=scripts/py/migration/.migration_output
-MIGRATION_DRY_RUN=false
-MIGRATION_SPFX_DEPLOYED=true
-```
+- `config/`
+    - package-solution.json
+        - webApiPermissionRequests from app registration: Application (client) ID + scope name
 
 # Individual list permissions (example model)
 
@@ -163,9 +164,35 @@ The tables below are a **starting pattern**, not a legal requirement—adjust fo
 | `LIST_ASSIGNMENTSTEPS` | AssignmentSteps | inherit from site |
 | `LIST_ASSIGNMENTQUIZQUESTIONS` | AssignmentQuizQuestions | inherit from site |
 | `LIST_ASSIGNMENTQUIZATTEMPTS` | AssignmentQuizAttempts | inherit from site |
-| `LIST_PDASSIGNMENT` | *(deprecated alias → same as Assignments)* | inherit from site |
 | `LIST_PROCEDURECHECKLIST` | LOPProcedureChecklist | inherit from site |
 | `LIST_PROCEDURESTEPS` | ProcedureSteps | inherit from site |
 | `LIST_HOTELINGRESERVATIONS` | HotelingReservations | inherit from site |
 | `LIST_SITESETTINGS` | SiteSettings | inherit from site |
+
+'inherit from site' uses Site Access (see above screenshot)
+
+# sample .env.migration.target
+```
+AZURE_TENANT_ID=
+AZURE_CLIENT_ID=
+AZURE_CLIENT_SECRET=
+TENANT_NAME=mycsproject25
+MIGRATION_TARGET_SITE_NAME=PD-Intranet
+MIGRATION_EXPORT_DIR=scripts/py/migration/.migration_output
+MIGRATION_DRY_RUN=false
+MIGRATION_SPFX_DEPLOYED=true
+```
+
+&nbsp;
+
+# Invite Guest Users:  Site access -> Entra ID change guest to Microsoft Fabric (free)
+
+optional: after they access site once, change back to guest
+
+&nbsp;
+
+&nbsp;
+
+# For deeper technical background and system inventory, see:
+- `docs/transfer of work/transfer of work2.md`
 
