@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_FUNCTIONAPP_PACKAGE_PATH: 'scripts/py/azure_function' # set this to the path to your web app project, defaults to the repository root
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: '.' # set this to the path to your web app project, defaults to the repository root
   PYTHON_VERSION: '3.12' # set this to the python version to use (supports 3.6, 3.7, 3.8)
 
 jobs:
@@ -29,18 +29,18 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies
-        working-directory: scripts/py/azure_function
+      - name: Create and start virtual environment
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt --target=".python_packages/lib/site-packages"
+          python -m venv venv
+          source venv/bin/activate
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
       # Optional: Add step to run tests here
 
       - name: Zip artifact for deployment
-        working-directory: scripts/py/azure_function
-        run: |
-          zip -r ../../../release.zip .  # zip ONLY this folder contents
+        run: zip release.zip ./* -r
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -48,7 +48,7 @@ jobs:
           name: python-app
           path: |
             release.zip
-  #            !venv/
+            !venv/
 
   deploy:
     runs-on: ubuntu-latest
@@ -63,12 +63,17 @@ jobs:
         with:
           name: python-app
 
+      - name: Unzip artifact for deployment
+        run: |
+          unzip release.zip
+          rm release.zip
+        
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_FB97880FAE074176B756E9EED4C32DEA }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_773D7B8C4E634890968019190E2252D5 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_7678A235D1CA4F2EB0EE728F1667A6D0 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_135E31242F1546D8BA3AFE9D20502D58 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_99ABE22733BB40ABBA30BA361096831D }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_CCE8B4F95F49434A8A50157372074B82 }}
 
       - name: 'Deploy to Azure Functions'
         uses: Azure/functions-action@v1
@@ -76,4 +81,5 @@ jobs:
         with:
           app-name: 'sbpubdef'
           slot-name: 'Production'
-          package: release.zip
+          package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+          
