@@ -36,33 +36,43 @@ export class ProcedureStepsApi extends ListApi<
 			.top(limitPerSite)
 			.expand("ProcedureId")();
 
+		const imageKey = ENV.INTERNALCOLUMN_IMAGE;
 		return (
 			(rows as unknown as ProcedureStepsListResult[])
 				.map(
-					(i): ProcedureStepItem => ({
-						id: i.Id || -1,
-						title: i.Title || "",
-						procedureId:
-							typeof i.ProcedureIDId === "number"
-								? i.ProcedureIDId
-								: undefined,
-						step:
-							typeof i.Step === "number"
-								? i.Step
-								: Number(i.Step || 0),
-						text:
-							typeof i.Text === "string"
-								? i.Text
-								: i.Text
-									? String(i.Text)
-									: "",
-						images:
-							typeof i.Images === "string"
-								? i.Images
-								: i.Images
-									? String(i.Images)
-									: "",
-					}),
+					(i): ProcedureStepItem => {
+						const raw = (i as Record<string, unknown>)[imageKey];
+						const images =
+							typeof raw === "string"
+								? raw
+								: raw != null
+									? String(raw)
+									: "";
+						const procId =
+							typeof i.ProcedureIdId === "number"
+								? i.ProcedureIdId
+								: typeof i.ProcedureIDId === "number"
+									? i.ProcedureIDId
+									: typeof i.ProcedureId?.Id === "number"
+										? i.ProcedureId.Id
+										: undefined;
+						return {
+							id: i.Id || -1,
+							title: i.Title || "",
+							procedureId: procId,
+							step:
+								typeof i.Step === "number"
+									? i.Step
+									: Number(i.Step || 0),
+							text:
+								typeof i.Text === "string"
+									? i.Text
+									: i.Text
+										? String(i.Text)
+										: "",
+							images,
+						};
+					},
 				)
 				// optional: drop empty or step < 1
 				.filter((s) => s.step >= 1)

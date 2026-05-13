@@ -9,11 +9,17 @@ import type RoleBasedViewProps from "@type/RoleBasedViewProps";
 export default function UrgencyPortal(
 	props: IUrgencyPortalWebPartProps,
 ): JSX.Element {
-	const View = ({ userGroupNames }: RoleBasedViewProps): JSX.Element => {
+	const View = ({
+		userGroupNames,
+		sourceRole,
+	}: RoleBasedViewProps): JSX.Element => {
+		const showForTrialSupervisorLayout =
+			sourceRole === "TRIALSUPERVISOR";
 		if (
 			!(
 				Utils.isIT(userGroupNames) ||
-				Utils.hasRole(userGroupNames, "TRIALSUPERVISOR")
+				Utils.hasRole(userGroupNames, "TRIALSUPERVISOR") ||
+				showForTrialSupervisorLayout
 			)
 		)
 			return <></>;

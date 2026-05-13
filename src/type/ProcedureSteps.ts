@@ -9,7 +9,9 @@ export type ProcedureStepsListResult = Record<string, unknown> & {
 	Images?: string;
 
 	// Lookup expansion shape depends on your list + select/expand; keep loose unless you need it:
-	ProcedureIDId?: number; // common pattern: <LookupInternalName>Id
+	ProcedureIdId?: number; // REST: internal name ProcedureId + Id
+	ProcedureIDId?: number; // legacy typo casing in some responses
+	ProcedureId?: { Id?: number };
 };
 
 export type ProcedureStepItem = ProcedureStepsListResult & {

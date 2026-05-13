@@ -74,6 +74,10 @@ export function PDRoleBasedSelect({
 				return;
 			}
 			const g = await Utils.userGroupNames(ctx);
+			if (location.hash.startsWith("#View-As-")) {
+				forceRole(location.hash.substring(9));
+				return;
+			}
 			localStorage.setItem("userGroupNames", JSON.stringify(g));
 			setRole(Utils.roleViewPriority(g));
 			setUserGroups(g);

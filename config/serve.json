@@ -4,10 +4,10 @@
 	"https": true,
 	"serveConfigurations": {
 		"default": {
-			"pageUrl": "https://csproject25.sharepoint.com/_layouts/workbench.aspx"
+			"pageUrl": "https://mycsproject25.sharepoint.com/_layouts/workbench.aspx"
 		},
 		"landingRedirectExt": {
-			"pageUrl": "https://csproject25.sharepoint.com/sites/PD-Internal",
+			"pageUrl": "https://mycsproject25.sharepoint.com/sites/PD-Internal",
 			"customActions": {
 				"2196e02f-20bc-4d3c-a967-c4e98420d1bb": {
 					"location": "ClientSideExtension.ApplicationCustomizer",
@@ -36,7 +36,7 @@
 			}
 		},
 		"themeInjector": {
-			"pageUrl": "https://csproject25.sharepoint.com/sites/PD-Intranet",
+			"pageUrl": "https://mycsproject25.sharepoint.com/sites/PD-Intranet",
 			"customActions": {
 				"3428f2ca-3584-4a31-aab2-c02d8cf38951": {
 					"location": "ClientSideExtension.ApplicationCustomizer",

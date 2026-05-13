@@ -32,6 +32,19 @@ interface ISharePointData {
 	cases: ICaseRaw[];
 }
 
+/** Same library path as legacy source site; resolved against the current web. */
+function attorneyWorkloadJsonUrl(webAbsoluteUrl: string): string {
+	const base = webAbsoluteUrl.replace(/\/+$/, "");
+	const segments = [
+		"Shared Documents",
+		"Intranet Form Database",
+		"Attorneys",
+		"Workload",
+		"attorneyWorkload.json",
+	];
+	return `${base}/${segments.map(encodeURIComponent).join("/")}`;
+}
+
 export function AttorneyWorkload({
 	userGroupNames,
 	pnpWrapper,
@@ -41,7 +54,9 @@ export function AttorneyWorkload({
 
 	const load = (): void => {
 		Utils.loadJSON<ISharePointData>(
-			"https://csproject25.sharepoint.com/sites/PD-Intranet/Shared%20Documents/Intranet%20Form%20Database/Attorneys/Workload/attorneyWorkload.json",
+			attorneyWorkloadJsonUrl(
+				pnpWrapper.ctx.pageContext.web.absoluteUrl,
+			),
 			(data) => {
 				if (data === undefined) return setLocations([]);
 				const locationsMap = new Map<

@@ -233,8 +233,35 @@ PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_items.py
 
 #### Rerunning after deleting lists on the target
 
-- Re-run **`import_lists.py`** → **`import_list_columns.py`** → **`schema_diff.py`** → **`import_list_items.py`** (or full orchestrator).  
-- **`state/item_id_map.json`** — Delete if you bulk-deleted target items so lookups remap cleanly.
+1. **In the target SharePoint UI**, delete the list(s) and **empty both recycle bins** (site → "Recycle bin"; then "Second-stage recycle bin" link). Skipping the second-stage bin can cause `nameAlreadyExists` on the next `import_lists` POST.
+2. **Reset local state surgically** with `reset_target_state.py` (preview by default; pass `--apply` to mutate; writes timestamped `.bak.<ts>` backups for every file it touches). Lookup prerequisites are auto-included.
+
+   ```bash
+   # Preview what would change for one list (and its lookup parents)
+   PYTHONPATH=scripts/py python3 scripts/py/migration/reset_target_state.py \
+       --lists ProcedureSteps
+
+   # Commit the changes and also remove per-list schema_diff / failure reports
+   PYTHONPATH=scripts/py python3 scripts/py/migration/reset_target_state.py \
+       --lists ProcedureSteps --apply --remove-reports
+   ```
+
+   This removes only the named lists (plus lookup prerequisites) from `import_reports/list_name_to_new_id.json` and the matching source-list-id buckets from `state/item_id_map.json` — unrelated lists keep their cached ids so the next run doesn't have to re-resolve everything.
+
+3. **Re-run the four steps that matter** (or the full orchestrator with `--lists`):
+
+   ```bash
+   PYTHONPATH=scripts/py python3 scripts/py/migration/run_full_import.py \
+       --lists ProcedureSteps
+   # — or surgically —
+   export MIGRATION_LIST_ALLOWLIST=ProcedureSteps
+   PYTHONPATH=scripts/py python3 scripts/py/migration/import_lists.py
+   PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_columns.py
+   PYTHONPATH=scripts/py python3 scripts/py/migration/schema_diff.py
+   PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_items.py
+   ```
+
+If you bulk-deleted target items but kept the lists, just rerun `reset_target_state.py --lists … --apply` (it preserves the list ids that still exist) followed by `import_list_items.py`.
 
 #### Legacy source quirks (one-time transforms)
 
