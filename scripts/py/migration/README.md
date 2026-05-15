@@ -132,7 +132,7 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 4. **`list_identity.py`** — Writes **`reports/list_identity_report.json`** (display vs internal names, collisions).  
 5. **`list_import_order.py`** — Writes **`reports/list_import_order.json`** (lookup-aware item order).  
 6. **`import_lists.py`** — Creates lists / libraries from `lists/index.json`; writes **`import_reports/list_name_to_new_id.json`** (uses import order when present).  
-7. **`import_list_columns.py`** — Creates columns via Graph (**text, note, choice, multi-choice, number, currency, boolean, dateTime, hyperlink, person/group, lookup**) — lookups in phase 2 after all lists exist.  
+7. **`import_list_columns.py`** — Creates columns via Graph (**text, note, choice, multi-choice, number, currency, boolean, dateTime, hyperlink, person/group, lookup**) — lookups in phase 2 after all lists exist. Multi-line text: omits `appendChangesToExistingText` unless the export enabled append (Graph/SPO can treat explicit `false` as append-only).  
 8. **`import_list_views.py`** — Views **manual** checklist from export.  
 9. **`schema_diff.py`** — Writes **`reports/schema_diff_<list>.json`**, **`.md`**, and **`reports/schema_diff_summary.json`** — gates item import (`itemImportReady`).  
 10. **`import_list_items.py`** — Two-pass items from `list_items/*.jsonl` (pass 1 create; pass 2 PATCH lookups); skips document libraries; writes **`state/item_id_map.json`**, **`reports/item_import_failures_<list>.json`**, **`reports/unresolved_users.json`**.  
@@ -211,7 +211,8 @@ PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_items.py
 4. **Lookups** — Pass 1 creates rows **without** lookup values; pass 2 PATCHes **`…LookupId`** using **`state/item_id_map.json`**. Parent lists must import **first** (see **`reports/list_import_order.json`**). Old tenant numeric IDs are never copied blindly.  
 5. **Person fields** — Values are **not** resolved to target users (no `User.Read.All`). They are logged to **`reports/unresolved_users.json`** and omitted from payloads.  
 6. **`reports/item_import_failures_<list>.json`** — Item-level Graph errors and schema gate messages; safe to delete and re-run after fixes.  
-7. **Read-only fields** — `_UIVersionString`, `AuthorLookupId`, built-in link fields, etc. are stripped; never “fix” by coercing types to plain text.
+7. **Read-only fields** — `_UIVersionString`, `AuthorLookupId`, built-in link fields, etc. are stripped; never “fix” by coercing types to plain text.  
+8. **“Append changes to existing text” after column import** — Delete affected columns or the list and re-run **`import_list_columns.py`**. The importer omits `appendChangesToExistingText` unless the export had it on (`column_schema._text_dict_for_graph_create`).
 
 #### Pages (Site Pages library)
 

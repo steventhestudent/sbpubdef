@@ -10,6 +10,14 @@ import re
 from typing import Any
 
 
+def _text_dict_for_graph_create(tx: dict[str, Any]) -> dict[str, Any]:
+    """Strip ``appendChangesToExistingText`` unless export has it on — explicit ``false`` on multiline can still yield append-only columns (https://stackoverflow.com/q/69023503)."""
+    out = dict(tx)
+    if out.get("appendChangesToExistingText") is not True:
+        out.pop("appendChangesToExistingText", None)
+    return out
+
+
 def column_kind(col: dict[str, Any]) -> str | None:
     """Return the primary Graph column type key, or None if unknown."""
     if not isinstance(col, dict):
@@ -84,16 +92,17 @@ def build_graph_column_create_body(
         if isinstance(tx, dict) and (
             tx.get("allowMultipleLines") or (tx.get("textType") or "").lower() in ("richtext", "enhancedrichtext")
         ):
-            body["text"] = {
+            tt = (tx.get("textType") or "").lower()
+            text_body: dict[str, Any] = {
                 "allowMultipleLines": True,
-                "appendChangesToExistingText": bool(tx.get("appendChangesToExistingText", False)),
                 "linesForEditing": int(tx.get("linesForEditing") or 6),
-                "textType": "richText"
-                if str(tx.get("textType") or "").lower() in ("richtext", "enhancedrichtext")
-                else "plain",
+                "textType": "richText" if tt in ("richtext", "enhancedrichtext") else "plain",
             }
+            if tx.get("appendChangesToExistingText") is True:
+                text_body["appendChangesToExistingText"] = True
+            body["text"] = text_body
         else:
-            body["text"] = tx if isinstance(tx, dict) else {}
+            body["text"] = _text_dict_for_graph_create(tx) if isinstance(tx, dict) else {}
         return body, None
 
     if kind == "choice":
