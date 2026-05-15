@@ -45,7 +45,7 @@ export class ProcedureStepsApi extends ListApi<
 						const images =
 							typeof raw === "string"
 								? raw
-								: raw != null
+								: raw !== null && raw !== undefined
 									? String(raw)
 									: "";
 						const procId =

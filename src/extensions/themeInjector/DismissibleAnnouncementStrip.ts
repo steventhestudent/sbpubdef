@@ -76,8 +76,8 @@ export async function DismissibleAnnouncementStrip(
 			edit.addEventListener("click", (e: MouseEvent) =>
 				e.stopPropagation(),
 			);
-			(strip.children.length == 1 &&
-			strip.children[0].children.length == 1
+			(strip.children.length === 1 &&
+			strip.children[0].children.length === 1
 				? strip.children[0].children[0]
 				: strip
 			).appendChild(edit);
