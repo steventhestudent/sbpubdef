@@ -172,6 +172,19 @@ def run_import() -> dict[str, Any]:
 
     idx = import_client.read_json(import_client.lists_index_path())
     lists_meta = idx.get("lists") or []
+    if ctx.migration_url_rewrite_enabled():
+        src = ctx.migration_source_site_absolute_url()
+        try:
+            tgt = ctx.migration_target_site_absolute_url()
+        except ValueError:
+            tgt = None
+        if src and tgt and src != tgt:
+            logger.info("Field URL rewrite (source site prefix -> target): %s -> %s", src, tgt)
+        elif not src:
+            logger.info(
+                "Field URL rewrite skipped (no source base URL; set MIGRATION_SOURCE_SITE_URL "
+                "or export site/site.json via export_site.py)"
+            )
     guid_to_name: dict[str, str] = {}
     for e in lists_meta:
         gid = _norm_source_list_id(str(e.get("id") or ""))

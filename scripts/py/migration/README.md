@@ -121,6 +121,8 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 | `MIGRATION_SKIP_SYSTEM_LISTS` | Default `true`: skip export index rows with `system: true`. |
 | `MIGRATION_SPFX_DEPLOYED` | Optional. Set `true` after the SPFx `.sppkg` is deployed in the **target** tenant. `provision_pages.py` will skip attempting custom web parts unless this is set. |
 | `MIGRATION_SKIP_CANVAS_PATCH` | Optional. Set `true` to skip applying exported `canvasLayout` (page stays default shell until you edit manually). |
+| `MIGRATION_SOURCE_SITE_URL` | Optional. Source site root URL (no trailing slash). If unset, `import_list_items` uses **`site/site.json`** `webUrl` from the export (run **`export_site.py`** when exporting). |
+| `MIGRATION_REWRITE_SOURCE_SITE_URLS` | Default `true`: replace that source prefix with the target site URL inside imported field values (rich text, hyperlinks, plain text). Set `false` to leave URLs unchanged. |
 
 ### Run order (orchestrated)
 
@@ -135,7 +137,7 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 7. **`import_list_columns.py`** — Creates columns via Graph (**text, note, choice, multi-choice, number, currency, boolean, dateTime, hyperlink, person/group, lookup**) — lookups in phase 2 after all lists exist. Multi-line text: omits `appendChangesToExistingText` unless the export enabled append (Graph/SPO can treat explicit `false` as append-only).  
 8. **`import_list_views.py`** — Views **manual** checklist from export.  
 9. **`schema_diff.py`** — Writes **`reports/schema_diff_<list>.json`**, **`.md`**, and **`reports/schema_diff_summary.json`** — gates item import (`itemImportReady`).  
-10. **`import_list_items.py`** — Two-pass items from `list_items/*.jsonl` (pass 1 create; pass 2 PATCH lookups); skips document libraries; writes **`state/item_id_map.json`**, **`reports/item_import_failures_<list>.json`**, **`reports/unresolved_users.json`**.  
+10. **`import_list_items.py`** — Two-pass items from `list_items/*.jsonl` (pass 1 create; pass 2 PATCH lookups); rewrites field values whose URLs start with the **exported source site** base (`site/site.json` or `MIGRATION_SOURCE_SITE_URL`) to the **target** site URL; skips document libraries; writes **`state/item_id_map.json`**, **`reports/item_import_failures_<list>.json`**, **`reports/unresolved_users.json`**.  
 11. **`import_libraries.py`** — Compares export `_manifest.json` drive names to target drives.  
 12. **`upload_library_files.py`** — Uploads files under `libraries/<drive>/files/`.  
 13. **Manual** — Deploy SPFx `.sppkg` to target app catalog (`pnpm run make`, then SharePoint admin).  

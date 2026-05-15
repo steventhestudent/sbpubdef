@@ -7,6 +7,8 @@ Call `load_migration_target_env()` at the start of each import script before `au
 
 from __future__ import annotations
 
+import functools
+import json
 import os
 from pathlib import Path
 
@@ -71,3 +73,47 @@ def migration_target_site_name() -> str:
 
 def migration_dry_run() -> bool:
     return (os.getenv("MIGRATION_DRY_RUN") or "false").strip().lower() in ("1", "true", "yes", "on")
+
+
+def migration_url_rewrite_enabled() -> bool:
+    """Replace source site absolute URLs in field values with the target site (see field_transform)."""
+    return (os.getenv("MIGRATION_REWRITE_SOURCE_SITE_URLS") or "true").strip().lower() in ("1", "true", "yes", "on")
+
+
+@functools.cache
+def _migration_source_site_absolute_url_cached(*, export_root: str, site_url_override: str) -> str | None:
+    if site_url_override:
+        return site_url_override.rstrip("/")
+    p = Path(export_root) / "site" / "site.json"
+    if not p.is_file():
+        return None
+    try:
+        with open(p, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+    u = (data.get("webUrl") or "").strip()
+    return u.rstrip("/") or None
+
+
+def migration_source_site_absolute_url() -> str | None:
+    """Base URL of the exported source site (no trailing slash), or None if unknown."""
+    return _migration_source_site_absolute_url_cached(
+        export_root=str(migration_export_root()),
+        site_url_override=(os.getenv("MIGRATION_SOURCE_SITE_URL") or "").strip(),
+    )
+
+
+@functools.cache
+def _migration_target_site_absolute_url_cached(*, tenant: str, site_name: str) -> str:
+    from migration import sp_client
+
+    return sp_client.sp_site_absolute_url(tenant, site_name).rstrip("/")
+
+
+def migration_target_site_absolute_url() -> str:
+    """Base URL of the target site (no trailing slash). Uses TENANT_NAME + MIGRATION_TARGET_SITE_NAME."""
+    tenant = (os.getenv("TENANT_NAME") or "").strip()
+    if not tenant:
+        raise ValueError("TENANT_NAME is required for migration target site URL rewrite")
+    return _migration_target_site_absolute_url_cached(tenant=tenant, site_name=migration_target_site_name())
