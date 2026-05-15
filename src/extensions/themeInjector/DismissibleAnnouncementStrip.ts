@@ -3,6 +3,8 @@ import "@pnp/sp/webs";
 import "@pnp/sp/lists";
 import "@pnp/sp/items";
 import type { ApplicationCustomizerContext } from "@microsoft/sp-application-base";
+import type { WebPartContext } from "@microsoft/sp-webpart-base";
+import * as Utils from "@utils";
 
 interface IBannerSettings {
 	BannerMessage: string;
@@ -45,6 +47,12 @@ export async function DismissibleAnnouncementStrip(
 		return; // Don't show banner if disabled or no message
 	}
 
+	const groupNames = await Utils.userGroupNames(
+		context as unknown as WebPartContext,
+	);
+	const showEditLink = Utils.isIT(groupNames);
+	const cmsUrl = `${context.pageContext.web.absoluteUrl.replace(/\/$/, "")}/SitePages/CMS.aspx`;
+
 	function createStrip(): HTMLDivElement {
 		document.querySelector("#DismissibleAnnouncementStrip")?.remove();
 		const strip = document.createElement("div");
@@ -54,6 +62,26 @@ export async function DismissibleAnnouncementStrip(
 			for (const child of Array.from(node.children))
 				removeFontColor(child as HTMLDivElement);
 		})(strip);
+		if (showEditLink) {
+			const edit = document.createElement("a");
+			edit.href = cmsUrl;
+			edit.textContent = "✎";
+			edit.title = "Edit site banner in CMS";
+			edit.setAttribute("aria-label", "Edit site banner in CMS");
+			edit.dataset.dismissibleAnnouncementStripEdit = "1";
+			edit.style.marginLeft = "0.35em";
+			edit.style.color = "inherit";
+			edit.style.textDecoration = "none";
+			edit.style.whiteSpace = "nowrap";
+			edit.addEventListener("click", (e: MouseEvent) =>
+				e.stopPropagation(),
+			);
+			(strip.children.length == 1 &&
+			strip.children[0].children.length == 1
+				? strip.children[0].children[0]
+				: strip
+			).appendChild(edit);
+		}
 		strip.id = "DismissibleAnnouncementStrip";
 		strip.style.textAlign = "center";
 		strip.style.backgroundColor = "rgb(0, 90, 158)";
@@ -75,6 +103,12 @@ export async function DismissibleAnnouncementStrip(
 			const target = event.target as HTMLElement | null;
 			// Avoid collapsing the strip when clicking the compact mode toggle button.
 			if (target?.closest?.("#CompactModeBtn")) return;
+			if (
+				target?.closest?.(
+					"a[data-dismissible-announcement-strip-edit='1']",
+				)
+			)
+				return;
 
 			if (strip.style.height) {
 				localStorage.removeItem(
