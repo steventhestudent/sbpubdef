@@ -26,6 +26,7 @@ if str(_SP) not in sys.path:
 
 from azure_function.sbpubdef.local_upload import add_list_item
 
+from migration import calendar_item_fields
 from migration.column_schema import column_kind, safe_report_filename_segment
 from migration.field_transform import value_for_graph_field
 from migration.list_allowlist import effective_export_list_names
@@ -151,6 +152,9 @@ def _build_pass1_fields(
         if name not in allowed_keys:
             continue
         out[name] = val
+    calendar_item_fields.merge_missing_allowed_fields(out, raw_fields, allowed_keys, columns_by_name)
+    calendar_item_fields.normalize_calendar_boolean_fields(out)
+    calendar_item_fields.apply_graph_all_day_eventdate_plus_one(out)
     return out
 
 
@@ -243,7 +247,6 @@ def run_import() -> dict[str, Any]:
             continue
 
         seg = safe_report_filename_segment(export_name)
-        failure_path = ctx.reports_dir() / f"item_import_failures_{seg}.json"
         ready = load_item_import_ready(export_name)
         columns_by_name = _load_export_columns_by_name(root, export_rel)
         allowed_keys = _acceptable_field_keys(site_id, list_id)

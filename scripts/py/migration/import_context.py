@@ -117,3 +117,20 @@ def migration_target_site_absolute_url() -> str:
     if not tenant:
         raise ValueError("TENANT_NAME is required for migration target site URL rewrite")
     return _migration_target_site_absolute_url_cached(tenant=tenant, site_name=migration_target_site_name())
+
+
+def migration_graph_all_day_eventdate_plus_one() -> bool:
+    """
+    When true (default), add one calendar day to ``EventDate`` on Graph create for ``fAllDayEvent`` items.
+
+    Microsoft Graph still shifts stored ``EventDate`` back one calendar day for many tenants when
+    ``fAllDayEvent`` is true; adding a day in the POST body compensates (see
+    https://github.com/SharePoint/sp-dev-docs/issues/2755). Set ``MIGRATION_GRAPH_ALLDAY_EVENTDATE_PLUS_ONE=false``
+    if your tenant stores the correct date without this adjustment (or dates become one day late).
+    """
+    return (os.getenv("MIGRATION_GRAPH_ALLDAY_EVENTDATE_PLUS_ONE") or "true").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+        "off",
+    )

@@ -76,6 +76,11 @@ def _bool_coerce(v: Any) -> bool | None:
     return None
 
 
+def coerce_graph_bool(v: Any) -> bool | None:
+    """Coerce SharePoint / OData values to ``bool`` for Graph (calendar ``fAllDayEvent``, etc.)."""
+    return _bool_coerce(v)
+
+
 def _number_coerce(v: Any) -> float | int | None:
     if v is None or v == "":
         return None
@@ -100,6 +105,7 @@ def value_for_graph_field(col: dict[str, Any], raw: Any) -> tuple[Any | None, st
 
     Does not handle lookups (handled in pass 2) or personOrGroup (policy: omit).
     """
+    col_name = (col.get("name") or "").strip()
     kind = column_kind(col)
 
     if kind == "personOrGroup":
@@ -116,6 +122,18 @@ def value_for_graph_field(col: dict[str, Any], raw: Any) -> tuple[Any | None, st
 
     if raw is None:
         return None, None
+
+    if col_name in ("fAllDayEvent", "fRecurrence"):
+        if isinstance(raw, bool):
+            return raw, None
+        if isinstance(raw, (int, float)):
+            if raw == 0:
+                return False, None
+            if raw == 1:
+                return True, None
+        b = _bool_coerce(raw)
+        if b is not None:
+            return b, None
 
     if kind == "text":
         if isinstance(raw, str):

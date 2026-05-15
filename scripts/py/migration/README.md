@@ -123,6 +123,7 @@ Create **`config/.env.migration.target`** from **`config/.env.migration.target.e
 | `MIGRATION_SKIP_CANVAS_PATCH` | Optional. Set `true` to skip applying exported `canvasLayout` (page stays default shell until you edit manually). |
 | `MIGRATION_SOURCE_SITE_URL` | Optional. Source site root URL (no trailing slash). If unset, `import_list_items` uses **`site/site.json`** `webUrl` from the export (run **`export_site.py`** when exporting). |
 | `MIGRATION_REWRITE_SOURCE_SITE_URLS` | Default `true`: replace that source prefix with the target site URL inside imported field values (rich text, hyperlinks, plain text). Set `false` to leave URLs unchanged. |
+| `MIGRATION_GRAPH_ALLDAY_EVENTDATE_PLUS_ONE` | Default `true`: for all-day **Events**, add one day to `EventDate` on Graph create (Graph off-by-one). Set `false` if your tenant already stores the correct calendar date without this. |
 
 ### Run order (orchestrated)
 
@@ -214,7 +215,8 @@ PYTHONPATH=scripts/py python3 scripts/py/migration/import_list_items.py
 5. **Person fields** — Values are **not** resolved to target users (no `User.Read.All`). They are logged to **`reports/unresolved_users.json`** and omitted from payloads.  
 6. **`reports/item_import_failures_<list>.json`** — Item-level Graph errors and schema gate messages; safe to delete and re-run after fixes.  
 7. **Read-only fields** — `_UIVersionString`, `AuthorLookupId`, built-in link fields, etc. are stripped; never “fix” by coercing types to plain text.  
-8. **“Append changes to existing text” after column import** — Delete affected columns or the list and re-run **`import_list_columns.py`**. The importer omits `appendChangesToExistingText` unless the export had it on (`column_schema._text_dict_for_graph_create`).
+8. **“Append changes to existing text” after column import** — Delete affected columns or the list and re-run **`import_list_columns.py`**. The importer omits `appendChangesToExistingText` unless the export had it on (`column_schema._text_dict_for_graph_create`).  
+9. **Events list — all-day on the wrong calendar day** — **`fAllDayEvent`** must be a real boolean on create (see merge above). For the remaining **one-day-early** Graph bug on ``EventDate``, **`import_list_items`** adds **one calendar day** to ``EventDate`` when ``fAllDayEvent`` is true (default **on**; see ``MIGRATION_GRAPH_ALLDAY_EVENTDATE_PLUS_ONE`` — set ``false`` if dates become one day **late**).
 
 #### Pages (Site Pages library)
 
