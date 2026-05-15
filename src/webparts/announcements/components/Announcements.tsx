@@ -74,7 +74,7 @@ function PDIntranetView({
 
 	React.useEffect(() => {
 		pnpWrapper.loadCachedThenFresh(load);
-	}, [sourceRole]);
+	}, [sourceRole, userGroupNames]);
 
 	return (
 		<section className="max-h-[28.7em] min-h-[24em] overflow-y-auto border border-[var(--webpart-border-color)] bg-[var(--webpart-bg-color)] shadow-sm">

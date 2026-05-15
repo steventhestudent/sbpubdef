@@ -1,4 +1,5 @@
 import * as React from "react";
+import { unstable_batchedUpdates } from "react-dom";
 import { WebPartContext } from "@microsoft/sp-webpart-base";
 import * as Utils from "@utils";
 import { PNPWrapper } from "@utils/PNPWrapper";
@@ -63,8 +64,12 @@ export function PDRoleBasedSelect({
 
 	function forceRole(role: string): void {
 		if (preventRoleForcing) return;
-		setRole(role);
-		setUserGroups([role]);
+		// React 17 does not batch setState in native handlers (hashchange); without
+		// batching, children that depend on sourceRole run effects before userGroups updates.
+		unstable_batchedUpdates(() => {
+			setRole(role);
+			setUserGroups([role]);
+		});
 		setTimeout(() => (location.hash = "")); // wait for all other components to register hash change
 	}
 	React.useEffect(() => {
@@ -79,8 +84,10 @@ export function PDRoleBasedSelect({
 				return;
 			}
 			localStorage.setItem("userGroupNames", JSON.stringify(g));
-			setRole(Utils.roleViewPriority(g));
-			setUserGroups(g);
+			unstable_batchedUpdates(() => {
+				setRole(Utils.roleViewPriority(g));
+				setUserGroups(g);
+			});
 		});
 		window.addEventListener("hashchange", function () {
 			if (!location.hash.startsWith("#View-As-")) return;
